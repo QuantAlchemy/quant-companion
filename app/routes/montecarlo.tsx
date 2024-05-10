@@ -1,5 +1,6 @@
 import { useLoaderData } from '@remix-run/react'
-import { MonteCarloPlot } from '~/components/MonteCarloPlot'
+// import { MonteCarloPlot } from '~/components/MonteCarloPlot'
+import { MonteCarloPlot } from '~/components/MonteCarloPlot.client'
 
 export function clientLoader() {
   return { message: 'loader' }
