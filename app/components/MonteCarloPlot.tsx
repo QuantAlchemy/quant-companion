@@ -1,7 +1,6 @@
-import Plot from 'react-plotly.js'
+import { Plot } from '~/components/Plot.client'
 
 export function MonteCarloPlot() {
-  // return <div>Monte Carlo Plot</div>
   return (
     <Plot
       data={[
@@ -19,4 +18,4 @@ export function MonteCarloPlot() {
   )
 }
 
-export { MonteCarloPlot as default }
+export default MonteCarloPlot
