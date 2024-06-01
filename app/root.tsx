@@ -1,10 +1,11 @@
 import {
+  Link,
   Links,
   Meta,
   Outlet,
   Scripts,
   ScrollRestoration,
-} from '@remix-run/react';
+} from '@remix-run/react'
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -26,18 +27,19 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body id="remix-extension">
+        <Link to="/">Home</Link>|<Link to="/montecarlo">Monte Carlo</Link>
         {children}
         <ScrollRestoration />
         <Scripts />
       </body>
     </html>
-  );
+  )
 }
 
 export default function App() {
-  return <Outlet />;
+  return <Outlet />
 }
 
 export function HydrateFallback() {
-  return <p>Loading...</p>;
+  return <p>Loading...</p>
 }
