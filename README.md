@@ -1,47 +1,30 @@
-# templates/spa
+## Usage
 
-This template leverages [Remix SPA Mode](https://remix.run/docs/en/main/guides/spa-mode) and the [Remix Vite Plugin](https://remix.run/docs/en/main/guides/vite) to build your app as a Single-Page Application using [Client Data](https://remix.run/docs/en/main/guides/client-data) for all of your data loads and mutations.
-
-## Setup
-
-```shellscript
-npx create-remix@latest --template remix-run/remix/templates/spa
+```bash
+$ npm install # or pnpm install or yarn install
 ```
 
-## Development
+### Learn more on the [Solid Website](https://solidjs.com) and come chat with us on our [Discord](https://discord.com/invite/solidjs)
 
-You can develop your SPA app just like you would a normal Remix app, via:
+## Available Scripts
 
-```shellscript
-npm run dev
-```
+In the project directory, you can run:
 
-## Production
+### `npm run dev`
 
-When you are ready to build a production version of your app, `npm run build` will generate your assets and an `index.html` for the SPA.
+Runs the app in the development mode.<br>
+Open [http://localhost:5173](http://localhost:5173) to view it in the browser.
 
-```shellscript
-npm run build
-```
+### `npm run build`
 
-### Preview
+Builds the app for production to the `dist` folder.<br>
+It correctly bundles Solid in production mode and optimizes the build for the best performance.
 
-You can preview the build locally with [vite preview](https://vitejs.dev/guide/cli#vite-preview) to serve all routes via the single `index.html` file:
+This build is also sutitable for a deployment as a web-extension.
 
-```shellscript
-npm run preview
-```
+The build is minified and the filenames include the hashes.<br>
+Your app is ready to be deployed!
 
-> [!IMPORTANT]
->
-> `vite preview` is not designed for use as a production server
+## Deployment
 
-### Deployment
-
-You can then serve your app from any HTTP server of your choosing. The server should be configured to serve multiple paths from a single root `/index.html` file (commonly called "SPA fallback"). Other steps may be required if the server doesn't directly support this functionality.
-
-For a simple example, you could use [sirv-cli](https://www.npmjs.com/package/sirv-cli):
-
-```shellscript
-npx sirv-cli build/client/ --single
-```
+Learn more about deploying your application with the [documentations](https://vitejs.dev/guide/static-deploy.html)
