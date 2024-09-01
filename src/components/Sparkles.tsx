@@ -37,7 +37,7 @@ export function Sparkles(props: ParticlesProps) {
     <div class="particles">
       <Motion.div
         animate={{ opacity: opacity() }}
-        transition={{ duration: 1 }}
+        transition={{ duration: 2 }}
         class={cn('opacity-0', props.class)}
       >
         <Show when={init()}>
