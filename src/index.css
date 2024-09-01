@@ -37,6 +37,7 @@
 
   [data-kb-theme='dark'] {
     --background: 222.2 84% 4.9%;
+    /* --background:  #161D2B; */
     --foreground: 210 40% 98%;
 
     --card: 222.2 84% 4.9%;
@@ -46,6 +47,8 @@
     --popover-foreground: 210 40% 98%;
 
     --primary: 210 40% 98%;
+    /* --primary: #552EF0; */
+    /* --primary: #5AA3F2; */
     --primary-foreground: 222.2 47.4% 11.2%;
 
     --secondary: 217.2 32.6% 17.5%;
