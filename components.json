@@ -11,6 +11,6 @@
   },
   "alias": {
     "component": "@/components",
-    "cn": "@/libs/cn"
+    "cn": "@/libs/utils"
   }
 }

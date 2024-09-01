@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "preview": "vite preview",
-    "prepare": "husky"
+    "prepare": "husky",
+    "preinstall": "npx only-allow pnpm"
   },
   "lint-staged": {
     "**/*.{js,jsx,ts,tsx,html}": [
@@ -23,12 +24,19 @@
   },
   "dependencies": {
     "@kobalte/core": "^0.13.4",
+    "@tsparticles/configs": "^3.5.0",
+    "@tsparticles/engine": "^3.5.0",
+    "@tsparticles/slim": "^3.5.0",
+    "// TODO: update this so it's not a link reference": "",
+    "@tsparticles/solid": "link:/home/agentsmith/Workspace/tsparticles-solid/components/solid/",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "lucide-solid": "^0.428.0",
     "solid-js": "^1.8.21",
+    "solid-motionone": "^1.0.0",
     "tailwind-merge": "^2.5.2",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "tsparticles": "^3.5.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.0",

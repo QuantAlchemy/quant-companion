@@ -2,6 +2,7 @@ import { Component, createSignal } from 'solid-js'
 import { ColorModeProvider, ColorModeScript } from '@kobalte/core'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Button } from '@/components/ui/button'
+import { SparklesPreview } from '@/components/SparklesPreview'
 
 const Popup: Component = () => {
   const [count, setCount] = createSignal(0)
@@ -26,6 +27,9 @@ const Popup: Component = () => {
         </p>
         <p style={{ 'font-family': "'IBM Plex Sans'" }}>This should be in IBM Plex</p>
       </ColorModeProvider>
+
+      {/* TODO: make this a spalsh screen fade */}
+      <SparklesPreview />
     </>
   )
 }

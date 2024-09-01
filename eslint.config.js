@@ -6,7 +6,7 @@ import eslintConfigPrettier from 'eslint-config-prettier'
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'build/**'],
+    ignores: ['dist/**', 'build/**', 'node_modules/**', '.vscode/**'],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
