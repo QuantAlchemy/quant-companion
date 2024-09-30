@@ -2,7 +2,6 @@ import { Component, createSignal } from 'solid-js'
 import { ColorModeProvider, ColorModeScript } from '@kobalte/core'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Button } from '@/components/ui/button'
-import { SparklesPreview } from '@/components/splashScreen/SparklesPreview'
 import SplashScreen from './components/splashScreen/SplashScreen'
 
 const Popup: Component = () => {
