@@ -1,6 +1,8 @@
 import type { Config } from 'tailwindcss'
 import { fontFamily } from 'tailwindcss/defaultTheme'
 import animate from 'tailwindcss-animate'
+import flattenColorPalette from 'tailwindcss/lib/util/flattenColorPalette'
+import type { PluginAPI } from 'tailwindcss/types/config'
 
 /** @type {import('tailwindcss').Config} */
 const config: Config = {
@@ -80,16 +82,36 @@ const config: Config = {
           from: { height: 'var(--kb-collapsible-content-height)' },
           to: { height: '0' },
         },
+        meteor: {
+          '0%': { transform: 'rotate(215deg) translateX(0)', opacity: '1' },
+          '70%': { opacity: '1' },
+          '100%': {
+            transform: 'rotate(215deg) translateX(-500px)',
+            opacity: '0',
+          },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
         'collapsible-down': 'collapsible-down 0.2s ease-out',
         'collapsible-up': 'collapsible-up 0.2s ease-out',
+        'meteor-effect': 'meteor 5s linear infinite',
       },
     },
   },
-  plugins: [animate],
+  plugins: [addVariablesForColors, animate],
+}
+
+function addVariablesForColors({ addBase, theme }: PluginAPI) {
+  const allColors = flattenColorPalette(theme('colors'))
+  const newVars: Record<string, string> = Object.fromEntries(
+    Object.entries(allColors).map(([key, val]) => [`--${key}`, val as string])
+  )
+
+  addBase({
+    ':root': newVars,
+  })
 }
 
 export default config
