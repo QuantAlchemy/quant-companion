@@ -1,4 +1,4 @@
-import { Sparkles } from './Sparkles'
+import { Sparkles } from '../ui/Sparkles'
 import icon from '@/assets/iconWhite.svg'
 
 export function SparklesPreview() {
@@ -12,7 +12,7 @@ export function SparklesPreview() {
       <img
         src={icon}
         class="h-3/12 w-3/12"
-        alt="Vite logo"
+        alt="Quant Alchemy logo"
       />
       <div class="w-[40rem] h-40 relative">
         {/* Gradients */}

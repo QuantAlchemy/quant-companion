@@ -4,7 +4,7 @@ import Particles, { initParticlesEngine } from '@tsparticles/solid'
 import { loadSlim } from '@tsparticles/slim'
 import { cn } from '@/libs/utils'
 
-import { sparkleOptions } from './sparkleOptions'
+import { sparkleOptions } from '../splashScreen/sparkleOptions'
 
 import type { Container } from '@tsparticles/engine'
 

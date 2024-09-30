@@ -9,7 +9,7 @@ import {
   SingleOrMultiple,
   StartValueType,
 } from '@tsparticles/engine'
-import { ParticlesProps } from './Sparkles'
+import { ParticlesProps } from '../ui/Sparkles'
 
 export function sparkleOptions(props: ParticlesProps = {}) {
   return {
