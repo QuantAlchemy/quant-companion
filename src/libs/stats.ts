@@ -10,15 +10,11 @@ export interface ProcessedData {
   equity: number[]
   netProfit: number[]
   cumNetProfit: number[]
-  profitBins: number[]
-  profitCounts: number[]
   futureDates: Date[]
   upperCone: number[]
   lowerCone: number[]
   monteCarloX: number[]
   monteCarloY: number[][]
-  priceBins: number[]
-  priceCounts: number[]
 }
 
 export interface SummaryStats {
@@ -68,12 +64,6 @@ export const processData = (rawData: Trade[], startingEquity: number = 100000): 
     return [...acc, acc[index - 1] + profit]
   }, [])
 
-  // Calculate profit distribution
-  const profitBins = [-100, -50, 0, 50, 100]
-  const profitCounts = profitBins.map(
-    (bin) => netProfit.filter((profit) => profit >= bin && profit < bin + 50).length
-  )
-
   // Simulate probability cones
   const futureDates = [...Array(30)].map(
     (_, i) => new Date(dates[dates.length - 1].getTime() + (i + 1) * 24 * 60 * 60 * 1000)
@@ -91,26 +81,16 @@ export const processData = (rawData: Trade[], startingEquity: number = 100000): 
     monteCarloX.map((x) => startingEquity * Math.exp(0.0002 * x + 0.01 * Math.random()))
   )
 
-  // Simulate random price distribution
-  const priceBins = [...Array(20)].map((_, i) => equity[equity.length - 1] * (0.9 + i * 0.01))
-  const priceCounts = priceBins.map(
-    (bin) => equity.filter((eq) => eq >= bin && eq < bin + equity[equity.length - 1] * 0.01).length
-  )
-
   return {
     dates,
     equity,
     netProfit,
     cumNetProfit,
-    profitBins,
-    profitCounts,
     futureDates,
     upperCone,
     lowerCone,
     monteCarloX,
     monteCarloY,
-    priceBins,
-    priceCounts,
   }
 }
 

@@ -9,7 +9,7 @@ import {
   SingleOrMultiple,
   StartValueType,
 } from '@tsparticles/engine'
-import { ParticlesProps } from '../ui/Sparkles'
+import { ParticlesProps } from '@/components/effects/Sparkles'
 
 export function sparkleOptions(props: ParticlesProps = {}) {
   return {
@@ -137,7 +137,7 @@ export function sparkleOptions(props: ParticlesProps = {}) {
         },
         decay: 0,
         distance: {},
-        derection: MoveDirection.none,
+        direction: MoveDirection.none,
         drift: 0,
         enable: true,
         gravity: {

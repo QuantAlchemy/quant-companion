@@ -30,13 +30,13 @@ export const darkTheme: Partial<Layout> = {
 }
 
 // This is just a wrapper around layout to simplify applying the dark theme to all layouts
-export const createLayout = (title: string): Partial<Plotly.Layout> => ({
+export const createLayout = (title?: string): Partial<Plotly.Layout> => ({
   ...darkTheme,
   title:
     typeof darkTheme.title === 'object' ? { ...darkTheme.title, text: title } : { text: title },
 })
 
-export const getChartColors = (count: number): string[] => {
+export const getChartColors = (count: number = 12): string[] => {
   const baseColors = [
     '#8dd3c7',
     '#ffffb3',

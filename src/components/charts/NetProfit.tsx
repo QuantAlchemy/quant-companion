@@ -5,19 +5,20 @@ import { createLayout, getChartColors } from '@/libs/plotly'
 import { ProcessedData } from '@/libs/stats'
 
 interface ChartProps {
-  data: Pick<ProcessedData, 'dates' | 'equity'> | null
+  data: Pick<ProcessedData, 'dates' | 'netProfit'> | null
 }
 
-export const Equity: Component<ChartProps> = (props) => {
-  const title = 'Equity'
+export const NetProfit: Component<ChartProps> = (props) => {
+  const title = 'Net Profit'
+
   // Memoize plotData and layout to optimize performance
   const plotData = createMemo<Partial<Plotly.PlotData>[]>(() => [
     {
       x: props.data?.dates,
-      y: props.data?.equity,
-      type: 'scatter' as PlotType,
+      y: props.data?.netProfit,
+      type: 'bar' as PlotType,
       name: title,
-      line: { color: getChartColors()[9] },
+      marker: { color: getChartColors()[9] },
     },
   ])
 
@@ -32,4 +33,4 @@ export const Equity: Component<ChartProps> = (props) => {
   )
 }
 
-export default Equity
+export default NetProfit

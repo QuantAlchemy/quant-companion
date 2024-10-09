@@ -9,7 +9,7 @@ importers:
   .:
     dependencies:
       '@kobalte/core':
-        specifier: ^0.13.4
+        specifier: ^0.13.6
         version: 0.13.6(solid-js@1.8.22)
       '@tsparticles/configs':
         specifier: ^3.5.0

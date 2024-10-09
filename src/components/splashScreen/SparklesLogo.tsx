@@ -1,7 +1,7 @@
-import { Sparkles } from '../ui/Sparkles'
+import { Sparkles } from '@/components/effects/Sparkles'
 import icon from '@/assets/iconWhite.svg'
 
-export function SparklesPreview() {
+export function SparklesLogo() {
   return (
     <div class="h-dvh w-full bg-black flex flex-col items-center justify-center overflow-hidden rounded-md">
       {/* <div class="h-dvh w-full bg-brand-primaryBackground flex flex-col items-center justify-center overflow-hidden rounded-md"> */}
@@ -52,3 +52,5 @@ export function SparklesPreview() {
     </div>
   )
 }
+
+export default SparklesLogo

@@ -1,5 +1,5 @@
 import { createSignal, createEffect, onCleanup, JSX } from 'solid-js'
-import { SparklesPreview } from '@/components/splashScreen/SparklesPreview'
+import { SparklesLogo } from '@/components/splashScreen/SparklesLogo'
 
 interface SplashScreenProps {
   duration?: number
@@ -42,7 +42,7 @@ const SplashScreen = (props: SplashScreenProps) => {
             z-50
           `}
         >
-          {props.children || <SparklesPreview />}
+          {props.children || <SparklesLogo />}
         </div>
       )}
     </>

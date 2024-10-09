@@ -23,7 +23,7 @@
     ]
   },
   "dependencies": {
-    "@kobalte/core": "^0.13.4",
+    "@kobalte/core": "^0.13.6",
     "@tsparticles/configs": "^3.5.0",
     "@tsparticles/engine": "^3.5.0",
     "@tsparticles/slim": "^3.5.0",
