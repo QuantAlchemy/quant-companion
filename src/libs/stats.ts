@@ -130,6 +130,13 @@ export const generateProbabilityCones = (
   // Determine the number of historical points to use for statistics calculation
   const historicalLength = Math.floor(data.equity.length * coneStartPercentage)
 
+  // Check if we have enough data points for meaningful calculation
+  if (historicalLength < 2) {
+    throw new Error(
+      'Insufficient historical data points for calculating probability cones. Need at least 2 points.'
+    )
+  }
+
   // Calculate historical returns using the equity values
   const historicalReturns = data.equity
     .slice(0, historicalLength)
@@ -148,14 +155,26 @@ export const generateProbabilityCones = (
   const avgTimeDelta = timeDeltas.reduce((sum, delta) => sum + delta, 0) / timeDeltas.length
 
   // Retain the dates not used for statistics (from coneStartPercentage to the end)
-  const retainedDates = data.dates.slice(historicalLength) // Last portion not used for stats calculation
+  const retainedDates = data.dates.slice(historicalLength)
+  const lastHistoricalDate = data.dates[historicalLength - 1]
 
   // Generate additional future dates to complete the futurePoints requirement
-  const additionalFutureDates = [...Array(futurePoints - retainedDates.length)].map(
-    (_, i) => new Date(retainedDates[retainedDates.length - 1].getTime() + (i + 1) * avgTimeDelta)
-  )
+  const additionalFutureDates =
+    retainedDates.length >= futurePoints
+      ? []
+      : [...Array(futurePoints - retainedDates.length)].map(
+          (_, i) =>
+            new Date(
+              retainedDates.length > 0
+                ? retainedDates[retainedDates.length - 1].getTime() + (i + 1) * avgTimeDelta
+                : lastHistoricalDate.getTime() + (i + 1) * avgTimeDelta
+            )
+        )
 
-  const futureDates = [...retainedDates, ...additionalFutureDates]
+  const futureDates =
+    retainedDates.length >= futurePoints
+      ? retainedDates.slice(0, futurePoints)
+      : [...retainedDates, ...additionalFutureDates]
 
   // Calculate upper and lower cones based on the standard deviation multiplier
   const lastEquity = data.equity[historicalLength - 1]
@@ -196,6 +215,13 @@ export const generateLinearProbabilityCones = (
   // Determine the start index of the historical data used for the cone
   const historicalLength = Math.max(1, Math.floor(data.equity.length * coneStartPercentage))
 
+  // Check if we have enough data points for meaningful calculation
+  if (historicalLength < 2) {
+    throw new Error(
+      'Insufficient historical data points for calculating probability cones. Need at least 2 points.'
+    )
+  }
+
   // Calculate average daily return and standard deviation using the specified length of historical data
   const historicalReturns = data.equity
     .slice(0, historicalLength)
@@ -215,14 +241,26 @@ export const generateLinearProbabilityCones = (
   const avgTimeDelta = timeDeltas.reduce((sum, delta) => sum + delta, 0) / timeDeltas.length
 
   // Retain the dates not used for statistics (from coneStartPercentage to the end)
-  const retainedDates = data.dates.slice(historicalLength) // Last portion not used for stats calculation
+  const retainedDates = data.dates.slice(historicalLength)
+  const lastHistoricalDate = data.dates[historicalLength - 1]
 
   // Generate additional future dates to complete the futurePoints requirement
-  const additionalFutureDates = [...Array(futurePoints - retainedDates.length)].map(
-    (_, i) => new Date(retainedDates[retainedDates.length - 1].getTime() + (i + 1) * avgTimeDelta)
-  )
+  const additionalFutureDates =
+    retainedDates.length >= futurePoints
+      ? []
+      : [...Array(futurePoints - retainedDates.length)].map(
+          (_, i) =>
+            new Date(
+              retainedDates.length > 0
+                ? retainedDates[retainedDates.length - 1].getTime() + (i + 1) * avgTimeDelta
+                : lastHistoricalDate.getTime() + (i + 1) * avgTimeDelta
+            )
+        )
 
-  const futureDates = [...retainedDates, ...additionalFutureDates]
+  const futureDates =
+    retainedDates.length >= futurePoints
+      ? retainedDates.slice(0, futurePoints)
+      : [...retainedDates, ...additionalFutureDates]
 
   // Get the last equity value to use as a starting point for projecting future values
   const lastEquity = data.equity[historicalLength - 1]

@@ -1,7 +1,7 @@
 import { Component, createMemo } from 'solid-js'
 import Plot from 'solid-plotly.js'
 import { createLayout, getChartColors } from '@/libs/plotly'
-import { generateProbabilityCones, calculateLinearAverageEquity } from '@/libs/stats'
+import { generateProbabilityCones } from '@/libs/stats'
 
 import type { PlotType } from 'plotly.js'
 import type { ProcessedData } from '@/libs/stats'
@@ -21,15 +21,15 @@ export const ProbabilityCones: Component<ChartProps> = (props) => {
       line: { color: getChartColors()[9] },
     },
   ])
-  const linearEquityPlotData = createMemo<Partial<Plotly.PlotData>[]>(() => [
-    {
-      x: props.data?.dates,
-      y: calculateLinearAverageEquity(props.data),
-      type: 'scatter' as PlotType,
-      name: 'Average Equity',
-      line: { color: getChartColors()[0] },
-    },
-  ])
+  // const linearEquityPlotData = createMemo<Partial<Plotly.PlotData>[]>(() => [
+  //   {
+  //     x: props.data?.dates,
+  //     y: calculateLinearAverageEquity(props.data),
+  //     type: 'scatter' as PlotType,
+  //     name: 'Average Equity',
+  //     line: { color: getChartColors()[0] },
+  //   },
+  // ])
 
   const coneAData = createMemo(() =>
     props.data
@@ -41,7 +41,7 @@ export const ProbabilityCones: Component<ChartProps> = (props) => {
       x: coneAData().futureDates,
       y: coneAData().upperCone,
       type: 'scatter' as PlotType,
-      name: `1σ Cone`,
+      name: `1σ Upper Cone`,
       line: { color: getChartColors()[11] },
     },
   ])
@@ -50,7 +50,7 @@ export const ProbabilityCones: Component<ChartProps> = (props) => {
       x: coneAData().futureDates,
       y: coneAData().lowerCone,
       type: 'scatter' as PlotType,
-      name: `1σ Cone`,
+      name: `1σ Lower Cone`,
       line: { color: getChartColors()[11] },
     },
   ])
@@ -65,7 +65,7 @@ export const ProbabilityCones: Component<ChartProps> = (props) => {
       x: coneBData().futureDates,
       y: coneBData().upperCone,
       type: 'scatter' as PlotType,
-      name: `2σ Cone`,
+      name: `2σ Upper Cone`,
       line: { color: getChartColors()[3] },
     },
   ])
@@ -74,7 +74,7 @@ export const ProbabilityCones: Component<ChartProps> = (props) => {
       x: coneBData().futureDates,
       y: coneBData().lowerCone,
       type: 'scatter' as PlotType,
-      name: `2σ Cone`,
+      name: `2σ Lower Cone`,
       line: { color: getChartColors()[3] },
     },
   ])
@@ -87,7 +87,7 @@ export const ProbabilityCones: Component<ChartProps> = (props) => {
     <Plot
       data={[
         ...equityPlotData(),
-        ...linearEquityPlotData(),
+        // ...linearEquityPlotData(),
         ...upperConeAData(),
         ...lowerConeAData(),
         ...upperConeBData(),
