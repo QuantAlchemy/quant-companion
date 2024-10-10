@@ -3,6 +3,7 @@ import html from 'eslint-plugin-html'
 import tseslint from 'typescript-eslint'
 import eslintPluginSolid from 'eslint-plugin-solid'
 import eslintConfigPrettier from 'eslint-config-prettier'
+import prettierPlugin from 'eslint-plugin-prettier'
 
 export default tseslint.config(
   {
@@ -15,14 +16,15 @@ export default tseslint.config(
     plugins: {
       html,
       solid: eslintPluginSolid,
+      prettier: prettierPlugin,
     },
     rules: {
       ...eslintPluginSolid.configs.recommended.rules,
-      // Add any custom rules here
+      'prettier/prettier': 'warn', // Prettier as an ESLint rule
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
       'solid/no-destructure': 'warn',
       'solid/jsx-no-undef': 'error',
     },
   },
-  eslintConfigPrettier
+  eslintConfigPrettier // Extending Prettier configuration to disable conflicting ESLint rules
 )
