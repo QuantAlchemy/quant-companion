@@ -94,6 +94,153 @@ export const processData = (rawData: Trade[], startingEquity: number = 100000): 
   }
 }
 
+export const calculateLinearAverageEquity = (
+  data: Pick<ProcessedData, 'equity'> | null
+): number[] => {
+  if (!data?.equity || data.equity.length === 0) {
+    return []
+  }
+
+  // Calculate average daily return based on the change between first and last equity values
+  const totalReturn = data.equity[data.equity.length - 1] - data.equity[0]
+  const averageDailyChange = totalReturn / (data.equity.length - 1) // Use (length - 1) to calculate the change rate correctly
+
+  // Calculate the linear average for each data point starting from the initial equity value
+  const linearAverageEquity = data.equity.map(
+    (_, index) => data.equity[0] + index * averageDailyChange
+  )
+
+  return linearAverageEquity
+}
+
+/*
+  Exponential Growth formula for growth:
+    Future_value = last_equity × 𝑒(mean + stdDevMultiplier × stdDev)×sqrt(period)
+
+  This simulates compounded growth, which is typical in financial modeling where returns are continuously compounded over time.
+  This uses a geometric Brownian motion approximation, which reflects the compounding nature of returns over time.
+  Financial assets often grow in a compounding way rather than linearly, making the exponential approach more suitable for modeling equity growth.
+*/
+export const generateProbabilityCones = (
+  data: ProcessedData,
+  stdDevMultiplier: number = 2,
+  futurePoints: number = 30,
+  coneStartPercentage: number = 0.9 // 0.9 means cone starts from 90% of equity length
+): Pick<ProcessedData, 'futureDates' | 'upperCone' | 'lowerCone'> => {
+  // Determine the number of historical points to use for statistics calculation
+  const historicalLength = Math.floor(data.equity.length * coneStartPercentage)
+
+  // Calculate historical returns using the equity values
+  const historicalReturns = data.equity
+    .slice(0, historicalLength)
+    .map((eq, i, arr) => (i > 0 ? (eq - arr[i - 1]) / arr[i - 1] : 0))
+
+  const mean = historicalReturns.reduce((sum, ret) => sum + ret, 0) / historicalReturns.length
+  const stdDev = Math.sqrt(
+    historicalReturns.reduce((sum, ret) => sum + Math.pow(ret - mean, 2), 0) /
+      historicalReturns.length
+  )
+
+  // Calculate the average time delta from the historical dates so that the future dates can be generated with similar intervals
+  const timeDeltas = data.dates
+    .slice(1, historicalLength)
+    .map((date, i) => date.getTime() - data.dates[i].getTime())
+  const avgTimeDelta = timeDeltas.reduce((sum, delta) => sum + delta, 0) / timeDeltas.length
+
+  // Retain the dates not used for statistics (from coneStartPercentage to the end)
+  const retainedDates = data.dates.slice(historicalLength) // Last portion not used for stats calculation
+
+  // Generate additional future dates to complete the futurePoints requirement
+  const additionalFutureDates = [...Array(futurePoints - retainedDates.length)].map(
+    (_, i) => new Date(retainedDates[retainedDates.length - 1].getTime() + (i + 1) * avgTimeDelta)
+  )
+
+  const futureDates = [...retainedDates, ...additionalFutureDates]
+
+  // Calculate upper and lower cones based on the standard deviation multiplier
+  const lastEquity = data.equity[historicalLength - 1]
+  const upperCone = futureDates.map(
+    (_, i) => lastEquity * Math.exp((mean + stdDevMultiplier * stdDev) * Math.sqrt(i + 1))
+  )
+
+  const lowerCone = futureDates.map(
+    (_, i) => lastEquity * Math.exp((mean - stdDevMultiplier * stdDev) * Math.sqrt(i + 1))
+  )
+
+  return { futureDates, upperCone, lowerCone }
+}
+
+/*
+  Linear Probability Cone Calculation
+  https://alvarezquanttrading.com/blog/using-probability-cones-to-test-for-strategy-death/
+  Future_value = last_value_of_equity + (avg_daily_return*period + sqrt(period)*(curve_sd*std_equity)
+
+  Where:
+
+  Last_value_of_equity: The last value of your backtested results. This is also the last value of your linear equity curve on the last day of your backtested results.
+
+  Avg_daily_return: This is the average of the natural log of the daily percent returns
+
+  Period: How many days from the last_value_equity that we want to calculate the curve value for
+
+  Curve_sd: For what standard deviation are we calculating the curve for. Typical values are -2, -1, 1, 2.
+
+  Std_equity: This is the standard deviation of the log of daily returns
+*/
+export const generateLinearProbabilityCones = (
+  data: ProcessedData,
+  stdDevMultiplier: number = 2,
+  futurePoints: number = 30,
+  coneStartPercentage: number = 0.9 // 0.9 means cone starts from 90% of equity length
+): Pick<ProcessedData, 'futureDates' | 'upperCone' | 'lowerCone'> => {
+  // Determine the start index of the historical data used for the cone
+  const historicalLength = Math.max(1, Math.floor(data.equity.length * coneStartPercentage))
+
+  // Calculate average daily return and standard deviation using the specified length of historical data
+  const historicalReturns = data.equity
+    .slice(0, historicalLength)
+    .map((eq, i, arr) => (i > 0 ? (eq - arr[i - 1]) / arr[i - 1] : 0))
+
+  const avgDailyReturn =
+    historicalReturns.reduce((sum, ret) => sum + ret, 0) / historicalReturns.length
+  const stdEquity = Math.sqrt(
+    historicalReturns.reduce((sum, ret) => sum + Math.pow(ret - avgDailyReturn, 2), 0) /
+      historicalReturns.length
+  )
+
+  // Calculate the average time delta from the historical dates so that the future dates can be generated with similar intervals
+  const timeDeltas = data.dates
+    .slice(1, historicalLength)
+    .map((date, i) => date.getTime() - data.dates[i].getTime())
+  const avgTimeDelta = timeDeltas.reduce((sum, delta) => sum + delta, 0) / timeDeltas.length
+
+  // Retain the dates not used for statistics (from coneStartPercentage to the end)
+  const retainedDates = data.dates.slice(historicalLength) // Last portion not used for stats calculation
+
+  // Generate additional future dates to complete the futurePoints requirement
+  const additionalFutureDates = [...Array(futurePoints - retainedDates.length)].map(
+    (_, i) => new Date(retainedDates[retainedDates.length - 1].getTime() + (i + 1) * avgTimeDelta)
+  )
+
+  const futureDates = [...retainedDates, ...additionalFutureDates]
+
+  // Get the last equity value to use as a starting point for projecting future values
+  const lastEquity = data.equity[historicalLength - 1]
+
+  // Calculate upper and lower probability cones using the linear model
+  const upperCone = futureDates.map(
+    (_, i) =>
+      lastEquity + avgDailyReturn * (i + 1) + Math.sqrt(i + 1) * (stdDevMultiplier * stdEquity)
+  )
+
+  const lowerCone = futureDates.map(
+    (_, i) =>
+      lastEquity + avgDailyReturn * (i + 1) - Math.sqrt(i + 1) * (stdDevMultiplier * stdEquity)
+  )
+
+  return { futureDates, upperCone, lowerCone }
+}
+
 // Function to calculate summary statistics
 export const calculateSummaryStats = (data: ProcessedData): SummaryStats => {
   const totalTrades = data.netProfit.length
@@ -134,36 +281,6 @@ export const filterDataByDateRange = (
     netProfit: filteredIndices.map((i) => data.netProfit[i]),
     cumNetProfit: filteredIndices.map((i) => data.cumNetProfit[i]),
   }
-}
-
-// Function to generate probability cones
-export const generateProbabilityCones = (
-  data: ProcessedData,
-  params: ProbabilityConeParams
-): Pick<ProcessedData, 'futureDates' | 'upperCone' | 'lowerCone'> => {
-  const { futurePoints, offset, length } = params
-  const startIndex = Math.max(0, data.equity.length - length - offset)
-  const endIndex = Math.min(data.equity.length, startIndex + length)
-
-  const historicalReturns = data.equity
-    .slice(startIndex, endIndex)
-    .map((eq, i, arr) => (i > 0 ? (eq - arr[i - 1]) / arr[i - 1] : 0))
-
-  const mean = historicalReturns.reduce((sum, ret) => sum + ret, 0) / historicalReturns.length
-  const stdDev = Math.sqrt(
-    historicalReturns.reduce((sum, ret) => sum + Math.pow(ret - mean, 2), 0) /
-      historicalReturns.length
-  )
-
-  const futureDates = [...Array(futurePoints)].map(
-    (_, i) => new Date(data.dates[data.dates.length - 1].getTime() + (i + 1) * 24 * 60 * 60 * 1000)
-  )
-
-  const lastEquity = data.equity[data.equity.length - 1]
-  const upperCone = futureDates.map((_, i) => lastEquity * Math.exp((mean + 2 * stdDev) * (i + 1)))
-  const lowerCone = futureDates.map((_, i) => lastEquity * Math.exp((mean - 2 * stdDev) * (i + 1)))
-
-  return { futureDates, upperCone, lowerCone }
 }
 
 // Function to generate Monte Carlo simulation data

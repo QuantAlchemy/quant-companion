@@ -109,14 +109,14 @@ const Dashboard = () => {
         </div>
 
         <div class="grid grid-cols-1 2xl:grid-cols-2 gap-6 mt-6">
-          {/* <Card>
+          <Card>
             <CardHeader>
-              <CardTitle>Probability Cones Chart</CardTitle>
+              <CardTitle>Probability Cones</CardTitle>
             </CardHeader>
             <CardContent>
               <ProbabilityConesChart data={data()} />
             </CardContent>
-          </Card> */}
+          </Card>
 
           <Card>
             <CardHeader>
@@ -177,14 +177,14 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          {/* <Card>
+          <Card>
             <CardHeader>
-              <CardTitle>Probability Cones Chart</CardTitle>
+              <CardTitle>Probability Cones</CardTitle>
             </CardHeader>
             <CardContent>
               <ProbabilityConesChart data={data()} />
             </CardContent>
-          </Card> */}
+          </Card>
 
           {/* <Card>
             <CardHeader>
