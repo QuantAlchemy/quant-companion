@@ -225,7 +225,7 @@ export const generateLinearProbabilityCones = (
   // Calculate average daily return and standard deviation using the specified length of historical data
   const historicalReturns = data.equity
     .slice(0, historicalLength)
-    .map((eq, i, arr) => (i > 0 ? (eq - arr[i - 1]) / arr[i - 1] : 0))
+    .map((eq, i, arr) => (i > 0 ? eq - arr[i - 1] : 0))
 
   const avgDailyReturn =
     historicalReturns.reduce((sum, ret) => sum + ret, 0) / historicalReturns.length

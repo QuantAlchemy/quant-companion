@@ -9,7 +9,7 @@ import {
   ProfitDistributionBox as ProfitDistributionBoxChart,
   ProfitDistributionHist as ProfitDistributionHistChart,
 } from '@/components/charts/ProfitDistribution'
-import ProbabilityConesChart from '@/components/charts/ProbabilityCones'
+import ProbabilityConesCard from './ProbabilityConesCard'
 // import MonteCarloChart from '@/components/charts/MonteCarlo'
 import { simulateTradingViewData, processData, ProcessedData } from '@/libs/stats'
 
@@ -111,15 +111,6 @@ const Dashboard = () => {
         <div class="grid grid-cols-1 2xl:grid-cols-2 gap-6 mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Probability Cones</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ProbabilityConesChart data={data()} />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
               <CardTitle>Equity</CardTitle>
             </CardHeader>
             <CardContent>
@@ -165,7 +156,7 @@ const Dashboard = () => {
               */}
               <CardTitle>TODO: Random Profit Distribution</CardTitle>
             </CardHeader>
-            <CardContent>
+            {/* <CardContent>
               <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-0">
                 <ProfitDistributionBoxChart
                   data={processData(simulateTradingViewData(), startingEquity())}
@@ -174,17 +165,10 @@ const Dashboard = () => {
                   data={processData(simulateTradingViewData(), startingEquity())}
                 />
               </div>
-            </CardContent>
+            </CardContent> */}
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Probability Cones</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ProbabilityConesChart data={data()} />
-            </CardContent>
-          </Card>
+          <ProbabilityConesCard data={data()} />
 
           {/* <Card>
             <CardHeader>

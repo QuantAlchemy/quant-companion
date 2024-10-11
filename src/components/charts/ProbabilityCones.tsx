@@ -1,101 +1,132 @@
-import { Component, createMemo } from 'solid-js'
+import { createMemo, createEffect, mergeProps } from 'solid-js'
 import Plot from 'solid-plotly.js'
 import { createLayout, getChartColors } from '@/libs/plotly'
-import { generateProbabilityCones } from '@/libs/stats'
+import { generateProbabilityCones, generateLinearProbabilityCones } from '@/libs/stats'
 
+import type { Component } from 'solid-js'
 import type { PlotType } from 'plotly.js'
 import type { ProcessedData } from '@/libs/stats'
 
+export enum ConeType {
+  Linear,
+  Exponential,
+}
+
 interface ChartProps {
   data: ProcessedData | null
+  stdDevA?: number
+  stdDevB?: number
+  coneType?: ConeType
+  coneLength?: number
+  coneStartPercentage?: number
+}
+
+const getConeMethod = (coneType: ConeType) => {
+  switch (coneType) {
+    case ConeType.Linear:
+      return generateLinearProbabilityCones
+    case ConeType.Exponential:
+      return generateProbabilityCones
+    default:
+      return generateProbabilityCones
+  }
 }
 
 export const ProbabilityCones: Component<ChartProps> = (props) => {
-  // Memoize plotData and layout to optimize performance
-  const equityPlotData = createMemo<Partial<Plotly.PlotData>[]>(() => [
+  // eslint-disable-next-line solid/reactivity
+  props = mergeProps(
     {
-      x: props.data?.dates,
-      y: props.data?.equity,
-      type: 'scatter' as PlotType,
-      name: 'Equity',
-      line: { color: getChartColors()[9] },
+      coneType: ConeType.Exponential,
+      coneLength: 30,
+      coneStartPercentage: 90,
+      stdDevA: 1,
+      stdDevB: 2,
     },
-  ])
-  // const linearEquityPlotData = createMemo<Partial<Plotly.PlotData>[]>(() => [
-  //   {
-  //     x: props.data?.dates,
-  //     y: calculateLinearAverageEquity(props.data),
-  //     type: 'scatter' as PlotType,
-  //     name: 'Average Equity',
-  //     line: { color: getChartColors()[0] },
-  //   },
-  // ])
-
-  const coneAData = createMemo(() =>
-    props.data
-      ? generateProbabilityCones(props.data, 1)
-      : { futureDates: [], upperCone: [], lowerCone: [] }
+    props
   )
-  const upperConeAData = createMemo<Partial<Plotly.PlotData>[]>(() => [
-    {
-      x: coneAData().futureDates,
-      y: coneAData().upperCone,
-      type: 'scatter' as PlotType,
-      name: `1σ Upper Cone`,
-      line: { color: getChartColors()[11] },
-    },
-  ])
-  const lowerConeAData = createMemo<Partial<Plotly.PlotData>[]>(() => [
-    {
-      x: coneAData().futureDates,
-      y: coneAData().lowerCone,
-      type: 'scatter' as PlotType,
-      name: `1σ Lower Cone`,
-      line: { color: getChartColors()[11] },
-    },
-  ])
 
-  const coneBData = createMemo(() =>
-    props.data
-      ? generateProbabilityCones(props.data)
-      : { futureDates: [], upperCone: [], lowerCone: [] }
-  )
-  const upperConeBData = createMemo<Partial<Plotly.PlotData>[]>(() => [
-    {
-      x: coneBData().futureDates,
-      y: coneBData().upperCone,
-      type: 'scatter' as PlotType,
-      name: `2σ Upper Cone`,
-      line: { color: getChartColors()[3] },
-    },
-  ])
-  const lowerConeBData = createMemo<Partial<Plotly.PlotData>[]>(() => [
-    {
-      x: coneBData().futureDates,
-      y: coneBData().lowerCone,
-      type: 'scatter' as PlotType,
-      name: `2σ Lower Cone`,
-      line: { color: getChartColors()[3] },
-    },
-  ])
-
-  // console.log({ coneAData: coneAData() })
-
+  const coneMethod = (coneType = props.coneType) => getConeMethod(coneType as ConeType)
   const layout = createMemo(() => createLayout())
 
+  const plotData = createMemo(() => {
+    if (!props.data) {
+      return []
+    }
+
+    const coneDataA = coneMethod()(
+      props.data,
+      props.stdDevA,
+      props.coneLength,
+      (props.coneStartPercentage ?? 90) / 100
+    )
+    const coneDataB = coneMethod()(
+      props.data,
+      props.stdDevB,
+      props.coneLength,
+      (props.coneStartPercentage ?? 90) / 100
+    )
+
+    return [
+      // Equity line
+      {
+        x: props.data.dates,
+        y: props.data.equity,
+        type: 'scatter' as PlotType,
+        name: 'Equity',
+        line: { color: getChartColors()[9] },
+      },
+      // Average equity line
+      // {
+      //   x: props.data?.dates,
+      //   y: calculateLinearAverageEquity(props.data),
+      //   type: 'scatter' as PlotType,
+      //   name: 'Average Equity',
+      //   line: { color: getChartColors()[0] },
+      // },
+      // Upper cone A
+      {
+        x: coneDataA.futureDates,
+        y: coneDataA.upperCone,
+        type: 'scatter' as PlotType,
+        name: `${props.stdDevA}σ Upper Cone`,
+        line: { color: getChartColors()[11] },
+      },
+      // Lower cone A
+      {
+        x: coneDataA.futureDates,
+        y: coneDataA.lowerCone,
+        type: 'scatter' as PlotType,
+        name: `${props.stdDevA}σ Lower Cone`,
+        line: { color: getChartColors()[11] },
+      },
+      // Upper cone B
+      {
+        x: coneDataB.futureDates,
+        y: coneDataB.upperCone,
+        type: 'scatter' as PlotType,
+        name: `${props.stdDevB}σ Upper Cone`,
+        line: { color: getChartColors()[3] },
+      },
+      // Lower cone B
+      {
+        x: coneDataB.futureDates,
+        y: coneDataB.lowerCone,
+        type: 'scatter' as PlotType,
+        name: `${props.stdDevB}σ Lower Cone`,
+        line: { color: getChartColors()[3] },
+      },
+    ]
+  })
+
   return (
-    <Plot
-      data={[
-        ...equityPlotData(),
-        // ...linearEquityPlotData(),
-        ...upperConeAData(),
-        ...lowerConeAData(),
-        ...upperConeBData(),
-        ...lowerConeBData(),
-      ]}
-      layout={layout()}
-      useResizeHandler={true}
-    />
+    <>
+      <div>Current Cone Length: {props.coneLength}</div>
+      <Plot
+        data={plotData()}
+        layout={layout()}
+        useResizeHandler={true}
+      />
+    </>
   )
 }
 
