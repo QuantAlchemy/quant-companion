@@ -17,15 +17,6 @@ const Dashboard = () => {
   const [data, setData] = createSignal<ProcessedData | null>(null)
   const [startingEquity, setStartingEquity] = createSignal(10000)
   const [monteCarloTrials, setMonteCarloTrials] = createSignal(1000)
-  // const [probabilityConeParams, setProbabilityConeParams] = createSignal({
-  //   futurePoints: 30,
-  //   offset: 0,
-  //   length: 100,
-  // })
-  // const [dateRange, setDateRange] = createSignal({
-  //   start: null,
-  //   end: null,
-  // })
 
   createEffect(() => {
     // Simulate initial data load
