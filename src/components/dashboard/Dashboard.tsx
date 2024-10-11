@@ -10,7 +10,7 @@ import {
   ProfitDistributionHist as ProfitDistributionHistChart,
 } from '@/components/charts/ProfitDistribution'
 import ProbabilityConesCard from './ProbabilityConesCard'
-// import MonteCarloChart from '@/components/charts/MonteCarlo'
+import MonteCarloChartCard from './MonteCarloCard'
 import { simulateTradingViewData, processData, ProcessedData } from '@/libs/stats'
 
 const Dashboard = () => {
@@ -35,7 +35,7 @@ const Dashboard = () => {
   return (
     <div class="container py-4 px-0">
       <div class="mb-8">
-        <h1 class="text-3xl font-bold mb-4">Trading Dashboard</h1>
+        <h1 class="text-3xl font-bold mb-4">Quant Companion</h1>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
@@ -100,6 +100,8 @@ const Dashboard = () => {
         </div>
 
         <div class="grid grid-cols-1 2xl:grid-cols-2 gap-6 mt-6">
+          <MonteCarloChartCard data={data()} />
+
           <Card>
             <CardHeader>
               <CardTitle>Equity</CardTitle>
@@ -160,15 +162,6 @@ const Dashboard = () => {
           </Card>
 
           <ProbabilityConesCard data={data()} />
-
-          {/* <Card>
-            <CardHeader>
-              <CardTitle>Monte Carlo Simulation</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <MonteCarloChart data={data()} trials={monteCarloTrials()} />
-            </CardContent>
-          </Card> */}
         </div>
 
         <p class="mt-4 text-sm text-gray-500">

@@ -1,8 +1,10 @@
-import { Component, createMemo } from 'solid-js'
+import { createMemo } from 'solid-js'
 import Plot from 'solid-plotly.js'
-import type { PlotType } from 'plotly.js'
 import { createLayout, getChartColors } from '@/libs/plotly'
 import { ProcessedData } from '@/libs/stats'
+
+import type { Component } from 'solid-js'
+import type { PlotType } from 'plotly.js'
 
 interface ChartProps {
   data: Pick<ProcessedData, 'netProfit'> | null

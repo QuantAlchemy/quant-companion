@@ -7,7 +7,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { TextField, TextFieldLabel, TextFieldRoot } from '@/components/ui/textfield'
+import { TextFieldLabel, TextFieldRoot } from '@/components/ui/textfield'
+import { NumberInput } from '@/components/ui/NumberInput'
 import ProbabilityConesChart, { ConeType } from '@/components/charts/ProbabilityCones'
 
 import type { Component } from 'solid-js'
@@ -15,34 +16,6 @@ import type { ProcessedData } from '@/libs/stats'
 
 interface CardProps {
   data: ProcessedData | null
-}
-
-interface NumberInputProps {
-  id: string
-  label: string
-  min?: number
-  max?: number
-  value?: number
-  onInput?: (e: Event) => void
-}
-
-const NumberInput: Component<NumberInputProps> = (props) => {
-  return (
-    <TextFieldRoot
-      class="w-24"
-      defaultValue={(props.value as unknown as string) ?? '30'}
-    >
-      <TextFieldLabel for={props.id}>{props.label}</TextFieldLabel>
-      <TextField
-        id={props.id}
-        type="number"
-        min={props.min}
-        max={props.max}
-        value={props?.value}
-        onInput={(e) => props?.onInput?.(e)}
-      />
-    </TextFieldRoot>
-  )
 }
 
 interface ConeTypeSelectProps {
@@ -95,7 +68,7 @@ export const ProbabilityConesCard: Component<CardProps> = (props) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle class="">Probability Cones</CardTitle>
+        <CardTitle>Probability Cones</CardTitle>
         <div class="flex flex-row justify-end gap-2">
           <NumberInput
             id="stdDevA"

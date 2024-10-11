@@ -1,4 +1,4 @@
-import { createMemo } from 'solid-js'
+import { createMemo, mergeProps } from 'solid-js'
 import Plot from 'solid-plotly.js'
 import { createLayout, getChartColors } from '@/libs/plotly'
 import { ProcessedData } from '@/libs/stats'
@@ -8,17 +8,27 @@ import type { PlotType } from 'plotly.js'
 
 interface ChartProps {
   data: Pick<ProcessedData, 'dates' | 'equity'> | null
+  trials?: number
+  futurePoints?: number
 }
 
-export const Equity: Component<ChartProps> = (props) => {
-  const title = 'Equity'
+export const MonteCarlo: Component<ChartProps> = (props) => {
+  // eslint-disable-next-line solid/reactivity
+  props = mergeProps(
+    {
+      trials: 100,
+      futurePoints: 100,
+    },
+    props
+  )
+
   // Memoize plotData and layout to optimize performance
   const plotData = createMemo<Partial<Plotly.PlotData>[]>(() => [
     {
       x: props.data?.dates,
       y: props.data?.equity,
       type: 'scatter' as PlotType,
-      name: title,
+      name: 'Monte Carlo',
       line: { color: getChartColors()[9] },
     },
   ])
@@ -26,12 +36,16 @@ export const Equity: Component<ChartProps> = (props) => {
   const layout = createMemo(() => createLayout())
 
   return (
-    <Plot
-      data={plotData()}
-      layout={layout()}
-      useResizeHandler={true}
-    />
+    <>
+      <p>{props.trials}</p>
+      <p>{props.futurePoints}</p>
+      <Plot
+        data={plotData()}
+        layout={layout()}
+        useResizeHandler={true}
+      />
+    </>
   )
 }
 
-export default Equity
+export default MonteCarlo

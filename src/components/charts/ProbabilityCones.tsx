@@ -1,4 +1,4 @@
-import { createMemo, createEffect, mergeProps } from 'solid-js'
+import { createMemo, mergeProps } from 'solid-js'
 import Plot from 'solid-plotly.js'
 import { createLayout, getChartColors } from '@/libs/plotly'
 import { generateProbabilityCones, generateLinearProbabilityCones } from '@/libs/stats'
