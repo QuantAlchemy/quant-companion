@@ -1,10 +1,18 @@
-import { TextField, TextFieldLabel, TextFieldRoot } from '@/components/ui/textfield'
+import {
+  TextField,
+  TextFieldLabel,
+  TextFieldDescription,
+  TextFieldRoot,
+} from '@/components/ui/textfield'
 
 import type { Component } from 'solid-js'
+import type { JSX } from 'solid-js/jsx-runtime'
 
 interface NumberInputProps {
   id: string
-  label: string
+  label: JSX.Element
+  info?: JSX.Element
+  class?: string
   min?: number
   max?: number
   value?: number
@@ -14,7 +22,7 @@ interface NumberInputProps {
 export const NumberInput: Component<NumberInputProps> = (props) => {
   return (
     <TextFieldRoot
-      class="w-24"
+      class={props.class ?? 'w-24'}
       defaultValue={props.value as unknown as string}
     >
       <TextFieldLabel for={props.id}>{props.label}</TextFieldLabel>
@@ -23,9 +31,10 @@ export const NumberInput: Component<NumberInputProps> = (props) => {
         type="number"
         min={props.min}
         max={props.max}
-        value={props?.value}
-        onInput={(e) => props?.onInput?.(e)}
+        value={props.value}
+        onInput={(e) => props.onInput?.(e)}
       />
+      <TextFieldDescription>{props.info}</TextFieldDescription>
     </TextFieldRoot>
   )
 }

@@ -16,7 +16,6 @@ import { simulateTradingViewData, processData, ProcessedData } from '@/libs/stat
 const Dashboard = () => {
   const [data, setData] = createSignal<ProcessedData | null>(null)
   const [startingEquity, setStartingEquity] = createSignal(10000)
-  const [monteCarloTrials, setMonteCarloTrials] = createSignal(1000)
 
   createEffect(() => {
     // Simulate initial data load
@@ -55,22 +54,6 @@ const Dashboard = () => {
                   value={startingEquity()}
                   onInput={(e) => setStartingEquity(Number((e.target as HTMLInputElement).value))}
                   class="mt-2"
-                />
-              </TextFieldRoot>
-
-              <TextFieldRoot>
-                <TextFieldLabel
-                  for="monteCarloTrials"
-                  class="mt-4"
-                >
-                  Monte Carlo Trials
-                </TextFieldLabel>
-                <TextField
-                  id="monteCarloTrials"
-                  class="mt-2"
-                  type="number"
-                  value={monteCarloTrials()}
-                  onInput={(e) => setMonteCarloTrials(Number((e.target as HTMLInputElement).value))}
                 />
               </TextFieldRoot>
 

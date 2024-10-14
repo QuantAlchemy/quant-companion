@@ -1,5 +1,8 @@
 import { createSignal } from 'solid-js'
+// import { Info } from 'lucide-solid'
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card'
+// import { Checkbox, CheckboxControl, CheckboxLabel } from '@/components/ui/checkbox'
+// import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { NumberInput } from '@/components/ui/NumberInput'
 import MonteCarloChart from '@/components/charts/MonteCarlo'
 
@@ -13,6 +16,7 @@ interface CardProps {
 export const MonteCarloCard: Component<CardProps> = (props) => {
   const [trials, setTrials] = createSignal(100)
   const [futurePoints, setFuturePoints] = createSignal(100)
+  // const [staticPoints, setStaticPoints] = createSignal(false)
 
   return (
     <Card>
@@ -33,6 +37,26 @@ export const MonteCarloCard: Component<CardProps> = (props) => {
             value={futurePoints()}
             onInput={(e) => setFuturePoints(Number((e.target as HTMLInputElement).value))}
           />
+
+          {/* <Checkbox
+            checked={staticPoints()}
+            onChange={(checked: boolean) => setStaticPoints(checked)}
+          >
+            <CheckboxControl />
+            <CheckboxLabel>Static Points</CheckboxLabel>
+          </Checkbox> */}
+
+          {/* <Tooltip>
+            <TooltipTrigger class="self-start">
+              <Info />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>
+                The x-axis will apply future dates based on the average dates in the trade data
+                provided.
+              </p>
+            </TooltipContent>
+          </Tooltip> */}
         </div>
       </CardHeader>
       <CardContent>
@@ -40,6 +64,7 @@ export const MonteCarloCard: Component<CardProps> = (props) => {
           data={props.data}
           trials={trials()}
           futurePoints={futurePoints()}
+          // staticPoints={staticPoints()}
         />
       </CardContent>
     </Card>
