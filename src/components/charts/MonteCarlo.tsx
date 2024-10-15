@@ -1,4 +1,4 @@
-import { createMemo, mergeProps } from 'solid-js'
+import { createEffect, createMemo, mergeProps } from 'solid-js'
 import Plot from 'solid-plotly.js'
 import { createLayout } from '@/libs/plotly'
 import { averageTimeDelta } from '@/libs/stats'
@@ -20,7 +20,7 @@ import type { MonteCarloData } from '@/libs/monteCarlo'
 */
 
 interface ChartProps {
-  data: Pick<ProcessedData, 'dates' | 'profits' | 'startingEquity'> | null
+  data: Pick<ProcessedData, 'dates' | 'netProfit' | 'startingEquity'> | null
   futurePoints?: number
   trials?: number
   staticPoints?: boolean
@@ -63,9 +63,7 @@ export const MonteCarlo: Component<ChartProps> = (props) => {
     {
       trials: 100,
       futurePoints: 100,
-      // TODO: figure out why setting this to true is causing other charts to break
-      // it probably has to do with default props being merged/overwritten
-      staticPoints: false,
+      staticPoints: true,
     },
     props
   )
@@ -74,7 +72,7 @@ export const MonteCarlo: Component<ChartProps> = (props) => {
 
   const plotData = createMemo<Partial<Plotly.PlotData>[]>(() => {
     let monteCarloData = simulations(
-      props.data?.profits ?? [],
+      props.data?.netProfit ?? [],
       props.trials,
       props.futurePoints,
       props.data?.startingEquity

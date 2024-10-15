@@ -9,7 +9,6 @@ export interface ProcessedData {
   equity: number[]
   netProfit: number[]
   cumNetProfit: number[]
-  profits: number[]
   startingEquity: number
 }
 
@@ -76,7 +75,6 @@ export const processData = (rawData: Trade[], startingEquity: number = 100000): 
     equity,
     netProfit,
     cumNetProfit,
-    profits: rawData.map((trade) => trade.profit),
     startingEquity,
   }
 }

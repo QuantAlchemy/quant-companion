@@ -30,11 +30,12 @@ export const darkTheme: Partial<Layout> = {
 }
 
 // This is just a wrapper around layout to simplify applying the dark theme to all layouts
-export const createLayout = (title?: string): Partial<Plotly.Layout> => ({
-  ...darkTheme,
-  title:
-    typeof darkTheme.title === 'object' ? { ...darkTheme.title, text: title } : { text: title },
-})
+export const createLayout = (title?: string): Partial<Plotly.Layout> => {
+  const layout = structuredClone(darkTheme) // Deep clone darkTheme to avoid plotly.js errors because of shared object mutation
+  layout.title =
+    typeof layout.title === 'object' ? { ...layout.title, text: title } : { text: title }
+  return layout
+}
 
 export const getChartColors = (count: number = 12): string[] => {
   const baseColors = [
