@@ -28,6 +28,27 @@ export interface ProbabilityConeData {
   lowerCone: number[]
 }
 
+export const mean = (arr: number[]): number => {
+  return arr.reduce((acc, val) => acc + val, 0) / arr.length
+}
+
+export const median = (arr: number[]): number => {
+  const mid = Math.floor(arr.length / 2)
+  const sortedArr = [...arr].sort((a, b) => a - b)
+
+  if (arr.length % 2 === 0) {
+    return (sortedArr[mid - 1] + sortedArr[mid]) / 2
+  } else {
+    return sortedArr[mid]
+  }
+}
+
+export const standardDeviation = (arr: number[]): number => {
+  const avg = mean(arr)
+  const variance = mean(arr.map((val) => Math.pow(val - avg, 2)))
+  return Math.sqrt(variance)
+}
+
 // Function to generate random integers within a range
 export const getRandomInt = (min: number, max: number): number => {
   min = Math.ceil(min)
@@ -65,6 +86,14 @@ export const simulateTradingViewData = (): Trade[] => {
 
   return trades
 }
+
+// Function to dedupe trading view data based on a key which is 'Trade #' by default
+// Trading View exports the data with duplicate trade numbers, so we need to dedupe them
+// export const dedupeTradingViewData = (arr: any[], key = 'Trade #') => {
+//   const map = new Map()
+//   arr.forEach((obj) => map.set(obj[key], obj))
+//   return Array.from(map.values())
+// }
 
 // Process raw data into format needed for charts
 export const processData = (rawData: Trade[], startingEquity: number = 100000): ProcessedData => {
@@ -145,11 +174,8 @@ export const generateProbabilityCones = (
     .slice(0, historicalLength)
     .map((eq, i, arr) => (i > 0 ? (eq - arr[i - 1]) / arr[i - 1] : 0))
 
-  const mean = historicalReturns.reduce((sum, ret) => sum + ret, 0) / historicalReturns.length
-  const stdDev = Math.sqrt(
-    historicalReturns.reduce((sum, ret) => sum + Math.pow(ret - mean, 2), 0) /
-      historicalReturns.length
-  )
+  const historicalReturnsMean = mean(historicalReturns)
+  const stdDev = standardDeviation(historicalReturns)
 
   // Calculate the average time delta from the historical dates so that the future dates can be generated with similar intervals
   const avgTimeDelta = averageTimeDelta(data.dates)
@@ -179,11 +205,13 @@ export const generateProbabilityCones = (
   // Calculate upper and lower cones based on the standard deviation multiplier
   const lastEquity = data.equity[historicalLength - 1]
   const upperCone = futureDates.map(
-    (_, i) => lastEquity * Math.exp((mean + stdDevMultiplier * stdDev) * Math.sqrt(i + 1))
+    (_, i) =>
+      lastEquity * Math.exp((historicalReturnsMean + stdDevMultiplier * stdDev) * Math.sqrt(i + 1))
   )
 
   const lowerCone = futureDates.map(
-    (_, i) => lastEquity * Math.exp((mean - stdDevMultiplier * stdDev) * Math.sqrt(i + 1))
+    (_, i) =>
+      lastEquity * Math.exp((historicalReturnsMean - stdDevMultiplier * stdDev) * Math.sqrt(i + 1))
   )
 
   return { futureDates, upperCone, lowerCone }
@@ -333,9 +361,7 @@ export const generateLinearProbabilityCones = (
 // // Function to calculate Sharpe ratio
 // export const calculateSharpeRatio = (returns: number[], riskFreeRate: number = 0.02): number => {
 //   const meanReturn = returns.reduce((sum, ret) => sum + ret, 0) / returns.length
-//   const stdDev = Math.sqrt(
-//     returns.reduce((sum, ret) => sum + Math.pow(ret - meanReturn, 2), 0) / returns.length
-//   )
+//   const stdDev = standardDeviation(returns)
 //   return ((meanReturn - riskFreeRate) / stdDev) * Math.sqrt(252) // Annualized Sharpe ratio
 // }
 
@@ -345,8 +371,6 @@ export const generateLinearProbabilityCones = (
 //   riskFreeRate: number = 0.02
 // ): number => {
 //   const meanReturn = returns.reduce((sum, ret) => sum + ret, 0) / returns.length
-//   const stdDev = Math.sqrt(
-//     returns.reduce((sum, ret) => sum + Math.pow(ret - meanReturn, 2), 0) / returns.length
-//   )
+//   const stdDev = standardDeviation(returns)
 //   return (meanReturn - riskFreeRate) / stdDev
 // }

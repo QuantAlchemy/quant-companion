@@ -126,7 +126,8 @@ const Dashboard = () => {
 
           <Card>
             <CardHeader>
-              {/* TODO: plot histogram of sharpe ratio (or other metric) from random price
+              {/*
+                TODO: plot histogram of sharpe ratio (or other metric) from random price
                 plot sharpe ratio (or other metric) from actual price
                 the value from the actual price should be an outlier
               */}
@@ -145,6 +146,17 @@ const Dashboard = () => {
           </Card>
 
           <ProbabilityConesCard data={data()} />
+
+          {/*
+            TODO: cumulativeProfits table (in code pen)
+          */}
+
+          {/*
+            TODO: The z-score is the number of standard deviations a value is away from it's mean. It’s a great way to summarize where a value lies on a distribution.
+            For example, if you’re 189 cm tall, the z-score of your height might be 2.5. That means you are 2.5 standard deviations away from the mean height of everyone in the distribution.
+            The math is simple:
+            (value - average value) / standard deviation of values
+          */}
         </div>
 
         <p class="mt-4 text-sm text-gray-500">
