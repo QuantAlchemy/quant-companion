@@ -14,7 +14,7 @@ const SplashScreen = (props: SplashScreenProps) => {
   createEffect(() => {
     const timer = setTimeout(() => {
       setIsVisible(false)
-    }, props.duration || 2000) // Default duration is 2 seconds
+    }, props.duration || 3000) // Default duration is 3 seconds
 
     onCleanup(() => clearTimeout(timer))
   })

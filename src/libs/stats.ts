@@ -36,6 +36,18 @@ export const getRandomInt = (min: number, max: number): number => {
   return Math.floor(Math.random() * (max - min) + min)
 }
 
+// Function to get the average of multiple arrays
+export const averageOfArrays = (arrays: number[][]): number[] => {
+  const length = arrays[0].length
+  if (!arrays.every((arr) => arr.length === length)) {
+    throw new Error('All arrays must have the same length.')
+  }
+  return Array.from({ length }, (_, i) => {
+    const sum = arrays.reduce((acc, arr) => acc + arr[i], 0)
+    return sum / arrays.length
+  })
+}
+
 // Simulate TradingView data
 export const simulateTradingViewData = (): Trade[] => {
   const trades: Trade[] = []

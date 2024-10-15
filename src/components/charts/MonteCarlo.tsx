@@ -1,7 +1,7 @@
-import { createEffect, createMemo, mergeProps } from 'solid-js'
+import { createMemo, mergeProps } from 'solid-js'
 import Plot from 'solid-plotly.js'
 import { createLayout } from '@/libs/plotly'
-import { averageTimeDelta } from '@/libs/stats'
+import { averageTimeDelta, averageOfArrays } from '@/libs/stats'
 import { simulations } from '@/libs/monteCarlo'
 
 import type { Component } from 'solid-js'
@@ -81,11 +81,18 @@ export const MonteCarlo: Component<ChartProps> = (props) => {
     const data = monteCarloData.map((simulation, i) =>
       formatMonteCarloData(
         simulation,
-        `simulation ${i + 1}`,
+        `run ${i + 1}`,
         props.staticPoints ? undefined : props.data?.dates
       )
     )
-    return data
+    const averageMonteCarlo = averageOfArrays(monteCarloData)
+    const avgPlotData = formatMonteCarloData(averageMonteCarlo, 'average', undefined, {
+      line: {
+        color: 'rgba(0, 0, 0, 0.6)',
+        width: 3,
+      },
+    })
+    return [...data, avgPlotData]
   })
 
   return (
