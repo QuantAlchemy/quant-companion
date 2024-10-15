@@ -125,6 +125,7 @@ export const ProbabilityCones: Component<ChartProps> = (props) => {
         data={plotData()}
         layout={layout()}
         useResizeHandler={true}
+        config={{ displayModeBar: false }}
       />
     </>
   )

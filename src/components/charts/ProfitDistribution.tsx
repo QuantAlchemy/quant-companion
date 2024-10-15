@@ -30,6 +30,7 @@ export const ProfitDistributionBox: Component<ChartProps> = (props) => {
       data={plotData()}
       layout={layout()}
       useResizeHandler={true}
+      config={{ displayModeBar: false }}
     />
   )
 }
@@ -54,6 +55,7 @@ export const ProfitDistributionHist: Component<ChartProps> = (props) => {
       data={plotData()}
       layout={layout()}
       useResizeHandler={true}
+      config={{ displayModeBar: false }}
     />
   )
 }
