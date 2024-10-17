@@ -139,6 +139,19 @@ const Dashboard = () => {
             TODO: plot histogram of sharpe ratio (or other metric) from random price
             plot sharpe ratio (or other metric) from actual price
             the value from the actual price should be an outlier
+
+            1. Generate Random Price Series:
+              * Use random walk models or stochastic processes, such as Geometric Brownian Motion (GBM), to simulate price action. This will create a time series of prices that resemble market fluctuations.
+            2. Apply Your Trading Strategy:
+              * Run your trading strategy on this randomized price data.
+              * Record the resulting profit and loss data for each simulation.
+            3. Repeat the Simulation:
+              * Run the simulation multiple times to create a distribution of profits under random conditions. This gives a range of potential outcomes for your strategy when faced with random price movements.
+            4. Compare Distributions:
+              * Compare the distribution of profits from the actual data with the distribution of profits from simulated price action.
+              * If the actual strategy’s performance significantly deviates from the random simulations, this can suggest that the strategy is indeed effective (not purely a product of random chance).
+
+            Thoughts: It might be possible to do this through a setting in the SKX on TradingView. The web extension would need to control enabling this option and running it multiple times and collecting the data for each run.
           */}
           {/* <Card>
             <CardHeader>
