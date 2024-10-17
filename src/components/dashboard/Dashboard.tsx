@@ -11,6 +11,8 @@ import {
 } from '@/components/charts/ProfitDistribution'
 import ProbabilityConesCard from './ProbabilityConesCard'
 import MonteCarloChartCard from './MonteCarloCard'
+import MonteCarloStats from './MonteCarloStats'
+import TradeDataStats from './TradeDataStats'
 import { simulateTradingViewData, processData, ProcessedData } from '@/libs/stats'
 
 const Dashboard = () => {
@@ -35,7 +37,7 @@ const Dashboard = () => {
     <div class="container py-4 px-0">
       <div class="mb-8">
         <h1 class="text-3xl font-bold mb-4">Quant Companion</h1>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card>
             <CardHeader>
               <CardTitle>Properties</CardTitle>
@@ -74,10 +76,19 @@ const Dashboard = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Summary Statistics</CardTitle>
+              <CardTitle>Trade Data Statistics</CardTitle>
             </CardHeader>
             <CardContent>
-              <p>Summary statistics will be displayed here.</p>
+              <TradeDataStats data={data()} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Monte Carlo Statistics</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <MonteCarloStats data={data()} />
             </CardContent>
           </Card>
         </div>
@@ -124,16 +135,16 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          {/*
+            TODO: plot histogram of sharpe ratio (or other metric) from random price
+            plot sharpe ratio (or other metric) from actual price
+            the value from the actual price should be an outlier
+          */}
+          {/* <Card>
             <CardHeader>
-              {/*
-                TODO: plot histogram of sharpe ratio (or other metric) from random price
-                plot sharpe ratio (or other metric) from actual price
-                the value from the actual price should be an outlier
-              */}
-              <CardTitle>TODO: Random Profit Distribution</CardTitle>
+              <CardTitle>Random Profit Distribution</CardTitle>
             </CardHeader>
-            {/* <CardContent>
+            <CardContent>
               <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-0">
                 <ProfitDistributionBoxChart
                   data={processData(simulateTradingViewData(), startingEquity())}
@@ -142,8 +153,8 @@ const Dashboard = () => {
                   data={processData(simulateTradingViewData(), startingEquity())}
                 />
               </div>
-            </CardContent> */}
-          </Card>
+            </CardContent>
+          </Card> */}
 
           <ProbabilityConesCard data={data()} />
 

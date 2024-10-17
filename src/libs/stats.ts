@@ -16,10 +16,18 @@ export interface SummaryStats {
   totalTrades: number
   winningTrades: number
   losingTrades: number
-  winRate: string
-  totalProfit: string
-  averageProfit: string
-  maxDrawdown: string
+  winRate: number
+  totalProfit: number
+  averageProfit: number
+  medianProfit: number
+  firstStdDev: number
+  secondStdDev: number
+  maxProfit: number
+  minProfit: number
+  maxDrawdown: number
+  maxDrawdownPercent: number
+  mar: number
+  sharpeRatio: number
 }
 
 export interface ProbabilityConeData {
@@ -59,6 +67,17 @@ export const getRandomInt = (min: number, max: number): number => {
 
 // Function to get the average of multiple arrays
 export const averageOfArrays = (arrays: number[][]): number[] => {
+  // Check if arrays is empty
+  if (!arrays || arrays.length === 0) {
+    return []
+  }
+
+  // Check if first array exists
+  const firstArray = arrays[0]
+  if (!firstArray) {
+    return []
+  }
+
   const length = arrays[0].length
   if (!arrays.every((arr) => arr.length === length)) {
     throw new Error('All arrays must have the same length.')
@@ -66,6 +85,24 @@ export const averageOfArrays = (arrays: number[][]): number[] => {
   return Array.from({ length }, (_, i) => {
     const sum = arrays.reduce((acc, arr) => acc + arr[i], 0)
     return sum / arrays.length
+  })
+}
+
+// Function to calculate drawdowns
+// Maximum Drawdown (MDD) = (Trough Value – Peak Value) ÷ Peak Value
+// https://youtu.be/tXUrvH1T19o?si=8oDGpo1WeaO06yhU
+export const calculateDrawdowns = (
+  equity: number[]
+): { drawdownValue: number; drawdownPercent: number }[] => {
+  let peak = equity[0]
+  return equity.map((value) => {
+    if (value > peak) {
+      peak = value
+      return { drawdownValue: 0, drawdownPercent: 0 }
+    }
+    const drawdownValue = peak - value
+    const drawdownPercent = drawdownValue / peak
+    return { drawdownValue, drawdownPercent }
   })
 }
 
@@ -304,26 +341,139 @@ export const generateLinearProbabilityCones = (
   return { futureDates, upperCone, lowerCone }
 }
 
-// // Function to calculate summary statistics
-// export const calculateSummaryStats = (data: ProcessedData): SummaryStats => {
-//   const totalTrades = data.netProfit.length
-//   const winningTrades = data.netProfit.filter((profit) => profit > 0).length
-//   const losingTrades = data.netProfit.filter((profit) => profit < 0).length
-//   const winRate = (winningTrades / totalTrades) * 100
-//   const totalProfit = data.netProfit.reduce((sum, profit) => sum + profit, 0)
-//   const averageProfit = totalProfit / totalTrades
-//   const maxDrawdown = Math.min(...data.cumNetProfit) - Math.max(...data.cumNetProfit)
+// Function to calculate trade data statistics
+export const calculateSummaryStats = (data: ProcessedData): SummaryStats => {
+  const totalTrades = data.netProfit.length
+  const winningTrades = data.netProfit.filter((profit) => profit > 0).length
+  const losingTrades = data.netProfit.filter((profit) => profit < 0).length
+  const winRate = winningTrades / totalTrades
+  const totalProfit = data.netProfit.reduce((sum, profit) => sum + profit, 0)
+  const averageProfit = totalProfit / totalTrades
+  const medianProfit = median(data.netProfit)
+  const firstStdDev = standardDeviation(data.netProfit)
+  const secondStdDev = 2 * firstStdDev
+  const maxProfit = Math.max(...data.netProfit)
+  const minProfit = Math.min(...data.netProfit)
+  const drawdowns = calculateDrawdowns(data.equity)
+  const maxDrawdown = Math.max(...drawdowns.map((dd) => dd.drawdownValue))
+  const maxDrawdownPercent = Math.max(...drawdowns.map((dd) => dd.drawdownPercent))
+  const mar = marRatio(data)
 
-//   return {
-//     totalTrades,
-//     winningTrades,
-//     losingTrades,
-//     winRate: winRate.toFixed(2),
-//     totalProfit: totalProfit.toFixed(2),
-//     averageProfit: averageProfit.toFixed(2),
-//     maxDrawdown: maxDrawdown.toFixed(2),
-//   }
-// }
+  // we need the same number of dates as equity values and since we add an extra equity value for starting equity
+  // we also need to add a date for that extra equity value
+  // As an estimate, we use the average time delta between dates to estimate the date for the extra equity value
+  const avgTimeDelta = averageTimeDelta(data.dates)
+  const firstHistoricalDate = data.dates[0]
+  const previousDate = new Date(firstHistoricalDate.getTime() - avgTimeDelta)
+  const sharpeRatio = calculateSharpeRatio(data.equity, [previousDate, ...data.dates])
+
+  // INFO: Trading Edge Ratio: (MFE/MAE > 1)
+  // To accurately calculate MFE and MAE, you need intra-trade data capturing the peak unrealized profits during each trade.
+  // The ratio of maximum favorable movement (MFE) to maximum adverse movement (MAE).
+  // A value greater than 1 suggests that profitable movements outweigh losses, indicating a potential trading edge.
+  // const edge = maxProfit / Math.abs(minProfit);
+
+  return {
+    totalTrades,
+    winningTrades,
+    losingTrades,
+    winRate,
+    totalProfit,
+    averageProfit,
+    medianProfit,
+    firstStdDev,
+    secondStdDev,
+    maxProfit,
+    minProfit,
+    maxDrawdown,
+    maxDrawdownPercent,
+    mar,
+    sharpeRatio,
+  }
+}
+
+// The MAR Ratio (Managed Account Ratio) is calculated as the annualized return divided by the maximum drawdown (expressed as a percentage).
+// Annualization Matters: The MAR Ratio is designed to facilitate comparisons across different time periods and investment strategies by
+// annualizing returns. This standardization is crucial because it accounts for the effect of time on returns.
+// Return Period: If you calculate the return over a period that is not one year and do not annualize it, then the resulting ratio will
+// not accurately represent the MAR Ratio.
+const marRatio = (data: ProcessedData): number => {
+  const startingEquity = data.equity[0]
+  const finalEquity = data.equity[data.equity.length - 1]
+  const totalReturn = finalEquity - startingEquity
+  const startDate = data.dates[0]
+  const endDate = data.dates[data.dates.length - 1]
+  const periodInYears = (endDate.getTime() - startDate.getTime()) / (365 * 24 * 60 * 60 * 1000)
+  const totalReturnPercent = (totalReturn / startingEquity) * 100
+  const annualizedReturnPercent = ((1 + totalReturnPercent / 100) ** (1 / periodInYears) - 1) * 100
+  const drawdowns = calculateDrawdowns(data.equity)
+  const maxDrawdownPercent = Math.max(...drawdowns.map((dd) => dd.drawdownPercent))
+  return annualizedReturnPercent / (maxDrawdownPercent * 100)
+}
+
+// Function to calculate Sharpe ratio
+// 1. Calculate Periodic Returns Adjusted for Time Intervals
+//   * Calculating Logarithmic Returns (Continuously Compounded Returns): This is preferred for irregular time intervals.
+//   * Annualizing Returns: Adjusting the returns to a common annual scale based on the time difference between trades.
+// 2. Adjust for the Risk-Free Rate
+//   * Since the risk-free rate is typically an annual rate, you can subtract it directly from the annualized returns to get the excess returns.
+// 3. Calculate the Mean and Standard Deviation of Excess Returns
+//   * Mean Excess Return: Average of the excess returns.
+//   * Standard Deviation of Excess Returns: Measures the variability of the excess returns.
+// 4. Calculate the Sharpe Ratio
+export const calculateSharpeRatio = (
+  equityValues: number[],
+  dates: Date[],
+  riskFreeRate: number = 0.02
+) => {
+  if (equityValues.length !== dates.length) {
+    throw new Error('Equity values and dates arrays must have the same length.')
+  }
+
+  const excessReturns = []
+
+  for (let i = 1; i < equityValues.length; i++) {
+    const equityPrev = equityValues[i - 1]
+    const equityCurr = equityValues[i]
+    const datePrev = new Date(dates[i - 1])
+    const dateCurr = new Date(dates[i])
+
+    // Time difference in years
+    const timeDiff = (dateCurr.getTime() - datePrev.getTime()) / (365.25 * 24 * 60 * 60 * 1000)
+
+    // Handle cases where time difference is zero or negative
+    if (timeDiff <= 0) {
+      continue // Skip this interval
+    }
+
+    // Logarithmic return
+    const logReturn = Math.log(equityCurr / equityPrev)
+
+    // Annualized return
+    const annualizedReturn = logReturn * (1 / timeDiff)
+
+    // Excess return
+    const excessReturn = annualizedReturn - riskFreeRate
+
+    excessReturns.push(excessReturn)
+  }
+
+  if (excessReturns.length === 0) {
+    throw new Error('No valid returns to calculate Sharpe Ratio.')
+  }
+
+  // Calculate mean and standard deviation of excess returns
+  const meanExcessReturn = excessReturns.reduce((sum, r) => sum + r, 0) / excessReturns.length
+
+  const stdDevExcessReturn = Math.sqrt(
+    excessReturns.reduce((sum, r) => sum + Math.pow(r - meanExcessReturn, 2), 0) /
+      (excessReturns.length - 1)
+  )
+
+  const sharpeRatio = meanExcessReturn / stdDevExcessReturn
+
+  return sharpeRatio
+}
 
 // // Function to filter data by date range
 // export const filterDataByDateRange = (
@@ -344,33 +494,4 @@ export const generateLinearProbabilityCones = (
 //     netProfit: filteredIndices.map((i) => data.netProfit[i]),
 //     cumNetProfit: filteredIndices.map((i) => data.cumNetProfit[i]),
 //   }
-// }
-
-// // Function to calculate drawdowns
-// export const calculateDrawdowns = (equity: number[]): number[] => {
-//   let peak = equity[0]
-//   return equity.map((value) => {
-//     if (value > peak) {
-//       peak = value
-//       return 0
-//     }
-//     return (peak - value) / peak
-//   })
-// }
-
-// // Function to calculate Sharpe ratio
-// export const calculateSharpeRatio = (returns: number[], riskFreeRate: number = 0.02): number => {
-//   const meanReturn = returns.reduce((sum, ret) => sum + ret, 0) / returns.length
-//   const stdDev = standardDeviation(returns)
-//   return ((meanReturn - riskFreeRate) / stdDev) * Math.sqrt(252) // Annualized Sharpe ratio
-// }
-
-// // Function to calculate risk-adjusted return (RAR)
-// export const calculateRiskAdjustedReturn = (
-//   returns: number[],
-//   riskFreeRate: number = 0.02
-// ): number => {
-//   const meanReturn = returns.reduce((sum, ret) => sum + ret, 0) / returns.length
-//   const stdDev = standardDeviation(returns)
-//   return (meanReturn - riskFreeRate) / stdDev
 // }

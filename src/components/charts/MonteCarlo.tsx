@@ -2,31 +2,19 @@ import { createMemo, mergeProps } from 'solid-js'
 import Plot from 'solid-plotly.js'
 import { createLayout } from '@/libs/plotly'
 import { averageTimeDelta, averageOfArrays } from '@/libs/stats'
-import { simulations } from '@/libs/monteCarlo'
+import { monteCarloData } from '@/libs/monteCarlo'
 
 import type { Component } from 'solid-js'
 import type { PlotType, PlotData } from 'plotly.js'
 import type { ProcessedData } from '@/libs/stats'
 import type { MonteCarloData } from '@/libs/monteCarlo'
 
-/*
-  INFO:
-  https://kjtradingsystems.com/monte-carlo-probability-cones.html
-  This uses a process called “sampling with replacement”.
-  Each trade in the backtest can be chosen numerous times, based on the random selection process.
-  Some trades may not be chosen at all. This leads to a wide range of ending equity values.
-  If “sampling without replacement” was used, then eventually all equity curves would converge to a common end point,
-  since each backtest trade was used once and only once).
-*/
-
 interface ChartProps {
   data: Pick<ProcessedData, 'dates' | 'netProfit' | 'startingEquity'> | null
-  futurePoints?: number
-  trials?: number
   staticPoints?: boolean
 }
 
-const sortArraysByLastNumberDescending = (arrays: MonteCarloData['monteCarloY']) => {
+const sortArraysByLastNumberDescending = (arrays: MonteCarloData) => {
   return arrays.sort((a, b) => {
     const lastA = a.length > 0 ? a[a.length - 1] : Infinity
     const lastB = b.length > 0 ? b[b.length - 1] : Infinity
@@ -61,8 +49,6 @@ export const MonteCarlo: Component<ChartProps> = (props) => {
   // eslint-disable-next-line solid/reactivity
   props = mergeProps(
     {
-      trials: 100,
-      futurePoints: 100,
       staticPoints: true,
     },
     props
@@ -71,21 +57,15 @@ export const MonteCarlo: Component<ChartProps> = (props) => {
   const layout = createMemo(() => createLayout())
 
   const plotData = createMemo<Partial<Plotly.PlotData>[]>(() => {
-    let monteCarloData = simulations(
-      props.data?.netProfit ?? [],
-      props.trials,
-      props.futurePoints,
-      props.data?.startingEquity
-    )
-    monteCarloData = sortArraysByLastNumberDescending(monteCarloData)
-    const data = monteCarloData.map((simulation, i) =>
+    const sortedMonteCarloData = sortArraysByLastNumberDescending(monteCarloData())
+    const data = sortedMonteCarloData.map((simulation: number[], i: number) =>
       formatMonteCarloData(
         simulation,
         `run ${i + 1}`,
         props.staticPoints ? undefined : props.data?.dates
       )
     )
-    const averageMonteCarlo = averageOfArrays(monteCarloData)
+    const averageMonteCarlo = averageOfArrays(sortedMonteCarloData)
     const avgPlotData = formatMonteCarloData(averageMonteCarlo, 'average', undefined, {
       line: {
         color: 'rgba(0, 0, 0, 0.6)',

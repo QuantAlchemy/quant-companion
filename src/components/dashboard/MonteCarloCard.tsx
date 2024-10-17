@@ -1,10 +1,11 @@
-import { createSignal } from 'solid-js'
+import { createEffect, createSignal } from 'solid-js'
 // import { Info } from 'lucide-solid'
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card'
 // import { Checkbox, CheckboxControl, CheckboxLabel } from '@/components/ui/checkbox'
 // import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { NumberInput } from '@/components/ui/NumberInput'
 import MonteCarloChart from '@/components/charts/MonteCarlo'
+import { setMonteCarloData, simulations } from '@/libs/monteCarlo'
 
 import type { Component } from 'solid-js'
 import type { ProcessedData } from '@/libs/stats'
@@ -17,6 +18,20 @@ export const MonteCarloCard: Component<CardProps> = (props) => {
   const [trials, setTrials] = createSignal(100)
   const [futurePoints, setFuturePoints] = createSignal(100)
   // const [staticPoints, setStaticPoints] = createSignal(false)
+
+  const handleMonteCarloData = () => {
+    const simulationResult = simulations(
+      props.data?.netProfit ?? [],
+      trials(),
+      futurePoints(),
+      props.data?.startingEquity
+    )
+    setMonteCarloData(() => simulationResult)
+  }
+
+  createEffect(() => {
+    handleMonteCarloData()
+  })
 
   return (
     <Card>
@@ -62,8 +77,6 @@ export const MonteCarloCard: Component<CardProps> = (props) => {
       <CardContent>
         <MonteCarloChart
           data={props.data}
-          trials={trials()}
-          futurePoints={futurePoints()}
           // staticPoints={staticPoints()}
         />
       </CardContent>

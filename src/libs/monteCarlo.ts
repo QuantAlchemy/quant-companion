@@ -1,12 +1,31 @@
-import { getRandomInt } from './stats'
+import { createSignal } from 'solid-js'
+import { calculateDrawdowns, getRandomInt } from './stats'
 
-import type { ProcessedData } from './stats'
+export type MonteCarloData = number[][]
 
-export interface MonteCarloData {
-  monteCarloX: number[]
-  monteCarloY: number[][]
+export interface MonteCarloSummaryStats {
+  positiveRuns: number
+  negativeRuns: number
+  maxEquity: number
+  minEquity: number
+  maxEquityPercent: number
+  minEquityPercent: number
+  successRate: number
+  maxDrawdown: number
+  maxDrawdownPercent: number
 }
 
+export const [monteCarloData, setMonteCarloData] = createSignal<MonteCarloData>([])
+
+/*
+  INFO:
+  https://kjtradingsystems.com/monte-carlo-probability-cones.html
+  This uses a process called “sampling with replacement”.
+  Each trade in the backtest can be chosen numerous times, based on the random selection process.
+  Some trades may not be chosen at all. This leads to a wide range of ending equity values.
+  If “sampling without replacement” was used, then eventually all equity curves would converge to a common end point,
+  since each backtest trade was used once and only once).
+*/
 export const simulation = (
   profitData: number[],
   points: number,
@@ -28,30 +47,47 @@ export const simulations = (
   trials: number = 100,
   points: number = 100,
   startingEquity: number = 10000
-): number[][] => {
+): MonteCarloData => {
   return [...Array(trials)].map(() => simulation(profitData, points, startingEquity))
 }
 
-// Function to generate Monte Carlo simulation data
-export const generateMonteCarloData = (
-  data: ProcessedData,
-  trials: number,
-  days: number
-): { monteCarloX: number[]; monteCarloY: number[][] } => {
-  const returns = data.equity.map((eq, i, arr) => (i > 0 ? (eq - arr[i - 1]) / arr[i - 1] : 0))
-  const mean = returns.reduce((sum, ret) => sum + ret, 0) / returns.length
-  const stdDev = Math.sqrt(
-    returns.reduce((sum, ret) => sum + Math.pow(ret - mean, 2), 0) / returns.length
+// Function to calculate monte carlo data statistics
+export const calculateMonteCarloStats = (data: MonteCarloData): MonteCarloSummaryStats => {
+  const startingEquity = data[0][0]
+  const results = monteCarloData().reduce(
+    (acc, simulation) => {
+      const finalEquity = simulation[simulation.length - 1]
+
+      if (finalEquity > startingEquity) {
+        acc.positive++
+      } else {
+        acc.negative++
+      }
+      if (finalEquity < acc.min) {
+        acc.min = finalEquity
+      }
+      if (finalEquity > acc.max) {
+        acc.max = finalEquity
+      }
+      return acc
+    },
+    { positive: 0, negative: 0, min: startingEquity, max: startingEquity }
   )
 
-  const monteCarloX = [...Array(days)].map((_, i) => i)
-  const monteCarloY = [...Array(trials)].map(() => {
-    let equity = data.equity[data.equity.length - 1]
-    return monteCarloX.map(() => {
-      equity *= Math.exp(mean - 0.5 * stdDev * stdDev + stdDev * Math.random())
-      return equity
-    })
-  })
+  const successRate = results.positive / (results.positive + results.negative)
+  const drawdowns = monteCarloData().map((simulation) => calculateDrawdowns(simulation))
+  const maxDrawdown = Math.max(...drawdowns.flat().map((dd) => dd.drawdownValue))
+  const maxDrawdownPercent = Math.max(...drawdowns.flat().map((dd) => dd.drawdownPercent))
 
-  return { monteCarloX, monteCarloY }
+  return {
+    positiveRuns: results.positive,
+    negativeRuns: results.negative,
+    successRate,
+    maxEquity: results.max,
+    minEquity: results.min,
+    maxEquityPercent: results.max / startingEquity - 1,
+    minEquityPercent: results.min / startingEquity - 1,
+    maxDrawdown,
+    maxDrawdownPercent,
+  }
 }
