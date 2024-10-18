@@ -13,6 +13,7 @@ import { camelToPascalWithSpace, currencyFormatter, percentageFormatter } from '
 import { monteCarloData } from '@/libs/monteCarlo'
 
 import type { Component } from 'solid-js'
+import type { JSX } from 'solid-js/jsx-runtime'
 import type { TradeMetrics } from '@/libs/stats'
 import type { MonteCarloSummaryStats } from '@/libs/monteCarlo'
 
@@ -50,7 +51,11 @@ const formatStatLabel = (key: string): string => {
       return camelToPascalWithSpace(key)
   }
 }
-const formatStatValue = (key: string, value: number, stats: MonteCarloSummaryStats): string => {
+const formatStatValue = (
+  key: string,
+  value: number,
+  stats: MonteCarloSummaryStats
+): string | JSX.Element => {
   if (typeof value !== 'number') return String(value)
 
   switch (key) {
@@ -65,17 +70,32 @@ const formatStatValue = (key: string, value: number, stats: MonteCarloSummarySta
     case 'maxEquityCombined': {
       const equity = currencyFormatter.format(stats.maxEquity ?? 0)
       const equityPct = percentageFormatter.format(stats.maxEquityPercent ?? 0)
-      return `${equity} / ${equityPct}`
+      return (
+        <>
+          <div>{equity}</div>
+          <div class="text-xs">{equityPct}</div>
+        </>
+      )
     }
     case 'minEquityCombined': {
       const equity = currencyFormatter.format(stats.minEquity ?? 0)
       const equityPct = percentageFormatter.format(stats.minEquityPercent ?? 0)
-      return `${equity} / ${equityPct}`
+      return (
+        <>
+          <div>{equity}</div>
+          <div class="text-xs">{equityPct}</div>
+        </>
+      )
     }
     case 'maxDrawdownCombined': {
       const drawdown = currencyFormatter.format(stats.maxDrawdown ?? 0)
       const drawdownPct = percentageFormatter.format(stats.maxDrawdownPercent ?? 0)
-      return `${drawdown} / ${drawdownPct}`
+      return (
+        <>
+          <div>{drawdown}</div>
+          <div class="text-xs">{drawdownPct}</div>
+        </>
+      )
     }
     case 'maxDrawdown':
     default:

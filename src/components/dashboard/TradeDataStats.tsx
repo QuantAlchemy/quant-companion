@@ -12,13 +12,16 @@ import { calculateSummaryStats } from '@/libs/stats'
 import { camelToPascalWithSpace, currencyFormatter, percentageFormatter } from '@/libs/format'
 
 import type { Component } from 'solid-js'
+import type { JSX } from 'solid-js/jsx-runtime'
 import type { TradeMetrics, SummaryStats } from '@/libs/stats'
 
 interface Props {
   data: TradeMetrics | null
 }
 
-const formatStatLabel = (key: string): string => {
+const Divider: Component = () => <span class="text-muted-foreground">/</span>
+
+const formatStatLabel = (key: string): string | JSX.Element => {
   switch (key) {
     case 'totalTrades':
       return 'Total Trades'
@@ -27,7 +30,11 @@ const formatStatLabel = (key: string): string => {
     case 'losingTrades':
       return 'Losing Trades'
     case 'winsLossesCombined':
-      return 'Wins / Losses'
+      return (
+        <>
+          Wins <Divider /> Losses
+        </>
+      )
     case 'winRate':
       return 'Win Rate'
     case 'totalProfit':
@@ -41,13 +48,21 @@ const formatStatLabel = (key: string): string => {
     case 'secondStdDev':
       return '2σ Profit'
     case 'σCombined':
-      return '1σ / 2σ Profit'
+      return (
+        <>
+          1σ <Divider /> 2σ Profit
+        </>
+      )
     case 'maxProfit':
       return 'Max Profit'
     case 'minProfit':
       return 'Min Profit'
     case 'maxMinProfitCombined':
-      return 'Max / Min Profit'
+      return (
+        <>
+          Max <Divider /> Min Profit
+        </>
+      )
     case 'mar':
       return 'MAR'
     case 'sharpeRatio':
@@ -63,7 +78,7 @@ const formatStatLabel = (key: string): string => {
   }
 }
 
-const formatStatValue = (key: string, value: number, stats: SummaryStats): string => {
+const formatStatValue = (key: string, value: number, stats: SummaryStats): string | JSX.Element => {
   if (typeof value !== 'number') return String(value)
 
   switch (key) {
@@ -74,7 +89,11 @@ const formatStatValue = (key: string, value: number, stats: SummaryStats): strin
     case 'winsLossesCombined': {
       const wins = stats.winningTrades ?? 0
       const losses = stats.losingTrades ?? 0
-      return `${wins} / ${losses}`
+      return (
+        <>
+          {wins} <Divider /> {losses}
+        </>
+      )
     }
     case 'mar':
     case 'sharpeRatio':
@@ -85,17 +104,30 @@ const formatStatValue = (key: string, value: number, stats: SummaryStats): strin
     case 'maxDrawdownCombined': {
       const drawdown = currencyFormatter.format(stats.maxDrawdown ?? 0)
       const drawdownPct = percentageFormatter.format(stats.maxDrawdownPercent ?? 0)
-      return `${drawdown} / ${drawdownPct}`
+      return (
+        <>
+          <div>{drawdown}</div>
+          <div class="text-xs">{drawdownPct}</div>
+        </>
+      )
     }
     case 'σCombined': {
       const firstStdDev = currencyFormatter.format(stats.firstStdDev ?? 0)
       const secondStdDev = currencyFormatter.format(stats.secondStdDev ?? 0)
-      return `${firstStdDev} / ${secondStdDev}`
+      return (
+        <>
+          {firstStdDev} <Divider /> {secondStdDev}
+        </>
+      )
     }
     case 'maxMinProfitCombined': {
       const maxProfit = currencyFormatter.format(stats.maxProfit ?? 0)
       const minProfit = currencyFormatter.format(stats.minProfit ?? 0)
-      return `${maxProfit} / ${minProfit}`
+      return (
+        <>
+          {maxProfit} <Divider /> {minProfit}
+        </>
+      )
     }
     case 'totalProfit':
     case 'averageProfit':
