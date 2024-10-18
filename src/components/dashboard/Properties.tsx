@@ -1,4 +1,5 @@
 import { createEffect, createSignal } from 'solid-js'
+import { Button } from '@/components/ui/button'
 import {
   TextField,
   TextFieldErrorMessage,
@@ -10,7 +11,8 @@ import { FileUpload, uploadError } from '@/components/ui/FileUpload'
 import {
   originalTradeData,
   processTradeMetrics,
-  // simulateTradeData,
+  simulateTradeData,
+  setOriginalTradeData,
   setStartingEquity,
   setTradeData,
   setTradeMetrics,
@@ -25,7 +27,6 @@ export const Properties: Component = () => {
   const [bottomTradesCnt, setBottomTradesCnt] = createSignal(0)
 
   createEffect(() => {
-    // const data = simulateTradeData()
     const data = tradeData()
 
     if (data) {
@@ -99,6 +100,20 @@ export const Properties: Component = () => {
       <TextFieldRoot validationState={uploadError() ? 'invalid' : 'valid'}>
         <TextFieldErrorMessage>{uploadError()}</TextFieldErrorMessage>
       </TextFieldRoot>
+      {import.meta.env.VITE_USER_NODE_ENV === 'development' ? (
+        <Button
+          class="mt-4"
+          variant="default"
+          onClick={() => {
+            const data = simulateTradeData()
+            const processedData = processTradeMetrics(data, startingEquity())
+            setTradeMetrics(() => processedData)
+            setOriginalTradeData(() => data)
+          }}
+        >
+          Simulate Data
+        </Button>
+      ) : null}
     </>
   )
 }
