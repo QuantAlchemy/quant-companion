@@ -1,13 +1,8 @@
 import { createEffect, createSignal } from 'solid-js'
 import { Button } from '@/components/ui/button'
-import {
-  TextField,
-  TextFieldErrorMessage,
-  TextFieldLabel,
-  TextFieldRoot,
-} from '@/components/ui/textfield'
+import { TextField, TextFieldLabel, TextFieldRoot } from '@/components/ui/textfield'
 import { NumberInput } from '@/components/ui/NumberInput'
-import { FileUpload, uploadError } from '@/components/ui/FileUpload'
+import { FileUpload } from '@/components/ui/FileUpload'
 import {
   originalTradeData,
   processTradeMetrics,
@@ -96,10 +91,17 @@ export const Properties: Component = () => {
           removeBottomTrades()
         }}
       />
-      <FileUpload />
-      <TextFieldRoot validationState={uploadError() ? 'invalid' : 'valid'}>
-        <TextFieldErrorMessage>{uploadError()}</TextFieldErrorMessage>
-      </TextFieldRoot>
+      <div class="flex flex-wrap gap-2 justify-between">
+        <FileUpload />
+        <Button
+          class="mt-4"
+          variant="default"
+          onClick={() => {}}
+        >
+          Read Page Data
+        </Button>
+      </div>
+
       {import.meta.env.VITE_USER_NODE_ENV === 'development' ? (
         <Button
           class="mt-4"

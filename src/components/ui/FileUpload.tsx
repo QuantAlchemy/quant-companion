@@ -1,6 +1,7 @@
 import { createSignal } from 'solid-js'
 import Papa from 'papaparse'
 import { Button } from '@/components/ui/button'
+import { TextFieldErrorMessage, TextFieldRoot } from '@/components/ui/textfield'
 import { processTradingViewData, setTradeData, setOriginalTradeData } from '@/libs/stats'
 
 import type { ParseResult } from 'papaparse'
@@ -51,18 +52,23 @@ export const FileUpload = () => {
   }
 
   return (
-    <Button
-      as="label"
-      class="mt-4"
-      variant="default"
-    >
-      <input
-        type="file"
-        hidden
-        onChange={handleFileUpload}
-      />
-      Upload Data
-    </Button>
+    <div>
+      <Button
+        as="label"
+        class="mt-4"
+        variant="default"
+      >
+        <input
+          type="file"
+          hidden
+          onChange={handleFileUpload}
+        />
+        Upload Data
+      </Button>
+      <TextFieldRoot validationState={uploadError() ? 'invalid' : 'valid'}>
+        <TextFieldErrorMessage>{uploadError()}</TextFieldErrorMessage>
+      </TextFieldRoot>
+    </div>
   )
 }
 
