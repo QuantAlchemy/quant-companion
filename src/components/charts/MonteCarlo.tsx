@@ -6,11 +6,11 @@ import { monteCarloData } from '@/libs/monteCarlo'
 
 import type { Component } from 'solid-js'
 import type { PlotType, PlotData } from 'plotly.js'
-import type { ProcessedData } from '@/libs/stats'
+import type { TradeMetrics } from '@/libs/stats'
 import type { MonteCarloData } from '@/libs/monteCarlo'
 
 interface ChartProps {
-  data: Pick<ProcessedData, 'dates' | 'netProfit' | 'startingEquity'> | null
+  data: Pick<TradeMetrics, 'dates' | 'netProfit' | 'startingEquity'> | null
   staticPoints?: boolean
 }
 

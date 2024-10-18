@@ -5,7 +5,7 @@ import { generateProbabilityCones, generateLinearProbabilityCones } from '@/libs
 
 import type { Component } from 'solid-js'
 import type { PlotType } from 'plotly.js'
-import type { ProcessedData } from '@/libs/stats'
+import type { TradeMetrics } from '@/libs/stats'
 
 export enum ConeType {
   Linear,
@@ -13,7 +13,7 @@ export enum ConeType {
 }
 
 interface ChartProps {
-  data: ProcessedData | null
+  data: TradeMetrics | null
   stdDevA?: number
   stdDevB?: number
   coneType?: ConeType

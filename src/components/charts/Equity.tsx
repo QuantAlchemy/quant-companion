@@ -1,13 +1,13 @@
 import { createMemo } from 'solid-js'
 import Plot from 'solid-plotly.js'
 import { createLayout, getChartColors } from '@/libs/plotly'
-import { ProcessedData } from '@/libs/stats'
+import { TradeMetrics } from '@/libs/stats'
 
 import type { Component } from 'solid-js'
 import type { PlotType } from 'plotly.js'
 
 interface ChartProps {
-  data: Pick<ProcessedData, 'dates' | 'equity'> | null
+  data: Pick<TradeMetrics, 'dates' | 'equity'> | null
 }
 
 export const Equity: Component<ChartProps> = (props) => {

@@ -1,7 +1,7 @@
 import { createSignal, createEffect } from 'solid-js'
-import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card'
 import { TextField, TextFieldLabel, TextFieldRoot } from '@/components/ui/textfield'
+import { FileUpload } from '@/components/ui/FileUpload'
 import EquityChart from '@/components/charts/Equity'
 import NetProfitChart from '@/components/charts/NetProfit'
 import CumNetProfitChart from '@/components/charts/CumNetProfit'
@@ -13,25 +13,29 @@ import ProbabilityConesCard from './ProbabilityConesCard'
 import MonteCarloChartCard from './MonteCarloCard'
 import MonteCarloStats from './MonteCarloStats'
 import TradeDataStats from './TradeDataStats'
-import { simulateTradingViewData, processData, ProcessedData } from '@/libs/stats'
+import {
+  simulateTradeData,
+  processTradeMetrics,
+  tradeData,
+  tradeMetrics,
+  setTradeMetrics,
+} from '@/libs/stats'
+
+import type { TradeMetrics } from '@/libs/stats'
 
 const Dashboard = () => {
-  const [data, setData] = createSignal<ProcessedData | null>(null)
+  const [data, setData] = createSignal<TradeMetrics | null>(null)
   const [startingEquity, setStartingEquity] = createSignal(10000)
 
   createEffect(() => {
-    // Simulate initial data load
-    const simulatedData = simulateTradingViewData()
-    setData(() => processData(simulatedData, startingEquity()))
+    const data = simulateTradeData()
+    // const data = tradeData()
+    // console.log(data)
+    const processedData = processTradeMetrics(data, startingEquity())
+    // setData(() => processedData)
+    setTradeMetrics(() => processedData)
+    setData(() => tradeMetrics())
   })
-
-  const handleFileUpload = (event: Event) => {
-    // Placeholder for file upload functionality
-    const input = event.target as HTMLInputElement
-    if (input.files) {
-      console.log('File uploaded:', input.files[0])
-    }
-  }
 
   return (
     <div class="container py-4 px-0">
@@ -59,18 +63,7 @@ const Dashboard = () => {
                 />
               </TextFieldRoot>
 
-              <Button
-                as="label"
-                class="mt-4"
-                variant="default"
-              >
-                <input
-                  type="file"
-                  hidden
-                  onChange={handleFileUpload}
-                />
-                Upload Data
-              </Button>
+              <FileUpload />
             </CardContent>
           </Card>
 
@@ -160,10 +153,10 @@ const Dashboard = () => {
             <CardContent>
               <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-0">
                 <ProfitDistributionBoxChart
-                  data={processData(simulateTradingViewData(), startingEquity())}
+                  data={data()}
                 />
                 <ProfitDistributionHistChart
-                  data={processData(simulateTradingViewData(), startingEquity())}
+                  data={data()}
                 />
               </div>
             </CardContent>

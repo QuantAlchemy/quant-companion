@@ -8,10 +8,10 @@ import MonteCarloChart from '@/components/charts/MonteCarlo'
 import { setMonteCarloData, simulations } from '@/libs/monteCarlo'
 
 import type { Component } from 'solid-js'
-import type { ProcessedData } from '@/libs/stats'
+import type { TradeMetrics } from '@/libs/stats'
 
 interface CardProps {
-  data: ProcessedData | null
+  data: TradeMetrics | null
 }
 
 export const MonteCarloCard: Component<CardProps> = (props) => {

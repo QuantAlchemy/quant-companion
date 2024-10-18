@@ -1,10 +1,65 @@
-// Define interfaces for our data structures
+import { createSignal } from 'solid-js'
+import dayjs from 'dayjs'
+
+export type TradingViewRecord = {
+  'Trade #': number
+  Type: string
+  Signal: string
+  'Date/Time': string
+  [key: string]: number | string // For dynamic property names
+  // INFO: this is what the data looks like in the CSV file, but some of the keys are dynamic so we use this and normalize it.
+  // "Trade #": number
+  // "Type": string
+  // "Signal": string
+  // "Date/Time": string
+  // "Price USDT": number
+  // "Contracts": number
+  // "Profit USDT": number
+  // "Profit %": number
+  // "Cum. Profit USDT": number
+  // "Cum. Profit %": number
+  // "Run-up USDT": number
+  // "Run-up %": number
+  // "Drawdown USDT": number
+  // "Drawdown %": number
+}
+
 export interface Trade {
   date: Date
   profit: number
 }
 
-export interface ProcessedData {
+export interface TradeRecord {
+  tradeNo: number
+  entryContracts: number
+  entryCumProfit: number
+  entryCumProfitPct: number
+  entryDate: Date
+  entryDrawdown: number
+  entryDrawdownPct: number
+  entryPrice: number
+  entryProfit: number
+  entryProfitPct: number
+  entryRunUp: number
+  entryRunUpPct: number
+  entrySignal: string
+  entryType: string
+  exitContracts: number
+  exitCumProfit: number
+  exitCumProfitPct: number
+  exitDate: Date
+  exitDrawdown: number
+  exitDrawdownPct: number
+  exitPrice: number
+  exitProfit: number
+  exitProfitPct: number
+  exitRunUp: number
+  exitRunUpPct: number
+  exitSignal: string
+  exitType: string
+}
+
+export interface TradeMetrics {
   dates: Date[]
   equity: number[]
   netProfit: number[]
@@ -35,6 +90,105 @@ export interface ProbabilityConeData {
   upperCone: number[]
   lowerCone: number[]
 }
+
+// Type guard for string fields
+function isStringField(
+  key: keyof TradeRecord
+): key is 'entryType' | 'exitType' | 'entrySignal' | 'exitSignal' {
+  return ['entryType', 'exitType', 'entrySignal', 'exitSignal'].includes(key)
+}
+
+// Type guard for date fields
+function isDateField(key: keyof TradeRecord): key is 'entryDate' | 'exitDate' {
+  return ['entryDate', 'exitDate'].includes(key)
+}
+
+// Type guard for number fields
+function isNumberField(
+  key: keyof TradeRecord
+): key is
+  | 'tradeNo'
+  | 'entryContracts'
+  | 'exitContracts'
+  | 'entryPrice'
+  | 'exitPrice'
+  | 'entryProfit'
+  | 'exitProfit'
+  | 'entryProfitPct'
+  | 'exitProfitPct'
+  | 'entryCumProfit'
+  | 'exitCumProfit'
+  | 'entryCumProfitPct'
+  | 'exitCumProfitPct'
+  | 'entryDrawdown'
+  | 'exitDrawdown'
+  | 'entryDrawdownPct'
+  | 'exitDrawdownPct'
+  | 'entryRunUp'
+  | 'exitRunUp'
+  | 'entryRunUpPct'
+  | 'exitRunUpPct' {
+  return [
+    'tradeNo',
+    'entryContracts',
+    'exitContracts',
+    'entryPrice',
+    'exitPrice',
+    'entryProfit',
+    'exitProfit',
+    'entryProfitPct',
+    'exitProfitPct',
+    'entryCumProfit',
+    'exitCumProfit',
+    'entryCumProfitPct',
+    'exitCumProfitPct',
+    'entryDrawdown',
+    'exitDrawdown',
+    'entryDrawdownPct',
+    'exitDrawdownPct',
+    'entryRunUp',
+    'exitRunUp',
+    'entryRunUpPct',
+    'exitRunUpPct',
+  ].includes(key)
+}
+
+// Type guard function to check if a key is valid
+function isValidTradeRecordKey(key: string): key is keyof TradeRecord {
+  const validKeys = [
+    'tradeNo',
+    'entryContracts',
+    'entryCumProfit',
+    'entryCumProfitPct',
+    'entryDate',
+    'entryDrawdown',
+    'entryDrawdownPct',
+    'entryPrice',
+    'entryProfit',
+    'entryProfitPct',
+    'entryRunUp',
+    'entryRunUpPct',
+    'entrySignal',
+    'entryType',
+    'exitContracts',
+    'exitCumProfit',
+    'exitCumProfitPct',
+    'exitDate',
+    'exitDrawdown',
+    'exitDrawdownPct',
+    'exitPrice',
+    'exitProfit',
+    'exitProfitPct',
+    'exitRunUp',
+    'exitRunUpPct',
+    'exitSignal',
+    'exitType',
+  ]
+  return validKeys.includes(key)
+}
+
+export const [tradeData, setTradeData] = createSignal<TradeRecord[]>([])
+export const [tradeMetrics, setTradeMetrics] = createSignal<TradeMetrics | null>(null)
 
 export const mean = (arr: number[]): number => {
   return arr.reduce((acc, val) => acc + val, 0) / arr.length
@@ -88,9 +242,95 @@ export const averageOfArrays = (arrays: number[][]): number[] => {
   })
 }
 
-// Function to calculate drawdowns
-// Maximum Drawdown (MDD) = (Trough Value – Peak Value) ÷ Peak Value
-// https://youtu.be/tXUrvH1T19o?si=8oDGpo1WeaO06yhU
+function normalizePropertyName(key: string, prefix: string): string {
+  // Special case for Trade #
+  if (key === 'Trade #') return 'tradeNo'
+
+  // Handle Date/Time
+  if (key === 'Date/Time') return `${prefix}Date`
+
+  // Create a base mapping for the property names
+  const propertyMap: Record<string, string> = {
+    Price: 'Price',
+    Contracts: 'Contracts',
+    Profit: 'Profit',
+    'Profit %': 'ProfitPct',
+    'Cum. Profit': 'CumProfit',
+    'Cum. Profit %': 'CumProfitPct',
+    'Run-up': 'Runup',
+    'Run-up %': 'RunupPct',
+    Drawdown: 'Drawdown',
+    'Drawdown %': 'DrawdownPct',
+    Type: 'Type',
+    Signal: 'Signal',
+  }
+
+  // Remove currency and get base key
+  let baseKey = key
+  // Handle percentage fields first
+  if (key.includes('%')) {
+    baseKey = key
+  } else {
+    // Remove any currency indicators (e.g., "USDT", "BTC", etc.)
+    baseKey = key.replace(/\s+[A-Z]+$/, '')
+  }
+
+  // Get the normalized property name
+  const normalizedKey = propertyMap[baseKey] || baseKey
+
+  // Return camelCase version with prefix
+  return `${prefix}${normalizedKey}`
+}
+
+export function mergeTrades(trades: TradingViewRecord[]): TradeRecord[] {
+  return Object.values(
+    trades.reduce(
+      (acc, trade) => {
+        const tradeNum = trade['Trade #']
+        if (!acc[tradeNum]) {
+          acc[tradeNum] = []
+        }
+        acc[tradeNum].push(trade)
+        return acc
+      },
+      {} as Record<number, TradingViewRecord[]>
+    )
+  ).map((tradePair) => {
+    const [entry, exit] = tradePair.sort((a, _) => (a.Type.includes('Entry') ? -1 : 1))
+
+    const mergedTrade: Partial<TradeRecord> = {
+      tradeNo: entry['Trade #'],
+    }
+
+    ;[
+      { trade: entry, prefix: 'entry' as const },
+      { trade: exit, prefix: 'exit' as const },
+    ].forEach(({ trade, prefix }) => {
+      Object.entries(trade).forEach(([key, value]) => {
+        if (key === 'Trade #') return
+
+        const normalizedKey = normalizePropertyName(key, prefix)
+
+        if (isValidTradeRecordKey(normalizedKey)) {
+          if (key === 'Date/Time') {
+            if (isDateField(normalizedKey)) {
+              mergedTrade[normalizedKey] = dayjs(value).toDate()
+            }
+          } else if (isStringField(normalizedKey)) {
+            // Handle string fields (Type and Signal)
+            mergedTrade[normalizedKey] = value as string
+          } else if (isNumberField(normalizedKey)) {
+            // Handle number fields
+            mergedTrade[normalizedKey] = Number(value)
+          }
+        }
+      })
+    })
+
+    return mergedTrade as TradeRecord
+  })
+}
+
 export const calculateDrawdowns = (
   equity: number[]
 ): { drawdownValue: number; drawdownPercent: number }[] => {
@@ -106,43 +346,75 @@ export const calculateDrawdowns = (
   })
 }
 
-// Simulate TradingView data
-export const simulateTradingViewData = (): Trade[] => {
-  const trades: Trade[] = []
+// Simulate Trade data
+export const simulateTradeData = (): TradeRecord[] => {
+  const trades: TradeRecord[] = []
   const startDate = new Date(2023, 0, 1)
+  let cumulativeProfit = 0
 
   for (let i = 0; i < 100; i++) {
-    const tradeDate = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000)
-    const profit = Math.random() * 200 - 100 // Random profit between -100 and 100
+    const tradeNo = i + 1
+    const entryDate = new Date(startDate.getTime() + i * 2 * 24 * 60 * 60 * 1000) // Every 2 days
+    const exitDate = new Date(entryDate.getTime() + 24 * 60 * 60 * 1000) // 1 day after entry
+    const entryPrice = Math.random() * 500 + 100 // Random entry price between 100 and 600
+    const exitPrice = entryPrice + Math.random() * 20 - 10 // Exit price slightly higher/lower
+    const profit = exitPrice - entryPrice
+    const profitPct = (profit / entryPrice) * 100
+    const runUp = profit + Math.random() * 10 // Simulated run-up
+    const drawdown = profit - Math.random() * 10 // Simulated drawdown
+    const contracts = Math.random() * 1000 // Random number of contracts
+
+    cumulativeProfit += profit
 
     trades.push({
-      date: tradeDate,
-      profit: profit,
+      tradeNo: tradeNo,
+      entryContracts: contracts,
+      entryCumProfit: cumulativeProfit,
+      entryCumProfitPct: (cumulativeProfit / entryPrice) * 100,
+      entryDate: entryDate,
+      entryDrawdown: drawdown,
+      entryDrawdownPct: (drawdown / entryPrice) * 100,
+      entryPrice: entryPrice,
+      entryProfit: profit,
+      entryProfitPct: profitPct,
+      entryRunUp: runUp,
+      entryRunUpPct: (runUp / entryPrice) * 100,
+      entrySignal: 'enter', // Simulated signal
+      entryType: 'long', // Simulated type
+
+      exitContracts: contracts,
+      exitCumProfit: cumulativeProfit,
+      exitCumProfitPct: (cumulativeProfit / exitPrice) * 100,
+      exitDate: exitDate,
+      exitDrawdown: drawdown,
+      exitDrawdownPct: (drawdown / exitPrice) * 100,
+      exitPrice: exitPrice,
+      exitProfit: profit,
+      exitProfitPct: profitPct,
+      exitRunUp: runUp,
+      exitRunUpPct: (runUp / exitPrice) * 100,
+      exitSignal: 'exit', // Simulated signal
+      exitType: 'long', // Simulated type
     })
   }
 
   return trades
 }
 
-// Function to dedupe trading view data based on a key which is 'Trade #' by default
-// Trading View exports the data with duplicate trade numbers, so we need to dedupe them
-// export const dedupeTradingViewData = (arr: any[], key = 'Trade #') => {
-//   const map = new Map()
-//   arr.forEach((obj) => map.set(obj[key], obj))
-//   return Array.from(map.values())
-// }
-
 // Process raw data into format needed for charts
-export const processData = (rawData: Trade[], startingEquity: number = 100000): ProcessedData => {
-  const dates = rawData.map((trade) => trade.date)
+export const processTradeMetrics = (
+  rawData: TradeRecord[],
+  startingEquity: number = 100000
+): TradeMetrics => {
+  const dates = rawData.map((trade) => trade.exitDate)
   const equity = rawData.reduce(
     (acc, trade, i) => {
-      acc.push(acc[i] + trade.profit)
+      acc.push(acc[i] + trade.exitProfit)
       return acc
     },
     [startingEquity]
   )
-  const netProfit = rawData.map((trade) => trade.profit)
+  const netProfit = rawData.map((trade) => trade.exitProfit)
   const cumNetProfit = netProfit.reduce<number[]>((acc, profit, index) => {
     if (index === 0) return [profit]
     return [...acc, acc[index - 1] + profit]
@@ -164,7 +436,7 @@ export const averageTimeDelta = (dates: Date[]): number => {
 }
 
 export const calculateLinearAverageEquity = (
-  data: Pick<ProcessedData, 'equity'> | null
+  data: Pick<TradeMetrics, 'equity'> | null
 ): number[] => {
   if (!data?.equity || data.equity.length === 0) {
     return []
@@ -191,7 +463,7 @@ export const calculateLinearAverageEquity = (
   Financial assets often grow in a compounding way rather than linearly, making the exponential approach more suitable for modeling equity growth.
 */
 export const generateProbabilityCones = (
-  data: ProcessedData,
+  data: TradeMetrics,
   stdDevMultiplier: number = 2,
   futurePoints: number = 30,
   coneStartPercentage: number = 0.9 // 0.9 means cone starts from 90% of equity length
@@ -272,7 +544,7 @@ export const generateProbabilityCones = (
   Std_equity: This is the standard deviation of the log of daily returns
 */
 export const generateLinearProbabilityCones = (
-  data: ProcessedData,
+  data: TradeMetrics,
   stdDevMultiplier: number = 2,
   futurePoints: number = 30,
   coneStartPercentage: number = 0.9 // 0.9 means cone starts from 90% of equity length
@@ -342,7 +614,7 @@ export const generateLinearProbabilityCones = (
 }
 
 // Function to calculate trade data statistics
-export const calculateSummaryStats = (data: ProcessedData): SummaryStats => {
+export const calculateSummaryStats = (data: TradeMetrics): SummaryStats => {
   const totalTrades = data.netProfit.length
   const winningTrades = data.netProfit.filter((profit) => profit > 0).length
   const losingTrades = data.netProfit.filter((profit) => profit < 0).length
@@ -397,7 +669,7 @@ export const calculateSummaryStats = (data: ProcessedData): SummaryStats => {
 // annualizing returns. This standardization is crucial because it accounts for the effect of time on returns.
 // Return Period: If you calculate the return over a period that is not one year and do not annualize it, then the resulting ratio will
 // not accurately represent the MAR Ratio.
-const marRatio = (data: ProcessedData): number => {
+const marRatio = (data: TradeMetrics): number => {
   const startingEquity = data.equity[0]
   const finalEquity = data.equity[data.equity.length - 1]
   const totalReturn = finalEquity - startingEquity
@@ -477,10 +749,10 @@ export const calculateSharpeRatio = (
 
 // // Function to filter data by date range
 // export const filterDataByDateRange = (
-//   data: ProcessedData,
+//   data: TradeMetrics,
 //   startDate: Date,
 //   endDate: Date
-// ): Pick<ProcessedData, 'dates' | 'equity' | 'netProfit' | 'cumNetProfit'> => {
+// ): Pick<TradeMetrics, 'dates' | 'equity' | 'netProfit' | 'cumNetProfit'> => {
 //   const filteredIndices = data.dates.reduce<number[]>((indices, date, index) => {
 //     if (date >= startDate && date <= endDate) {
 //       indices.push(index)

@@ -12,10 +12,10 @@ import { NumberInput } from '@/components/ui/NumberInput'
 import ProbabilityConesChart, { ConeType } from '@/components/charts/ProbabilityCones'
 
 import type { Component } from 'solid-js'
-import type { ProcessedData } from '@/libs/stats'
+import type { TradeMetrics } from '@/libs/stats'
 
 interface CardProps {
-  data: ProcessedData | null
+  data: TradeMetrics | null
 }
 
 interface ConeTypeSelectProps {

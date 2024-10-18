@@ -12,10 +12,10 @@ import { calculateSummaryStats } from '@/libs/stats'
 import { camelToPascalWithSpace, currencyFormatter, percentageFormatter } from '@/libs/format'
 
 import type { Component } from 'solid-js'
-import type { ProcessedData, SummaryStats } from '@/libs/stats'
+import type { TradeMetrics, SummaryStats } from '@/libs/stats'
 
 interface Props {
-  data: ProcessedData | null
+  data: TradeMetrics | null
 }
 
 const formatStatLabel = (key: string): string => {

@@ -1,5 +1,3 @@
-// src/utils/plotlyTheme.ts
-
 import { Layout } from 'plotly.js'
 
 export const darkTheme: Partial<Layout> = {

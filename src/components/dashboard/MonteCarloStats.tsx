@@ -13,11 +13,11 @@ import { camelToPascalWithSpace, currencyFormatter, percentageFormatter } from '
 import { monteCarloData } from '@/libs/monteCarlo'
 
 import type { Component } from 'solid-js'
-import type { ProcessedData } from '@/libs/stats'
+import type { TradeMetrics } from '@/libs/stats'
 import type { MonteCarloSummaryStats } from '@/libs/monteCarlo'
 
 interface Props {
-  data: ProcessedData | null
+  data: TradeMetrics | null
 }
 
 const formatStatLabel = (key: string): string => {
