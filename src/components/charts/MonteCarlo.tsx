@@ -7,19 +7,10 @@ import { monteCarloData } from '@/libs/monteCarlo'
 import type { Component } from 'solid-js'
 import type { PlotType, PlotData } from 'plotly.js'
 import type { TradeMetrics } from '@/libs/stats'
-import type { MonteCarloData } from '@/libs/monteCarlo'
 
 interface ChartProps {
   data: Pick<TradeMetrics, 'dates' | 'netProfit' | 'startingEquity'> | null
   staticPoints?: boolean
-}
-
-const sortArraysByLastNumberDescending = (arrays: MonteCarloData) => {
-  return arrays.sort((a, b) => {
-    const lastA = a.length > 0 ? a[a.length - 1] : Infinity
-    const lastB = b.length > 0 ? b[b.length - 1] : Infinity
-    return lastB - lastA
-  })
 }
 
 const formatMonteCarloData = (
@@ -57,15 +48,14 @@ export const MonteCarlo: Component<ChartProps> = (props) => {
   const layout = createMemo(() => createLayout())
 
   const plotData = createMemo<Partial<Plotly.PlotData>[]>(() => {
-    const sortedMonteCarloData = sortArraysByLastNumberDescending(monteCarloData())
-    const data = sortedMonteCarloData.map((simulation: number[], i: number) =>
+    const data = monteCarloData().map((simulation: number[], i: number) =>
       formatMonteCarloData(
         simulation,
         `run ${i + 1}`,
         props.staticPoints ? undefined : props.data?.dates
       )
     )
-    const averageMonteCarlo = averageOfArrays(sortedMonteCarloData)
+    const averageMonteCarlo = averageOfArrays(monteCarloData())
     const avgPlotData = formatMonteCarloData(averageMonteCarlo, 'average', undefined, {
       line: {
         color: 'rgba(0, 0, 0, 0.6)',

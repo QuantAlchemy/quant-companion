@@ -17,6 +17,14 @@ export interface MonteCarloSummaryStats {
 
 export const [monteCarloData, setMonteCarloData] = createSignal<MonteCarloData>([])
 
+export const sortArraysByLastNumberDescending = (arrays: MonteCarloData) => {
+  return arrays.sort((a, b) => {
+    const lastA = a.length > 0 ? a[a.length - 1] : Infinity
+    const lastB = b.length > 0 ? b[b.length - 1] : Infinity
+    return lastB - lastA
+  })
+}
+
 /*
   INFO:
   https://kjtradingsystems.com/monte-carlo-probability-cones.html
@@ -48,7 +56,10 @@ export const simulations = (
   points: number = 100,
   startingEquity: number = 10000
 ): MonteCarloData => {
-  return [...Array(trials)].map(() => simulation(profitData, points, startingEquity))
+  const monteCarloData = [...Array(trials)].map(() =>
+    simulation(profitData, points, startingEquity)
+  )
+  return sortArraysByLastNumberDescending(monteCarloData)
 }
 
 // Function to calculate monte carlo data statistics

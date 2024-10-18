@@ -69,7 +69,7 @@ export const ProbabilityConesCard: Component<CardProps> = (props) => {
     <Card>
       <CardHeader>
         <CardTitle>Probability Cones</CardTitle>
-        <div class="flex flex-row justify-end gap-2">
+        <div class="flex flex-wrap flex-row justify-end gap-2">
           <NumberInput
             id="stdDevA"
             label="Std Dev A"
