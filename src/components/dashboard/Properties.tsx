@@ -105,7 +105,7 @@ export const Properties: Component = () => {
       {import.meta.env.VITE_USER_NODE_ENV === 'development' ? (
         <Button
           class="mt-4"
-          variant="default"
+          variant="secondary"
           onClick={() => {
             const data = simulateTradeData()
             const processedData = processTradeMetrics(data, startingEquity())
