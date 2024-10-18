@@ -14,6 +14,7 @@ import {
   ProfitDistributionBox as ProfitDistributionBoxChart,
   ProfitDistributionHist as ProfitDistributionHistChart,
 } from '@/components/charts/ProfitDistribution'
+import { ZScoreDistributionBox, ZScoreDistributionHist } from '@/components/charts/ZScore'
 import ProbabilityConesCard from './ProbabilityConesCard'
 import MonteCarloChartCard from './MonteCarloCard'
 import MonteCarloStats from './MonteCarloStats'
@@ -128,6 +129,18 @@ const Dashboard = () => {
               <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-0">
                 <ProfitDistributionBoxChart data={tradeMetrics()} />
                 <ProfitDistributionHistChart data={tradeMetrics()} />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Z-Score Distribution</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-0">
+                <ZScoreDistributionBox data={tradeMetrics()} />
+                <ZScoreDistributionHist data={tradeMetrics()} />
               </div>
             </CardContent>
           </Card>

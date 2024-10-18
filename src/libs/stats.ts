@@ -65,6 +65,7 @@ export interface TradeMetrics {
   netProfit: number[]
   cumNetProfit: number[]
   startingEquity: number
+  zScores: number[]
 }
 
 export interface SummaryStats {
@@ -257,6 +258,16 @@ export const calculateDrawdowns = (
   })
 }
 
+// INFO: The z-score is the number of standard deviations a value is away from it's mean. It’s a great way to summarize where a value lies on a distribution.
+// For example, if you’re 189 cm tall, the z-score of your height might be 2.5. That means you are 2.5 standard deviations away from the mean height of everyone in the distribution.
+// The math is simple:
+// (value - average value) / standard deviation of values
+export const calculateZScores = (data: number[]): number[] => {
+  const average = mean(data)
+  const stdDev = standardDeviation(data)
+  return data.map((value) => (value - average) / stdDev)
+}
+
 function normalizePropertyName(key: string, prefix: string): string {
   // Special case for Trade #
   if (key === 'Trade #') return 'tradeNo'
@@ -297,7 +308,7 @@ function normalizePropertyName(key: string, prefix: string): string {
   return `${prefix}${normalizedKey}`
 }
 
-export function mergeTrades(trades: TradingViewRecord[]): TradeRecord[] {
+export function processTradingViewData(trades: TradingViewRecord[]): TradeRecord[] {
   return Object.values(
     trades.reduce(
       (acc, trade) => {
@@ -419,6 +430,7 @@ export const processTradeMetrics = (
     if (index === 0) return [profit]
     return [...acc, acc[index - 1] + profit]
   }, [])
+  const zScores = calculateZScores(netProfit)
 
   return {
     dates,
@@ -426,6 +438,7 @@ export const processTradeMetrics = (
     netProfit,
     cumNetProfit,
     startingEquity,
+    zScores,
   }
 }
 
@@ -638,11 +651,6 @@ export const calculateSummaryStats = (data: TradeMetrics): SummaryStats => {
   const firstHistoricalDate = data.dates[0]
   const previousDate = new Date(firstHistoricalDate.getTime() - avgTimeDelta)
   const sharpeRatio = calculateSharpeRatio(data.equity, [previousDate, ...data.dates])
-
-  // TODO: The z-score is the number of standard deviations a value is away from it's mean. It’s a great way to summarize where a value lies on a distribution.
-  // For example, if you’re 189 cm tall, the z-score of your height might be 2.5. That means you are 2.5 standard deviations away from the mean height of everyone in the distribution.
-  // The math is simple:
-  // (value - average value) / standard deviation of values
 
   // INFO: Trading Edge Ratio: (MFE/MAE > 1)
   // To accurately calculate MFE and MAE, you need intra-trade data capturing the peak unrealized profits during each trade.

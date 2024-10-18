@@ -7,16 +7,15 @@ import type { Component } from 'solid-js'
 import type { PlotType } from 'plotly.js'
 
 interface ChartProps {
-  data: Pick<TradeMetrics, 'netProfit'> | null
+  data: Pick<TradeMetrics, 'dates' | 'zScores'> | null
 }
 
-export const ProfitDistributionBox: Component<ChartProps> = (props) => {
-  const title = 'Profit Distribution'
+export const ZScoreDistributionBox: Component<ChartProps> = (props) => {
+  const title = 'Z-Score Distribution'
 
-  // Memoize plotData and layout to optimize performance
   const plotData = createMemo<Partial<Plotly.PlotData>[]>(() => [
     {
-      y: props.data?.netProfit,
+      y: props.data?.zScores,
       type: 'box' as PlotType,
       name: title,
       marker: { color: getChartColors()[9] },
@@ -35,13 +34,13 @@ export const ProfitDistributionBox: Component<ChartProps> = (props) => {
   )
 }
 
-export const ProfitDistributionHist: Component<ChartProps> = (props) => {
-  const title = 'Profit Distribution'
+export const ZScoreDistributionHist: Component<ChartProps> = (props) => {
+  const title = 'Z-Score Distribution'
 
   // Memoize plotData and layout to optimize performance
   const plotData = createMemo<Partial<Plotly.PlotData>[]>(() => [
     {
-      x: props.data?.netProfit,
+      x: props.data?.zScores,
       type: 'histogram' as PlotType,
       name: title,
       marker: { color: getChartColors()[9] },
@@ -60,4 +59,4 @@ export const ProfitDistributionHist: Component<ChartProps> = (props) => {
   )
 }
 
-export default { ProfitDistributionBox, ProfitDistributionHist }
+export default { ZScoreDistributionBox, ZScoreDistributionHist }

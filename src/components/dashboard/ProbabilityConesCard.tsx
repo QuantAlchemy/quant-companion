@@ -61,7 +61,7 @@ const ConeTypeSelect: Component<ConeTypeSelectProps> = (props) => {
 export const ProbabilityConesCard: Component<CardProps> = (props) => {
   const [stdDevA, setStdDevA] = createSignal(1)
   const [stdDevB, setStdDevB] = createSignal(2)
-  const [coneSize, setConeSize] = createSignal(30)
+  const [coneSize, setConeSize] = createSignal(100)
   const [coneType, setConeType] = createSignal(ConeType.Exponential)
   const [coneStartPercentage, setConeStartPercentage] = createSignal(90)
 

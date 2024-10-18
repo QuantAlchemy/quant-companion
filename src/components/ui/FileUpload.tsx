@@ -1,7 +1,7 @@
 import { createSignal } from 'solid-js'
 import Papa from 'papaparse'
 import { Button } from '@/components/ui/button'
-import { mergeTrades, setTradeData, TradingViewRecord, TradeRecord } from '@/libs/stats'
+import { processTradingViewData, setTradeData, TradingViewRecord, TradeRecord } from '@/libs/stats'
 
 import type { ParseResult } from 'papaparse'
 
@@ -40,7 +40,7 @@ export const FileUpload = () => {
           return
         }
 
-        const mergedTrades = mergeTrades(data)
+        const mergedTrades = processTradingViewData(data)
         // console.log(data[0])
         // console.log(mergedTrades[0], mergedTrades[mergedTrades.length - 1])
         setTradeData(mergedTrades as TradeRecord[])
