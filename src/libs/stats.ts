@@ -188,6 +188,10 @@ function isValidTradeRecordKey(key: string): key is keyof TradeRecord {
   return validKeys.includes(key)
 }
 
+export const [startingEquity, setStartingEquity] = createSignal(10000)
+// INFO: we'll use the orignalTradeData to store the original data and tradeData to store data than can be manipulated
+// this way we can always revert back to the original data if needed as we do when removing top or bottom trades
+export const [originalTradeData, setOriginalTradeData] = createSignal<TradeRecord[] | null>(null)
 export const [tradeData, setTradeData] = createSignal<TradeRecord[] | null>(null)
 export const [tradeMetrics, setTradeMetrics] = createSignal<TradeMetrics | null>(null)
 

@@ -1,12 +1,5 @@
-import { createSignal, createEffect } from 'solid-js'
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card'
-import {
-  TextField,
-  TextFieldErrorMessage,
-  TextFieldLabel,
-  TextFieldRoot,
-} from '@/components/ui/textfield'
-import { FileUpload, uploadError } from '@/components/ui/FileUpload'
+import { Properties } from '@/components/dashboard/Properties'
 import EquityChart from '@/components/charts/Equity'
 import NetProfitChart from '@/components/charts/NetProfit'
 import CumNetProfitChart from '@/components/charts/CumNetProfit'
@@ -19,27 +12,9 @@ import ProbabilityConesCard from './ProbabilityConesCard'
 import MonteCarloChartCard from './MonteCarloCard'
 import MonteCarloStats from './MonteCarloStats'
 import TradeDataStats from './TradeDataStats'
-import {
-  // simulateTradeData,
-  processTradeMetrics,
-  tradeData,
-  tradeMetrics,
-  setTradeMetrics,
-} from '@/libs/stats'
+import { tradeMetrics } from '@/libs/stats'
 
 const Dashboard = () => {
-  const [startingEquity, setStartingEquity] = createSignal(10000)
-
-  createEffect(() => {
-    // const data = simulateTradeData()
-    const data = tradeData()
-
-    if (data) {
-      const processedData = processTradeMetrics(data, startingEquity())
-      setTradeMetrics(() => processedData)
-    }
-  })
-
   return (
     <div class="container py-4 px-0">
       <div class="mb-8">
@@ -50,25 +25,7 @@ const Dashboard = () => {
               <CardTitle>Properties</CardTitle>
             </CardHeader>
             <CardContent>
-              <TextFieldRoot>
-                <TextFieldLabel
-                  for="startingEquity"
-                  class="mt-4"
-                >
-                  Starting Equity
-                </TextFieldLabel>
-                <TextField
-                  id="startingEquity"
-                  type="number"
-                  value={startingEquity()}
-                  onInput={(e) => setStartingEquity(Number((e.target as HTMLInputElement).value))}
-                  class="mt-2"
-                />
-              </TextFieldRoot>
-              <FileUpload />
-              <TextFieldRoot validationState={uploadError() ? 'invalid' : 'valid'}>
-                <TextFieldErrorMessage>{uploadError()}</TextFieldErrorMessage>
-              </TextFieldRoot>
+              <Properties />
             </CardContent>
           </Card>
 
@@ -96,10 +53,10 @@ const Dashboard = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Equity</CardTitle>
+              <CardTitle>Cumulative Net Profit</CardTitle>
             </CardHeader>
             <CardContent>
-              <EquityChart data={tradeMetrics()} />
+              <CumNetProfitChart data={tradeMetrics()} />
             </CardContent>
           </Card>
 
@@ -109,15 +66,6 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <NetProfitChart data={tradeMetrics()} />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Cum. Net Profit</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CumNetProfitChart data={tradeMetrics()} />
             </CardContent>
           </Card>
 
@@ -180,6 +128,15 @@ const Dashboard = () => {
           </Card> */}
 
           <ProbabilityConesCard data={tradeMetrics()} />
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Equity</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <EquityChart data={tradeMetrics()} />
+            </CardContent>
+          </Card>
 
           {/*
             TODO: cumulativeProfits table (in code pen)
