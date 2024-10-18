@@ -187,7 +187,7 @@ function isValidTradeRecordKey(key: string): key is keyof TradeRecord {
   return validKeys.includes(key)
 }
 
-export const [tradeData, setTradeData] = createSignal<TradeRecord[]>([])
+export const [tradeData, setTradeData] = createSignal<TradeRecord[] | null>(null)
 export const [tradeMetrics, setTradeMetrics] = createSignal<TradeMetrics | null>(null)
 
 export const mean = (arr: number[]): number => {
@@ -239,6 +239,21 @@ export const averageOfArrays = (arrays: number[][]): number[] => {
   return Array.from({ length }, (_, i) => {
     const sum = arrays.reduce((acc, arr) => acc + arr[i], 0)
     return sum / arrays.length
+  })
+}
+
+export const calculateDrawdowns = (
+  equity: number[]
+): { drawdownValue: number; drawdownPercent: number }[] => {
+  let peak = equity[0]
+  return equity.map((value) => {
+    if (value > peak) {
+      peak = value
+      return { drawdownValue: 0, drawdownPercent: 0 }
+    }
+    const drawdownValue = peak - value
+    const drawdownPercent = drawdownValue / peak
+    return { drawdownValue, drawdownPercent }
   })
 }
 
@@ -328,21 +343,6 @@ export function mergeTrades(trades: TradingViewRecord[]): TradeRecord[] {
     })
 
     return mergedTrade as TradeRecord
-  })
-}
-
-export const calculateDrawdowns = (
-  equity: number[]
-): { drawdownValue: number; drawdownPercent: number }[] => {
-  let peak = equity[0]
-  return equity.map((value) => {
-    if (value > peak) {
-      peak = value
-      return { drawdownValue: 0, drawdownPercent: 0 }
-    }
-    const drawdownValue = peak - value
-    const drawdownPercent = drawdownValue / peak
-    return { drawdownValue, drawdownPercent }
   })
 }
 
@@ -638,6 +638,11 @@ export const calculateSummaryStats = (data: TradeMetrics): SummaryStats => {
   const firstHistoricalDate = data.dates[0]
   const previousDate = new Date(firstHistoricalDate.getTime() - avgTimeDelta)
   const sharpeRatio = calculateSharpeRatio(data.equity, [previousDate, ...data.dates])
+
+  // TODO: The z-score is the number of standard deviations a value is away from it's mean. It’s a great way to summarize where a value lies on a distribution.
+  // For example, if you’re 189 cm tall, the z-score of your height might be 2.5. That means you are 2.5 standard deviations away from the mean height of everyone in the distribution.
+  // The math is simple:
+  // (value - average value) / standard deviation of values
 
   // INFO: Trading Edge Ratio: (MFE/MAE > 1)
   // To accurately calculate MFE and MAE, you need intra-trade data capturing the peak unrealized profits during each trade.

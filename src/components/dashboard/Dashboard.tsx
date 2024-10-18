@@ -1,7 +1,12 @@
 import { createSignal, createEffect } from 'solid-js'
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card'
-import { TextField, TextFieldLabel, TextFieldRoot } from '@/components/ui/textfield'
-import { FileUpload } from '@/components/ui/FileUpload'
+import {
+  TextField,
+  TextFieldErrorMessage,
+  TextFieldLabel,
+  TextFieldRoot,
+} from '@/components/ui/textfield'
+import { FileUpload, uploadError } from '@/components/ui/FileUpload'
 import EquityChart from '@/components/charts/Equity'
 import NetProfitChart from '@/components/charts/NetProfit'
 import CumNetProfitChart from '@/components/charts/CumNetProfit'
@@ -14,27 +19,24 @@ import MonteCarloChartCard from './MonteCarloCard'
 import MonteCarloStats from './MonteCarloStats'
 import TradeDataStats from './TradeDataStats'
 import {
-  simulateTradeData,
+  // simulateTradeData,
   processTradeMetrics,
   tradeData,
   tradeMetrics,
   setTradeMetrics,
 } from '@/libs/stats'
 
-import type { TradeMetrics } from '@/libs/stats'
-
 const Dashboard = () => {
-  const [data, setData] = createSignal<TradeMetrics | null>(null)
   const [startingEquity, setStartingEquity] = createSignal(10000)
 
   createEffect(() => {
-    const data = simulateTradeData()
-    // const data = tradeData()
-    // console.log(data)
-    const processedData = processTradeMetrics(data, startingEquity())
-    // setData(() => processedData)
-    setTradeMetrics(() => processedData)
-    setData(() => tradeMetrics())
+    // const data = simulateTradeData()
+    const data = tradeData()
+
+    if (data) {
+      const processedData = processTradeMetrics(data, startingEquity())
+      setTradeMetrics(() => processedData)
+    }
   })
 
   return (
@@ -62,8 +64,10 @@ const Dashboard = () => {
                   class="mt-2"
                 />
               </TextFieldRoot>
-
               <FileUpload />
+              <TextFieldRoot validationState={uploadError() ? 'invalid' : 'valid'}>
+                <TextFieldErrorMessage>{uploadError()}</TextFieldErrorMessage>
+              </TextFieldRoot>
             </CardContent>
           </Card>
 
@@ -72,7 +76,7 @@ const Dashboard = () => {
               <CardTitle>Trade Data Statistics</CardTitle>
             </CardHeader>
             <CardContent>
-              <TradeDataStats data={data()} />
+              <TradeDataStats data={tradeMetrics()} />
             </CardContent>
           </Card>
 
@@ -81,20 +85,20 @@ const Dashboard = () => {
               <CardTitle>Monte Carlo Statistics</CardTitle>
             </CardHeader>
             <CardContent>
-              <MonteCarloStats data={data()} />
+              <MonteCarloStats data={tradeMetrics()} />
             </CardContent>
           </Card>
         </div>
 
         <div class="grid grid-cols-1 2xl:grid-cols-2 gap-6 mt-6">
-          <MonteCarloChartCard data={data()} />
+          <MonteCarloChartCard data={tradeMetrics()} />
 
           <Card>
             <CardHeader>
               <CardTitle>Equity</CardTitle>
             </CardHeader>
             <CardContent>
-              <EquityChart data={data()} />
+              <EquityChart data={tradeMetrics()} />
             </CardContent>
           </Card>
 
@@ -103,7 +107,7 @@ const Dashboard = () => {
               <CardTitle>Net Profit</CardTitle>
             </CardHeader>
             <CardContent>
-              <NetProfitChart data={data()} />
+              <NetProfitChart data={tradeMetrics()} />
             </CardContent>
           </Card>
 
@@ -112,7 +116,7 @@ const Dashboard = () => {
               <CardTitle>Cum. Net Profit</CardTitle>
             </CardHeader>
             <CardContent>
-              <CumNetProfitChart data={data()} />
+              <CumNetProfitChart data={tradeMetrics()} />
             </CardContent>
           </Card>
 
@@ -122,8 +126,8 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-0">
-                <ProfitDistributionBoxChart data={data()} />
-                <ProfitDistributionHistChart data={data()} />
+                <ProfitDistributionBoxChart data={tradeMetrics()} />
+                <ProfitDistributionHistChart data={tradeMetrics()} />
               </div>
             </CardContent>
           </Card>
@@ -162,17 +166,10 @@ const Dashboard = () => {
             </CardContent>
           </Card> */}
 
-          <ProbabilityConesCard data={data()} />
+          <ProbabilityConesCard data={tradeMetrics()} />
 
           {/*
             TODO: cumulativeProfits table (in code pen)
-          */}
-
-          {/*
-            TODO: The z-score is the number of standard deviations a value is away from it's mean. It’s a great way to summarize where a value lies on a distribution.
-            For example, if you’re 189 cm tall, the z-score of your height might be 2.5. That means you are 2.5 standard deviations away from the mean height of everyone in the distribution.
-            The math is simple:
-            (value - average value) / standard deviation of values
           */}
         </div>
 
