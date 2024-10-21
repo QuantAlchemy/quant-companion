@@ -1,7 +1,8 @@
 import { createMemo } from 'solid-js'
 import Plot from 'solid-plotly.js'
-import { createLayout, getChartColors } from '@/libs/plotly'
+import { createLayout } from '@/libs/plotly'
 import { TradeMetrics } from '@/libs/stats'
+import { getHSLColor } from '@/libs/theme'
 
 import type { Component } from 'solid-js'
 import type { PlotType } from 'plotly.js'
@@ -18,7 +19,7 @@ export const ZScoreDistributionBox: Component<ChartProps> = (props) => {
       y: props.data?.zScores,
       type: 'box' as PlotType,
       name: title,
-      marker: { color: getChartColors()[9] },
+      marker: { color: getHSLColor('--secondary') },
     },
   ])
 
@@ -43,7 +44,7 @@ export const ZScoreDistributionHist: Component<ChartProps> = (props) => {
       x: props.data?.zScores,
       type: 'histogram' as PlotType,
       name: title,
-      marker: { color: getChartColors()[9] },
+      marker: { color: getHSLColor('--secondary') },
     },
   ])
 

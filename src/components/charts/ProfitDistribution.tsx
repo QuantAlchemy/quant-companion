@@ -1,7 +1,8 @@
 import { createMemo } from 'solid-js'
 import Plot from 'solid-plotly.js'
-import { createLayout, getChartColors } from '@/libs/plotly'
+import { createLayout } from '@/libs/plotly'
 import { TradeMetrics } from '@/libs/stats'
+import { getHSLColor } from '@/libs/theme'
 
 import type { Component } from 'solid-js'
 import type { PlotType } from 'plotly.js'
@@ -19,7 +20,7 @@ export const ProfitDistributionBox: Component<ChartProps> = (props) => {
       y: props.data?.netProfit,
       type: 'box' as PlotType,
       name: title,
-      marker: { color: getChartColors()[9] },
+      marker: { color: getHSLColor('--secondary') },
     },
   ])
 
@@ -44,7 +45,7 @@ export const ProfitDistributionHist: Component<ChartProps> = (props) => {
       x: props.data?.netProfit,
       type: 'histogram' as PlotType,
       name: title,
-      marker: { color: getChartColors()[9] },
+      marker: { color: getHSLColor('--secondary') },
     },
   ])
 
