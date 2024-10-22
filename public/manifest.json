@@ -1,8 +1,14 @@
 {
   "manifest_version": 3,
-  "name": "SolidJS Web Extension",
+  "name": "Quant Companion",
   "version": "1.0",
-  "description": "A basic web extension using SolidJS",
+  "description": "A tool to help you better understand your trade performance",
+  "icons": {
+    "16": "icon.png",
+    "32": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
+  },
   "action": {
     "default_popup": "index.html"
   },
