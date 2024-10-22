@@ -1,5 +1,5 @@
 import { createSignal } from 'solid-js'
-import Plot from 'solid-plotly.js'
+import Plot from '@/components/ui/Plot'
 import type { PlotlyFigure } from 'solid-plotly.js'
 import type { PlotType } from 'plotly.js'
 

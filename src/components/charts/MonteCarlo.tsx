@@ -1,5 +1,5 @@
 import { createMemo, mergeProps } from 'solid-js'
-import Plot from 'solid-plotly.js'
+import Plot from '@/components/ui/Plot'
 import { createLayout } from '@/libs/plotly'
 import { averageTimeDelta, averageOfArrays } from '@/libs/stats'
 import { monteCarloData } from '@/libs/monteCarlo'
@@ -69,8 +69,6 @@ export const MonteCarlo: Component<ChartProps> = (props) => {
     <Plot
       data={plotData()}
       layout={layout()}
-      useResizeHandler={true}
-      config={{ displayModeBar: false }}
     />
   )
 }

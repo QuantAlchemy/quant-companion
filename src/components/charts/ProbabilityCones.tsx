@@ -1,5 +1,5 @@
 import { createMemo, mergeProps } from 'solid-js'
-import Plot from 'solid-plotly.js'
+import Plot from '@/components/ui/Plot'
 import { createLayout } from '@/libs/plotly'
 import { generateProbabilityCones, generateLinearProbabilityCones } from '@/libs/stats'
 import { getHSLColor } from '@/libs/theme'
@@ -123,8 +123,6 @@ export const ProbabilityCones: Component<ChartProps> = (props) => {
     <Plot
       data={plotData()}
       layout={layout()}
-      useResizeHandler={true}
-      config={{ displayModeBar: false }}
     />
   )
 }

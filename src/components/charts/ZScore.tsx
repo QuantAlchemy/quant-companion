@@ -1,5 +1,5 @@
 import { createMemo } from 'solid-js'
-import Plot from 'solid-plotly.js'
+import Plot from '@/components/ui/Plot'
 import { createLayout } from '@/libs/plotly'
 import { TradeMetrics } from '@/libs/stats'
 import { getHSLColor } from '@/libs/theme'
@@ -29,8 +29,6 @@ export const ZScoreDistributionBox: Component<ChartProps> = (props) => {
     <Plot
       data={plotData()}
       layout={layout()}
-      useResizeHandler={true}
-      config={{ displayModeBar: false }}
     />
   )
 }
@@ -60,8 +58,6 @@ export const ZScoreDistributionHist: Component<ChartProps> = (props) => {
     <Plot
       data={plotData()}
       layout={layout()}
-      useResizeHandler={true}
-      config={{ displayModeBar: false }}
     />
   )
 }
