@@ -33,22 +33,32 @@ export const Properties: Component = () => {
   const removeTopTrades = () => {
     const data = originalTradeData()
     if (data) {
-      const sortedData = data
-        .slice()
-        .sort((a, b) => b.exitProfit - a.exitProfit)
-        .slice(topTradesCnt())
-      setTradeData(() => sortedData)
+      // Find the top k trades to remove
+      const topTradesCount = topTradesCnt()
+      const topTrades = [...data]
+        .sort((a, b) => b.exitProfit - a.exitProfit) // Sort in descending order to find the highest exitProfit trades
+        .slice(0, topTradesCount)
+
+      const tradesToRemove = new Set(topTrades.map((trade) => trade.tradeNo))
+      const filteredData = data.filter((trade) => !tradesToRemove.has(trade.tradeNo))
+
+      setTradeData(() => filteredData)
     }
   }
 
   const removeBottomTrades = () => {
     const data = originalTradeData()
     if (data) {
-      const sortedData = data
-        .slice()
-        .sort((a, b) => a.exitProfit - b.exitProfit)
-        .slice(bottomTradesCnt())
-      setTradeData(() => sortedData)
+      // Find the bottom k trades to remove
+      const bottomTradesCount = bottomTradesCnt()
+      const bottomTrades = [...data]
+        .sort((a, b) => a.exitProfit - b.exitProfit) // Sort in ascending order to find the lowest exitProfit trades
+        .slice(0, bottomTradesCount)
+
+      const tradesToRemove = new Set(bottomTrades.map((trade) => trade.tradeNo))
+      const filteredData = data.filter((trade) => !tradesToRemove.has(trade.tradeNo))
+
+      setTradeData(() => filteredData)
     }
   }
 
