@@ -45,7 +45,14 @@ export const ProfitDistributionHist: Component<ChartProps> = (props) => {
       x: props.data?.netProfit,
       type: 'histogram' as PlotType,
       name: title,
-      marker: { color: getHSLColor('--secondary') },
+      // opacity: 0.9,
+      marker: {
+        color: getHSLColor('--secondary'),
+        line: {
+          color: getHSLColor('--plot-paper'),
+          width: 0.1,
+        },
+      },
     },
   ])
 

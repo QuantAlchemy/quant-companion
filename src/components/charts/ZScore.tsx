@@ -44,7 +44,13 @@ export const ZScoreDistributionHist: Component<ChartProps> = (props) => {
       x: props.data?.zScores,
       type: 'histogram' as PlotType,
       name: title,
-      marker: { color: getHSLColor('--secondary') },
+      marker: {
+        color: getHSLColor('--secondary'),
+        line: {
+          color: getHSLColor('--plot-paper'),
+          width: 0.1,
+        },
+      },
     },
   ])
 
