@@ -131,3 +131,7 @@ HSL: 0 0% 100%
     @apply bg-background text-foreground;
   }
 }
+
+body {
+  min-width: 600px;
+}
