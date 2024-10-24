@@ -35,6 +35,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // TODO: update this when @tsparticles/solid@3.1.0 is released
+      '@tsparticles/solid': '@ralphsmith80/tsparticles-solid',
     },
   },
   build: {

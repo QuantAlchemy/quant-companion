@@ -6,7 +6,7 @@ import type { PluginAPI } from 'tailwindcss/types/config'
 
 /** @type {import('tailwindcss').Config} */
 const config: Config = {
-  darkMode: ['class', '[data-kb-theme="dark"]'],
+  lightMode: ['class', '[data-kb-theme="light"]'],
   content: ['./src/**/*.{ts,tsx}'],
   theme: {
     extend: {
@@ -51,11 +51,18 @@ const config: Config = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
-        brand: {
-          primaryBackground: '#161D2B',
-          primary: '#552EF0',
-          secondary: '#B48CFF',
-        },
+        // plot: {
+        //   DEFAULT: 'hsl(var(--plot))',
+        //   paper: 'hsl(var(--plot-paper))',
+        //   foreground: 'hsl(var(--plot-foreground))',
+        //   title: 'hsl(var(--plot-title))',
+        //   'xaxis-grid': 'hsl(var(--plot-xaxis-grid))',
+        //   'xaxis-zeroline': 'hsl(var(--plot-xaxis-zeroline))',
+        //   'yaxis-grid': 'hsl(var(--plot-yaxis-grid))',
+        //   'yaxis-zeroline': 'hsl(var(--plot-yaxis-zeroline))',
+        //   legend: 'hsl(var(--plot-legend))',
+        //   'legend-foreground': 'hsl(var(--plot-legend-foreground))',
+        // },
       },
       borderRadius: {
         lg: `var(--radius)`,

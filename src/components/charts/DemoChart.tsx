@@ -1,6 +1,7 @@
 import { createSignal } from 'solid-js'
-import Plot from 'solid-plotly.js'
-import type { PlotlyFigure } from 'solid-plotly.js'
+import Plot from '@/components/ui/Plot'
+
+import type { PlotlyFigure } from '@ralphsmith80/solid-plotly.js'
 import type { PlotType } from 'plotly.js'
 
 export const Chart = () => {
@@ -28,6 +29,8 @@ export const Chart = () => {
 
   const handleError = (error: Error) => {
     console.error('Plotly chart error:', error)
+    // throw error
+    throw new Error('Oh No')
   }
 
   const handlePurge = () => {

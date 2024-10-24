@@ -8,16 +8,17 @@ import type { Component } from 'solid-js'
 import type { PlotType } from 'plotly.js'
 
 interface ChartProps {
-  data: Pick<TradeMetrics, 'dates' | 'equity'> | null
+  data: Pick<TradeMetrics, 'dates' | 'cumNetProfit'> | null
 }
 
-export const Equity: Component<ChartProps> = (props) => {
-  const title = 'Equity'
+export const CumNetProfit: Component<ChartProps> = (props) => {
+  const title = 'Cum. Net Profit'
+
   // Memoize plotData and layout to optimize performance
   const plotData = createMemo<Partial<Plotly.PlotData>[]>(() => [
     {
       x: props.data?.dates,
-      y: props.data?.equity,
+      y: props.data?.cumNetProfit,
       type: 'scatter' as PlotType,
       name: title,
       line: { color: getHSLColor('--secondary') },
@@ -34,4 +35,4 @@ export const Equity: Component<ChartProps> = (props) => {
   )
 }
 
-export default Equity
+export default CumNetProfit

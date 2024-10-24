@@ -3,8 +3,7 @@ import { Motion } from 'solid-motionone'
 import Particles, { initParticlesEngine } from '@tsparticles/solid'
 import { loadSlim } from '@tsparticles/slim'
 import { cn } from '@/libs/utils'
-
-import { sparkleOptions } from '../splashScreen/sparkleOptions'
+import { sparkleOptions } from './sparkleOptions'
 
 import type { Container } from '@tsparticles/engine'
 
@@ -18,6 +17,7 @@ export type ParticlesProps = {
   speed?: number
   particleColor?: string
   particleDensity?: number
+  options?: object
 }
 
 export function Sparkles(props: ParticlesProps) {

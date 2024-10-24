@@ -3,11 +3,11 @@
 const config = {
   arrowParens: 'always',
   bracketSpacing: true,
+  bracketSameLine: false,
   endOfLine: 'lf',
   htmlWhitespaceSensitivity: 'css',
   insertPragma: false,
   singleAttributePerLine: true,
-  bracketSameLine: false,
   jsxSingleQuote: false,
   printWidth: 100,
   proseWrap: 'preserve',
