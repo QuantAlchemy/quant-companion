@@ -18,7 +18,7 @@ const Popup: Component = () => {
       >
         <ColorModeScript />
         <ColorModeProvider>
-          {/* <SplashScreen /> */}
+          <SplashScreen />
           <header class="container mt-4 flex justify-center sm:justify-start">
             <Logo />
             {/* <ThemeToggle /> */}

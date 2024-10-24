@@ -14,6 +14,9 @@ importers:
       '@ralphsmith80/solid-plotly.js':
         specifier: ^0.0.1
         version: 0.0.1(plotly.js@2.35.2(mapbox-gl@1.13.3)(webpack@5.95.0))(solid-js@1.8.22)
+      '@ralphsmith80/tsparticles-solid':
+        specifier: 3.0.1-alpha.0
+        version: 3.0.1-alpha.0(@tsparticles/engine@3.5.0)(solid-js@1.8.22)
       '@tsparticles/configs':
         specifier: ^3.5.0
         version: 3.5.0
@@ -23,9 +26,6 @@ importers:
       '@tsparticles/slim':
         specifier: ^3.5.0
         version: 3.5.0
-      '@tsparticles/solid':
-        specifier: link:/home/agentsmith/Workspace/tsparticles-solid/components/solid/
-        version: link:../tsparticles-solid/components/solid
       class-variance-authority:
         specifier: ^0.7.0
         version: 0.7.0
@@ -546,6 +546,12 @@ packages:
     peerDependencies:
       plotly.js: '>2.0.0'
       solid-js: '>1.6.0'
+
+  '@ralphsmith80/tsparticles-solid@3.0.1-alpha.0':
+    resolution: {integrity: sha512-WILdyG8TcWIs6PchFrpWGf4KeHTC+jrQz2ad5KztQmN46kcGp7kFIFXW0pYpPu99cLMgHDxBpAoVl4/9DymOKQ==}
+    peerDependencies:
+      '@tsparticles/engine': '>=1.0.0'
+      solid-js: '>=1.0.0'
 
   '@solid-primitives/event-listener@2.3.3':
     resolution: {integrity: sha512-DAJbl+F0wrFW2xmcV8dKMBhk9QLVLuBSW+TR4JmIfTaObxd13PuL7nqaXnaYKDWOYa6otB00qcCUIGbuIhSUgQ==}
@@ -3474,6 +3480,11 @@ snapshots:
   '@ralphsmith80/solid-plotly.js@0.0.1(plotly.js@2.35.2(mapbox-gl@1.13.3)(webpack@5.95.0))(solid-js@1.8.22)':
     dependencies:
       plotly.js: 2.35.2(mapbox-gl@1.13.3)(webpack@5.95.0)
+      solid-js: 1.8.22
+
+  '@ralphsmith80/tsparticles-solid@3.0.1-alpha.0(@tsparticles/engine@3.5.0)(solid-js@1.8.22)':
+    dependencies:
+      '@tsparticles/engine': 3.5.0
       solid-js: 1.8.22
 
   '@solid-primitives/event-listener@2.3.3(solid-js@1.8.22)':

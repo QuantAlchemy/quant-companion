@@ -2,7 +2,9 @@
   "compilerOptions": {
     "baseUrl": "./",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      // TODO: update this when @tsparticles/solid@3.1.0 is released
+      "@tsparticles/solid": ["./node_modules/@ralphsmith80/tsparticles-solid"]
     },
     "target": "ESNext",
     "module": "ESNext",
