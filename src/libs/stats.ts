@@ -83,6 +83,7 @@ export interface SummaryStats {
   maxDrawdown: number
   maxDrawdownPercent: number
   mar: number
+  netProfitByAvgDrawdown: number
   sharpeRatio: number
 }
 
@@ -646,6 +647,7 @@ export const calculateSummaryStats = (data: TradeMetrics): SummaryStats => {
   const drawdowns = calculateDrawdowns(data.equity)
   const maxDrawdown = Math.max(...drawdowns.map((dd) => dd.drawdownValue))
   const maxDrawdownPercent = Math.max(...drawdowns.map((dd) => dd.drawdownPercent))
+  const netProfitByAvgDrawdown = totalProfit / mean(drawdowns.map((dd) => dd.drawdownValue))
   const mar = marRatio(data)
 
   // we need the same number of dates as equity values and since we add an extra equity value for starting equity
@@ -677,6 +679,7 @@ export const calculateSummaryStats = (data: TradeMetrics): SummaryStats => {
     maxDrawdown,
     maxDrawdownPercent,
     mar,
+    netProfitByAvgDrawdown,
     sharpeRatio,
   }
 }

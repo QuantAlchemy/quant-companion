@@ -36,7 +36,7 @@
     "plotly.js": "^2.35.2",
     "solid-js": "^1.8.22",
     "solid-motionone": "^1.0.0",
-    "solid-plotly.js": "link:/home/agentsmith/Workspace/solid-plotly.js/packages/solid-plotly.js/",
+    "@ralphsmith80/solid-plotly.js": "^0.0.1",
     "tailwindcss": "^3.4.10",
     "tailwind-merge": "^2.5.2",
     "tailwindcss-animate": "^1.0.7",

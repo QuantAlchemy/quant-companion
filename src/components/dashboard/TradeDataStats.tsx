@@ -38,7 +38,7 @@ const formatStatLabel = (key: string): string | JSX.Element => {
     case 'winRate':
       return 'Win Rate'
     case 'totalProfit':
-      return 'Total Profit'
+      return 'Net Profit'
     case 'averageProfit':
       return 'Average Profit'
     case 'medianProfit':
@@ -65,6 +65,12 @@ const formatStatLabel = (key: string): string | JSX.Element => {
       )
     case 'mar':
       return 'MAR'
+    case 'netProfitByAvgDrawdown':
+      return (
+        <>
+          Net Profit <Divider /> Avg Drawdown
+        </>
+      )
     case 'sharpeRatio':
       return 'Sharpe Ratio'
     case 'maxDrawdown':
@@ -96,6 +102,7 @@ const formatStatValue = (key: string, value: number, stats: SummaryStats): strin
       )
     }
     case 'mar':
+    case 'netProfitByAvgDrawdown':
     case 'sharpeRatio':
       return (value as number).toFixed(2)
     case 'winRate':

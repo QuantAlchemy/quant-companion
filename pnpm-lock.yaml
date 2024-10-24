@@ -11,6 +11,9 @@ importers:
       '@kobalte/core':
         specifier: ^0.13.6
         version: 0.13.6(solid-js@1.8.22)
+      '@ralphsmith80/solid-plotly.js':
+        specifier: ^0.0.1
+        version: 0.0.1(plotly.js@2.35.2(mapbox-gl@1.13.3)(webpack@5.95.0))(solid-js@1.8.22)
       '@tsparticles/configs':
         specifier: ^3.5.0
         version: 3.5.0
@@ -47,12 +50,12 @@ importers:
       solid-motionone:
         specifier: ^1.0.0
         version: 1.0.0(solid-js@1.8.22)
-      solid-plotly.js:
-        specifier: link:/home/agentsmith/Workspace/solid-plotly.js/packages/solid-plotly.js/
-        version: link:../solid-plotly.js/packages/solid-plotly.js
       tailwind-merge:
         specifier: ^2.5.2
         version: 2.5.2
+      tailwindcss:
+        specifier: ^3.4.10
+        version: 3.4.10
       tailwindcss-animate:
         specifier: ^1.0.7
         version: 1.0.7(tailwindcss@3.4.10)
@@ -105,9 +108,6 @@ importers:
       prettier:
         specifier: ^3.3.3
         version: 3.3.3
-      tailwindcss:
-        specifier: ^3.4.10
-        version: 3.4.10
       typescript:
         specifier: ^4.9.5
         version: 4.9.5
@@ -539,6 +539,13 @@ packages:
 
   '@plotly/regl@2.1.2':
     resolution: {integrity: sha512-Mdk+vUACbQvjd0m/1JJjOOafmkp/EpmHjISsopEz5Av44CBq7rPC05HHNbYGKVyNUF2zmEoBS/TT0pd0SPFFyw==}
+
+  '@ralphsmith80/solid-plotly.js@0.0.1':
+    resolution: {integrity: sha512-5tuHF6yHI9zr5grqGRHlyoZCklzptAOnTBOFP/74xVu5F0IyRzcoKcIkZxC9SNiG3Em8T/d66pRUWYFAcu0CMA==}
+    engines: {node: '>=18', pnpm: '>=9.0.0'}
+    peerDependencies:
+      plotly.js: '>2.0.0'
+      solid-js: '>1.6.0'
 
   '@solid-primitives/event-listener@2.3.3':
     resolution: {integrity: sha512-DAJbl+F0wrFW2xmcV8dKMBhk9QLVLuBSW+TR4JmIfTaObxd13PuL7nqaXnaYKDWOYa6otB00qcCUIGbuIhSUgQ==}
@@ -3463,6 +3470,11 @@ snapshots:
       pick-by-alias: 1.2.0
 
   '@plotly/regl@2.1.2': {}
+
+  '@ralphsmith80/solid-plotly.js@0.0.1(plotly.js@2.35.2(mapbox-gl@1.13.3)(webpack@5.95.0))(solid-js@1.8.22)':
+    dependencies:
+      plotly.js: 2.35.2(mapbox-gl@1.13.3)(webpack@5.95.0)
+      solid-js: 1.8.22
 
   '@solid-primitives/event-listener@2.3.3(solid-js@1.8.22)':
     dependencies:
