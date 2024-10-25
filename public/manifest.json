@@ -4,10 +4,10 @@
   "version": "1.0",
   "description": "A tool to help you better understand your trade performance",
   "icons": {
-    "16": "icon-16.png",
-    "32": "icon-32.png",
-    "48": "icon-48.png",
-    "128": "icon-128.png"
+    "16": "iconWhite-16.png",
+    "32": "iconWhite-32.png",
+    "48": "iconWhite-48.png",
+    "128": "iconWhite-128.png"
   },
   "action": {
     "default_popup": "index.html"
