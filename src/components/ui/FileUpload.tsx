@@ -9,6 +9,7 @@ import type { TradingViewRecord } from '@/libs/stats'
 
 const MESSAGES = {
   PAPA_PARSE_FAILED: 'Papa Parse failed',
+  MALFORMED_DATA: 'The CSV does not contain the expected columns',
 }
 
 export const [uploadError, setUploadError] = createSignal<string | null>(null)
@@ -42,11 +43,15 @@ export const FileUpload = () => {
           return
         }
 
-        const mergedTrades = processTradingViewData(data)
-        // console.log(data[0])
-        // console.log(mergedTrades[0], mergedTrades[mergedTrades.length - 1])
-        setTradeData(mergedTrades)
-        setOriginalTradeData(mergedTrades)
+        try {
+          const mergedTrades = processTradingViewData(data)
+          setTradeData(mergedTrades)
+          setOriginalTradeData(mergedTrades)
+        } catch (error) {
+          console.error({ message: (error as Error).message })
+          setTradeData(null)
+          setUploadError(MESSAGES.MALFORMED_DATA)
+        }
       },
     })
   }
