@@ -1,6 +1,6 @@
 {
-  "name": "solidjs-web-extension",
-  "description": "A SolidJS web extension starter template with Vite",
+  "name": "quant-companion",
+  "description": "A tool to help you better understand your trade performance",
   "version": "0.0.1",
   "type": "module",
   "scripts": {
