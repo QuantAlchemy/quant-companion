@@ -1,19 +1,22 @@
 import { Sparkles } from '@/components/effects/Sparkles'
-import { getHSLColor } from '@/libs/theme'
+// import { getHSLColor } from '@/libs/theme'
 import icon from '@/assets/iconWhite.svg'
+
+// use a slightly light color for the particles
+const particleColor = 'hsl(261, 100%, 87%)'
 
 export function SparklesLogo() {
   return (
     // <div class="h-dvh w-full bg-black flex flex-col items-center justify-center overflow-hidden rounded-md">
     <div class="h-dvh w-full bg-background flex flex-col items-center justify-center overflow-hidden rounded-md">
       {/* <h1 class="md:text-7xl text-3xl lg:text-9xl font-bold text-center text-white relative z-20">
-        Quant Alchemy
+        Quant Companion
       </h1> */}
 
       <img
         src={icon}
         class="h-3/12 w-3/12"
-        alt="Quant Alchemy logo"
+        alt="Quant Companion logo"
       />
       <div class="w-[40rem] h-40 relative">
         {/* Gradients */}
@@ -29,7 +32,8 @@ export function SparklesLogo() {
           maxSize={1}
           particleDensity={1200}
           class="w-full h-full"
-          particleColor={getHSLColor('--secondary', { useCommaSeparatedHSL: true })}
+          // particleColor={getHSLColor('--secondary', { useCommaSeparatedHSL: true })}
+          particleColor={particleColor}
         />
 
         {/* Radial Gradient to prevent sharp edges */}
