@@ -101,15 +101,18 @@ export const Properties: Component = () => {
           removeBottomTrades()
         }}
       />
+
       <div class="flex flex-wrap gap-2 justify-between">
         <FileUpload />
-        <Button
-          class="mt-4"
-          variant="default"
-          onClick={() => {}}
-        >
-          Read Page Data
-        </Button>
+        {import.meta.env.VITE_USER_EXTENSION === 'true' ? (
+          <Button
+            class="mt-4"
+            variant="default"
+            onClick={() => {}}
+          >
+            Read Page Data
+          </Button>
+        ) : null}
       </div>
 
       {import.meta.env.VITE_USER_NODE_ENV === 'development' ? (
