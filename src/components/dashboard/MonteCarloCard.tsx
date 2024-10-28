@@ -1,5 +1,6 @@
 import { createEffect, createSignal } from 'solid-js'
 // import { Info } from 'lucide-solid'
+import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card'
 // import { Checkbox, CheckboxControl, CheckboxLabel } from '@/components/ui/checkbox'
 // import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -105,6 +106,13 @@ export const MonteCarloCard: Component<CardProps> = (props) => {
             value={lowRunsCnt()}
             onInput={(e) => setLowRunsCnt(Number((e.target as HTMLInputElement).value))}
           />
+          <Button
+            class="self-end mb-1.5"
+            variant="default"
+            onClick={() => handleMonteCarloData()}
+          >
+            Rerun
+          </Button>
 
           {/* <Checkbox
             checked={staticPoints()}
