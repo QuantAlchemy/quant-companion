@@ -13,6 +13,8 @@ export interface MonteCarloSummaryStats {
   successRate: number
   maxDrawdown: number
   maxDrawdownPercent: number
+  minDrawdown: number
+  minDrawdownPercent: number
 }
 
 export const [monteCarloData, setMonteCarloData] = createSignal<MonteCarloData>([])
@@ -87,8 +89,14 @@ export const calculateMonteCarloStats = (data: MonteCarloData): MonteCarloSummar
 
   const successRate = results.positive / (results.positive + results.negative)
   const drawdowns = monteCarloData().map((simulation) => calculateDrawdowns(simulation))
-  const maxDrawdown = Math.max(...drawdowns.flat().map((dd) => dd.drawdownValue))
-  const maxDrawdownPercent = Math.max(...drawdowns.flat().map((dd) => dd.drawdownPercent))
+  const maxDrawdowns = drawdowns.map((dd) => Math.max(...dd.map((d) => d.drawdownValue)))
+  const maxDrawdownPercentages = drawdowns.map((dd) =>
+    Math.max(...dd.map((d) => d.drawdownPercent))
+  )
+  const maxDrawdown = Math.max(...maxDrawdowns)
+  const maxDrawdownPercent = Math.max(...maxDrawdownPercentages)
+  const minDrawdown = Math.min(...maxDrawdowns)
+  const minDrawdownPercent = Math.min(...maxDrawdownPercentages)
 
   return {
     positiveRuns: results.positive,
@@ -100,5 +108,7 @@ export const calculateMonteCarloStats = (data: MonteCarloData): MonteCarloSummar
     minEquityPercent: results.min / startingEquity - 1,
     maxDrawdown,
     maxDrawdownPercent,
+    minDrawdown,
+    minDrawdownPercent,
   }
 }

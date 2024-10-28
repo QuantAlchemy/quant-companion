@@ -35,6 +35,8 @@ const formatStatLabel = (key: string): string => {
       return 'Max Drawdown %'
     case 'maxDrawdownCombined':
       return 'Max Drawdown'
+    case 'minDrawdownCombined':
+      return 'Min Drawdown'
     case 'maxEquity':
       return 'Max Equity'
     case 'minEquity':
@@ -97,7 +99,18 @@ const formatStatValue = (
         </>
       )
     }
+    case 'minDrawdownCombined': {
+      const drawdown = currencyFormatter.format(stats.minDrawdown ?? 0)
+      const drawdownPct = percentageFormatter.format(stats.minDrawdownPercent ?? 0)
+      return (
+        <>
+          <div>{drawdown}</div>
+          <div class="text-xs">{drawdownPct}</div>
+        </>
+      )
+    }
     case 'maxDrawdown':
+    case 'minDrawdown':
     default:
       return currencyFormatter.format(value)
   }
@@ -112,12 +125,15 @@ export const MonteCarloStats: Component<Props> = (props) => {
     return Object.entries(statsData).reduce((acc: [string, number][], [key, value]) => {
       if (key === 'maxDrawdown') {
         acc.push(['maxDrawdownCombined', value])
+      } else if (key === 'minDrawdown') {
+        acc.push(['minDrawdownCombined', value])
       } else if (key === 'maxEquity') {
         acc.push(['maxEquityCombined', value])
       } else if (key === 'minEquity') {
         acc.push(['minEquityCombined', value])
       } else if (
         key !== 'maxDrawdownPercent' &&
+        key !== 'minDrawdownPercent' &&
         key !== 'maxEquityPercent' &&
         key !== 'minEquityPercent'
       ) {
