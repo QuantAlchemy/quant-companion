@@ -20,6 +20,5 @@
       "matches": ["*://*.tradingview.com/*"],
       "js": ["content/content.js"]
     }
-  ],
-  "permissions": ["activeTab"]
+  ]
 }
