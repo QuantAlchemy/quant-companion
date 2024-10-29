@@ -491,7 +491,7 @@ export const generateProbabilityCones = (
 
   // Check if we have enough data points for meaningful calculation
   if (historicalLength < 2) {
-    throw new Error(
+    console.error(
       'Insufficient historical data points for calculating probability cones. Need at least 2 points.'
     )
   }
@@ -572,7 +572,7 @@ export const generateLinearProbabilityCones = (
 
   // Check if we have enough data points for meaningful calculation
   if (historicalLength < 2) {
-    throw new Error(
+    console.error(
       'Insufficient historical data points for calculating probability cones. Need at least 2 points.'
     )
   }
