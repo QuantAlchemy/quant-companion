@@ -107,7 +107,8 @@ export const MonteCarloCard: Component<CardProps> = (props) => {
             onInput={(e) => setLowRunsCnt(Number((e.target as HTMLInputElement).value))}
           />
           <Button
-            class="self-end mb-1.5"
+            class="self-end"
+            style={{ 'margin-bottom': '0.3rem' }}
             variant="default"
             onClick={() => handleMonteCarloData()}
           >
