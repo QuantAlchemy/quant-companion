@@ -61,7 +61,7 @@ const Dashboard = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Net Profit</CardTitle>
+            <CardTitle>Net Profits</CardTitle>
           </CardHeader>
           <CardContent>
             <NetProfitChart data={tradeMetrics()} />

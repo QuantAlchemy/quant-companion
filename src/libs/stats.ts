@@ -273,6 +273,18 @@ export const calculateZScores = (data: number[]): number[] => {
   return data.map((value) => (value - average) / stdDev)
 }
 
+// Calculate next date `i` points in the future from the date provided based on the average time delta
+// previous dates can be identified by using negative values for `i`
+const calculateNextDate = (date: Date, i: number, avgTimeDelta: number): Date => {
+  return new Date(date.getTime() + i * avgTimeDelta)
+}
+
+// Calculate average time delta between dates so that the future dates can be generated with similar intervals
+export const averageTimeDelta = (dates: Date[]): number => {
+  const timeDeltas = dates.slice(1).map((date, i) => date.getTime() - dates[i].getTime())
+  return timeDeltas.reduce((sum, delta) => sum + delta, 0) / timeDeltas.length
+}
+
 function normalizePropertyName(key: string, prefix: string): string {
   // Special case for Trade #
   if (key === 'Trade #') return 'tradeNo'
@@ -422,7 +434,13 @@ export const processTradeMetrics = (
   rawData: TradeRecord[],
   startingEquity: number = 100000
 ): TradeMetrics => {
+  // we add one data point for the starting date and equity so the dates and equity values are the same length
+  // as an estimate, we use the average time delta between dates to estimate the date for the extra equity value
   const dates = rawData.map((trade) => trade.exitDate)
+  const avgTimeDelta = averageTimeDelta(dates)
+  const startingDate = calculateNextDate(dates[0], -1, avgTimeDelta)
+  dates.unshift(startingDate)
+
   const equity = rawData.reduce(
     (acc, trade, i) => {
       acc.push(acc[i] + trade.exitProfit)
@@ -445,12 +463,6 @@ export const processTradeMetrics = (
     startingEquity,
     zScores,
   }
-}
-
-// Calculate average time delta between dates so that the future dates can be generated with similar intervals
-export const averageTimeDelta = (dates: Date[]): number => {
-  const timeDeltas = dates.slice(1).map((date, i) => date.getTime() - dates[i].getTime())
-  return timeDeltas.reduce((sum, delta) => sum + delta, 0) / timeDeltas.length
 }
 
 export const calculateLinearAverageEquity = (
@@ -519,8 +531,8 @@ export const generateProbabilityCones = (
           (_, i) =>
             new Date(
               retainedDates.length > 0
-                ? retainedDates[retainedDates.length - 1].getTime() + (i + 1) * avgTimeDelta
-                : lastHistoricalDate.getTime() + (i + 1) * avgTimeDelta
+                ? calculateNextDate(retainedDates[retainedDates.length - 1], i + 1, avgTimeDelta) // Use the last retained date to calculate the next date
+                : calculateNextDate(lastHistoricalDate, i + 1, avgTimeDelta)
             )
         )
 
@@ -604,8 +616,8 @@ export const generateLinearProbabilityCones = (
           (_, i) =>
             new Date(
               retainedDates.length > 0
-                ? retainedDates[retainedDates.length - 1].getTime() + (i + 1) * avgTimeDelta
-                : lastHistoricalDate.getTime() + (i + 1) * avgTimeDelta
+                ? calculateNextDate(retainedDates[retainedDates.length - 1], i + 1, avgTimeDelta) // Use the last retained date to calculate the next date
+                : calculateNextDate(lastHistoricalDate, i + 1, avgTimeDelta)
             )
         )
 
@@ -649,14 +661,7 @@ export const calculateSummaryStats = (data: TradeMetrics): SummaryStats => {
   const maxDrawdownPercent = Math.max(...drawdowns.map((dd) => dd.drawdownPercent))
   const netProfitByAvgDrawdown = totalProfit / mean(drawdowns.map((dd) => dd.drawdownValue))
   const mar = marRatio(data)
-
-  // we need the same number of dates as equity values and since we add an extra equity value for starting equity
-  // we also need to add a date for that extra equity value
-  // As an estimate, we use the average time delta between dates to estimate the date for the extra equity value
-  const avgTimeDelta = averageTimeDelta(data.dates)
-  const firstHistoricalDate = data.dates[0]
-  const previousDate = new Date(firstHistoricalDate.getTime() - avgTimeDelta)
-  const sharpeRatio = calculateSharpeRatio(data.equity, [previousDate, ...data.dates])
+  const sharpeRatio = calculateSharpeRatio(data.equity, data.dates)
 
   // INFO: Trading Edge Ratio: (MFE/MAE > 1)
   // To accurately calculate MFE and MAE, you need intra-trade data capturing the peak unrealized profits during each trade.

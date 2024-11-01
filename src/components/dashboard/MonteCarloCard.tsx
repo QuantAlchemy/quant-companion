@@ -80,31 +80,31 @@ export const MonteCarloCard: Component<CardProps> = (props) => {
             id="trials"
             label="Trials"
             min={1}
-            value={trials()}
-            onInput={(e) => setTrials(Number((e.target as HTMLInputElement).value))}
+            value={trials}
+            onInput={setTrials}
           />
           <NumberInput
             id="futurePoints"
             label="Future Points"
             min={1}
-            value={futurePoints()}
-            onInput={(e) => setFuturePoints(Number((e.target as HTMLInputElement).value))}
+            value={futurePoints}
+            onInput={setFuturePoints}
           />
           <NumberInput
             class="w-36"
             id="removeHighRuns"
             label="Remove Best Trials"
             min={0}
-            value={highRunsCnt()}
-            onInput={(e) => setHighRunsCnt(Number((e.target as HTMLInputElement).value))}
+            value={highRunsCnt}
+            onInput={setHighRunsCnt}
           />
           <NumberInput
             class="w-36"
             id="removeLowRuns"
             label="Remove Worst Trials"
             min={0}
-            value={lowRunsCnt()}
-            onInput={(e) => setLowRunsCnt(Number((e.target as HTMLInputElement).value))}
+            value={lowRunsCnt}
+            onInput={setLowRunsCnt}
           />
           <Button
             class="self-end"

@@ -1,6 +1,5 @@
 import { createEffect, createSignal } from 'solid-js'
 import { Button } from '@/components/ui/button'
-import { TextField, TextFieldLabel, TextFieldRoot } from '@/components/ui/textfield'
 import { NumberInput } from '@/components/ui/NumberInput'
 import { FileUpload } from '@/components/ui/FileUpload'
 import {
@@ -64,29 +63,21 @@ export const Properties: Component = () => {
 
   return (
     <>
-      <TextFieldRoot>
-        <TextFieldLabel
-          for="startingEquity"
-          class="mt-4"
-        >
-          Starting Equity
-        </TextFieldLabel>
-        <TextField
-          id="startingEquity"
-          type="number"
-          value={startingEquity()}
-          onInput={(e) => setStartingEquity(Number((e.target as HTMLInputElement).value))}
-          class="mt-2"
-        />
-      </TextFieldRoot>
+      <NumberInput
+        class="w-auto"
+        id="startingEquity"
+        label="Starting Equity"
+        value={startingEquity}
+        onInput={setStartingEquity}
+      />
       <NumberInput
         class="w-auto"
         id="removeTopTrades"
         label="Remove Best Trades"
         min={0}
-        value={topTradesCnt()}
-        onInput={(e) => {
-          setTopTradesCnt(Number((e.target as HTMLInputElement).value))
+        value={topTradesCnt}
+        onInput={(value) => {
+          setTopTradesCnt(value)
           removeTopTrades()
         }}
       />
@@ -95,9 +86,9 @@ export const Properties: Component = () => {
         id="removeBottomTrades"
         label="Remove Worst Trades"
         min={0}
-        value={bottomTradesCnt()}
-        onInput={(e) => {
-          setBottomTradesCnt(Number((e.target as HTMLInputElement).value))
+        value={bottomTradesCnt}
+        onInput={(value) => {
+          setBottomTradesCnt(value)
           removeBottomTrades()
         }}
       />

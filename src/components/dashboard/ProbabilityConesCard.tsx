@@ -74,30 +74,30 @@ export const ProbabilityConesCard: Component<CardProps> = (props) => {
             id="stdDevA"
             label="Std Dev A"
             min={1}
-            value={stdDevA()}
-            onInput={(e) => setStdDevA(Number((e.target as HTMLInputElement).value))}
+            value={stdDevA}
+            onInput={setStdDevA}
           />
           <NumberInput
             id="stdDevB"
             label="Std Dev B"
             min={1}
-            value={stdDevB()}
-            onInput={(e) => setStdDevB(Number((e.target as HTMLInputElement).value))}
+            value={stdDevB}
+            onInput={setStdDevB}
           />
           <NumberInput
             id="coneSize"
             label="Cone Size"
             min={1}
-            value={coneSize()}
-            onInput={(e) => setConeSize(Number((e.target as HTMLInputElement).value))}
+            value={coneSize}
+            onInput={setConeSize}
           />
           <NumberInput
             id="coneStartPercentage"
             label="Cone Start %"
             min={2}
             max={100}
-            value={coneStartPercentage()}
-            onInput={(e) => setConeStartPercentage(Number((e.target as HTMLInputElement).value))}
+            value={coneStartPercentage}
+            onInput={setConeStartPercentage}
           />
           <ConeTypeSelect
             value={coneType()}
