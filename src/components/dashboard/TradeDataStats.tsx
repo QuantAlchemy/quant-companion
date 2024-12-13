@@ -41,8 +41,28 @@ const formatStatLabel = (key: string): string | JSX.Element => {
       return 'Net Profit'
     case 'averageProfit':
       return 'Average Profit'
+    case 'averageProfitWin':
+      return 'Average Profit Win'
+    case 'averageProfitLoss':
+      return 'Average Profit Loss'
+    case 'averageProfitWinLoss':
+      return (
+        <>
+          Average Profit Win <Divider /> Loss
+        </>
+      )
     case 'medianProfit':
       return 'Median Profit'
+    case 'medianProfitWin':
+      return 'Median Profit Win'
+    case 'medianProfitLoss':
+      return 'Median Profit Loss'
+    case 'medianProfitWinLoss':
+      return (
+        <>
+          Median Profit Win <Divider /> Loss
+        </>
+      )
     case 'firstStdDev':
       return '1σ Profit'
     case 'secondStdDev':
@@ -93,8 +113,8 @@ const formatStatValue = (key: string, value: number, stats: SummaryStats): strin
     case 'losingTrades':
       return value.toString()
     case 'winsLossesCombined': {
-      const wins = stats.winningTrades ?? 0
-      const losses = stats.losingTrades ?? 0
+      const wins = stats.winningTradesCnt ?? 0
+      const losses = stats.losingTradesCnt ?? 0
       return (
         <>
           {wins} <Divider /> {losses}
@@ -115,6 +135,24 @@ const formatStatValue = (key: string, value: number, stats: SummaryStats): strin
         <>
           <div>{drawdown}</div>
           <div class="text-xs">{drawdownPct}</div>
+        </>
+      )
+    }
+    case 'averageProfitWinLoss': {
+      const avgProfitWin = currencyFormatter.format(stats.averageProfitWin ?? 0)
+      const avgProfitLoss = currencyFormatter.format(stats.averageProfitLoss ?? 0)
+      return (
+        <>
+          {avgProfitWin} <Divider /> {avgProfitLoss}
+        </>
+      )
+    }
+    case 'medianProfitWinLoss': {
+      const medianProfitWin = currencyFormatter.format(stats.medianProfitWin ?? 0)
+      const medianProfitLoss = currencyFormatter.format(stats.medianProfitLoss ?? 0)
+      return (
+        <>
+          {medianProfitWin} <Divider /> {medianProfitLoss}
         </>
       )
     }
@@ -158,7 +196,11 @@ export const TradeDataStats: Component<Props> = (props) => {
     return Object.entries(statsData).reduce((acc: [string, number][], [key, value]) => {
       if (key === 'maxDrawdown') {
         acc.push(['maxDrawdownCombined', statsData[key]])
-      } else if (key === 'winningTrades') {
+      } else if (key === 'averageProfitWin') {
+        acc.push(['averageProfitWinLoss', statsData[key]])
+      } else if (key === 'medianProfitWin') {
+        acc.push(['medianProfitWinLoss', statsData[key]])
+      } else if (key === 'winningTradesCnt') {
         acc.push(['winsLossesCombined', statsData[key]])
       } else if (key === 'firstStdDev') {
         acc.push(['σCombined', statsData[key]])
@@ -166,7 +208,9 @@ export const TradeDataStats: Component<Props> = (props) => {
         acc.push(['maxMinProfitCombined', statsData[key]])
       } else if (
         key !== 'maxDrawdownPercent' &&
-        key !== 'losingTrades' &&
+        key !== 'averageProfitLoss' &&
+        key !== 'medianProfitLoss' &&
+        key !== 'losingTradesCnt' &&
         key !== 'secondStdDev' &&
         key !== 'minProfit'
       ) {
