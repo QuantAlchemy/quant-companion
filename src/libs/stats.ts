@@ -70,12 +70,16 @@ export interface TradeMetrics {
 
 export interface SummaryStats {
   totalTrades: number
-  winningTrades: number
-  losingTrades: number
+  winningTradesCnt: number
+  losingTradesCnt: number
   winRate: number
   totalProfit: number
   averageProfit: number
+  averageProfitWin: number
+  averageProfitLoss: number
   medianProfit: number
+  medianProfitWin: number
+  medianProfitLoss: number
   firstStdDev: number
   secondStdDev: number
   maxProfit: number
@@ -646,12 +650,20 @@ export const generateLinearProbabilityCones = (
 // Function to calculate trade data statistics
 export const calculateSummaryStats = (data: TradeMetrics): SummaryStats => {
   const totalTrades = data.netProfit.length
-  const winningTrades = data.netProfit.filter((profit) => profit > 0).length
-  const losingTrades = data.netProfit.filter((profit) => profit < 0).length
-  const winRate = winningTrades / totalTrades
+  const winningTrades = data.netProfit.filter((profit) => profit > 0)
+  const winningTradesCnt = data.netProfit.filter((profit) => profit > 0).length
+  const losingTrades = data.netProfit.filter((profit) => profit < 0)
+  const losingTradesCnt = data.netProfit.filter((profit) => profit < 0).length
+  const winRate = winningTradesCnt / totalTrades
   const totalProfit = data.netProfit.reduce((sum, profit) => sum + profit, 0)
+  const totalProfitWin = winningTrades.reduce((sum, profit) => sum + profit, 0)
+  const totalProfitLoss = losingTrades.reduce((sum, profit) => sum + profit, 0)
   const averageProfit = totalProfit / totalTrades
+  const averageProfitWin = totalProfitWin / winningTradesCnt
+  const averageProfitLoss = totalProfitLoss / losingTradesCnt
   const medianProfit = median(data.netProfit)
+  const medianProfitWin = median(winningTrades)
+  const medianProfitLoss = median(losingTrades)
   const firstStdDev = standardDeviation(data.netProfit)
   const secondStdDev = 2 * firstStdDev
   const maxProfit = Math.max(...data.netProfit)
@@ -671,16 +683,20 @@ export const calculateSummaryStats = (data: TradeMetrics): SummaryStats => {
 
   return {
     totalTrades,
-    winningTrades,
-    losingTrades,
+    winningTradesCnt,
+    losingTradesCnt,
     winRate,
     totalProfit,
     averageProfit,
+    averageProfitWin,
+    averageProfitLoss,
     medianProfit,
-    firstStdDev,
-    secondStdDev,
+    medianProfitWin,
+    medianProfitLoss,
     maxProfit,
     minProfit,
+    firstStdDev,
+    secondStdDev,
     maxDrawdown,
     maxDrawdownPercent,
     mar,
