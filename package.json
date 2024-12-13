@@ -11,7 +11,8 @@
     "lint:fix": "eslint . --fix",
     "prepare": "husky",
     "preinstall": "npx only-allow pnpm",
-    "serve": "vite preview"
+    "serve": "vite preview",
+    "rebase:production": "git checkout production && git rebase main && git push && git checkout main"
   },
   "lint-staged": {
     "**/*.{js,jsx,ts,tsx,html}": [
