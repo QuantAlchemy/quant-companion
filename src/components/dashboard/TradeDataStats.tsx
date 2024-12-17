@@ -88,7 +88,9 @@ const formatStatLabel = (key: string): string | JSX.Element => {
     case 'netProfitByAvgDrawdown':
       return (
         <>
-          Net Profit <Divider /> Avg Drawdown
+          Profit
+          <Divider />
+          Drawdown Ratio
         </>
       )
     case 'sharpeRatio':
