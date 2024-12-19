@@ -1,7 +1,8 @@
 import { createEffect, createSignal } from 'solid-js'
 import { Button } from '@/components/ui/button'
 import { NumberInput } from '@/components/ui/NumberInput'
-import { FileUpload } from '@/components/ui/FileUpload'
+import { FileUpload } from '@/components/dashboard/FileUpload'
+import { FileFilter } from '@/components/dashboard/FileFilter'
 import {
   originalTradeData,
   processTradeMetrics,
@@ -38,6 +39,7 @@ export const Properties: Component = () => {
         .sort((a, b) => b.exitProfit - a.exitProfit) // Sort in descending order to find the highest exitProfit trades
         .slice(0, topTradesCount)
 
+      // TODO: fix this since tradeNo is not unique when using muliple files
       const tradesToRemove = new Set(topTrades.map((trade) => trade.tradeNo))
       const filteredData = data.filter((trade) => !tradesToRemove.has(trade.tradeNo))
 
@@ -92,6 +94,7 @@ export const Properties: Component = () => {
           removeBottomTrades()
         }}
       />
+      <FileFilter />
 
       <div class="flex flex-wrap gap-2 justify-between">
         <FileUpload />

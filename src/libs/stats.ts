@@ -30,6 +30,7 @@ export interface Trade {
 }
 
 export interface TradeRecord {
+  filename: string
   tradeNo: number
   entryContracts: number
   entryCumProfit: number
@@ -329,7 +330,10 @@ function normalizePropertyName(key: string, prefix: string): string {
   return `${prefix}${normalizedKey}`
 }
 
-export function processTradingViewData(trades: TradingViewRecord[]): TradeRecord[] {
+export function processTradingViewData(
+  filename: string,
+  trades: TradingViewRecord[]
+): TradeRecord[] {
   return Object.values(
     trades.reduce(
       (acc, trade) => {
@@ -347,6 +351,7 @@ export function processTradingViewData(trades: TradingViewRecord[]): TradeRecord
       const [entry, exit] = tradePair.sort((a, _) => (a.Type.includes('Entry') ? -1 : 1))
 
       const mergedTrade: Partial<TradeRecord> = {
+        filename,
         tradeNo: entry['Trade #'],
       }
 
@@ -401,6 +406,7 @@ export const simulateTradeData = (): TradeRecord[] => {
     cumulativeProfit += profit
 
     trades.push({
+      filename: 'simulated.csv',
       tradeNo: tradeNo,
       entryContracts: contracts,
       entryCumProfit: cumulativeProfit,
