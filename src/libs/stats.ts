@@ -342,40 +342,42 @@ export function processTradingViewData(trades: TradingViewRecord[]): TradeRecord
       },
       {} as Record<number, TradingViewRecord[]>
     )
-  ).map((tradePair) => {
-    const [entry, exit] = tradePair.sort((a, _) => (a.Type.includes('Entry') ? -1 : 1))
+  )
+    .map((tradePair) => {
+      const [entry, exit] = tradePair.sort((a, _) => (a.Type.includes('Entry') ? -1 : 1))
 
-    const mergedTrade: Partial<TradeRecord> = {
-      tradeNo: entry['Trade #'],
-    }
+      const mergedTrade: Partial<TradeRecord> = {
+        tradeNo: entry['Trade #'],
+      }
 
-    ;[
-      { trade: entry, prefix: 'entry' as const },
-      { trade: exit, prefix: 'exit' as const },
-    ].forEach(({ trade, prefix }) => {
-      Object.entries(trade).forEach(([key, value]) => {
-        if (key === 'Trade #') return
+      ;[
+        { trade: entry, prefix: 'entry' as const },
+        { trade: exit, prefix: 'exit' as const },
+      ].forEach(({ trade, prefix }) => {
+        Object.entries(trade).forEach(([key, value]) => {
+          if (key === 'Trade #') return
 
-        const normalizedKey = normalizePropertyName(key, prefix)
+          const normalizedKey = normalizePropertyName(key, prefix)
 
-        if (isValidTradeRecordKey(normalizedKey)) {
-          if (key === 'Date/Time') {
-            if (isDateField(normalizedKey)) {
-              mergedTrade[normalizedKey] = dayjs(value).toDate()
+          if (isValidTradeRecordKey(normalizedKey)) {
+            if (key === 'Date/Time') {
+              if (isDateField(normalizedKey)) {
+                mergedTrade[normalizedKey] = dayjs(value).toDate()
+              }
+            } else if (isStringField(normalizedKey)) {
+              // Handle string fields (Type and Signal)
+              mergedTrade[normalizedKey] = value as string
+            } else if (isNumberField(normalizedKey)) {
+              // Handle number fields
+              mergedTrade[normalizedKey] = Number(value)
             }
-          } else if (isStringField(normalizedKey)) {
-            // Handle string fields (Type and Signal)
-            mergedTrade[normalizedKey] = value as string
-          } else if (isNumberField(normalizedKey)) {
-            // Handle number fields
-            mergedTrade[normalizedKey] = Number(value)
           }
-        }
+        })
       })
-    })
 
-    return mergedTrade as TradeRecord
-  })
+      return mergedTrade as TradeRecord
+    })
+    .filter((trade) => dayjs(trade.exitDate).isValid())
 }
 
 // Simulate Trade data
