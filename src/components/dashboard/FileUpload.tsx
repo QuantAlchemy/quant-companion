@@ -53,7 +53,7 @@ export const FileUpload = () => {
       const results = await Promise.all(
         selectedFiles.map(async (file) => {
           const data = await processFile(file)
-          return processTradingViewData(data)
+          return processTradingViewData(file.name, data)
         })
       )
       const mergedTrades = results.flat()
