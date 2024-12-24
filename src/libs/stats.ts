@@ -31,7 +31,8 @@ export interface Trade {
 
 export interface TradeRecord {
   filename: string
-  tradeNo: number
+  tradeNo?: number
+  tradeNoOrig: number
   entryContracts: number
   entryCumProfit: number
   entryCumProfitPct: number
@@ -114,7 +115,7 @@ function isDateField(key: keyof TradeRecord): key is 'entryDate' | 'exitDate' {
 function isNumberField(
   key: keyof TradeRecord
 ): key is
-  | 'tradeNo'
+  | 'tradeNoOrig'
   | 'entryContracts'
   | 'exitContracts'
   | 'entryPrice'
@@ -136,7 +137,7 @@ function isNumberField(
   | 'entryRunUpPct'
   | 'exitRunUpPct' {
   return [
-    'tradeNo',
+    'tradeNoOrig',
     'entryContracts',
     'exitContracts',
     'entryPrice',
@@ -163,7 +164,7 @@ function isNumberField(
 // Type guard function to check if a key is valid
 function isValidTradeRecordKey(key: string): key is keyof TradeRecord {
   const validKeys = [
-    'tradeNo',
+    'tradeNoOrig',
     'entryContracts',
     'entryCumProfit',
     'entryCumProfitPct',
@@ -292,7 +293,7 @@ export const averageTimeDelta = (dates: Date[]): number => {
 
 function normalizePropertyName(key: string, prefix: string): string {
   // Special case for Trade #
-  if (key === 'Trade #') return 'tradeNo'
+  if (key === 'Trade #') return 'tradeNoOrig'
 
   // Handle Date/Time
   if (key === 'Date/Time') return `${prefix}Date`
@@ -352,7 +353,7 @@ export function processTradingViewData(
 
       const mergedTrade: Partial<TradeRecord> = {
         filename,
-        tradeNo: entry['Trade #'],
+        tradeNoOrig: entry['Trade #'],
       }
 
       ;[
@@ -392,7 +393,7 @@ export const simulateTradeData = (): TradeRecord[] => {
   let cumulativeProfit = 0
 
   for (let i = 0; i < 100; i++) {
-    const tradeNo = i + 1
+    const tradeNoOrig = i + 1
     const entryDate = new Date(startDate.getTime() + i * 2 * 24 * 60 * 60 * 1000) // Every 2 days
     const exitDate = new Date(entryDate.getTime() + 24 * 60 * 60 * 1000) // 1 day after entry
     const entryPrice = Math.random() * 500 + 100 // Random entry price between 100 and 600
@@ -407,7 +408,7 @@ export const simulateTradeData = (): TradeRecord[] => {
 
     trades.push({
       filename: 'simulated.csv',
-      tradeNo: tradeNo,
+      tradeNoOrig: tradeNoOrig,
       entryContracts: contracts,
       entryCumProfit: cumulativeProfit,
       entryCumProfitPct: (cumulativeProfit / entryPrice) * 100,

@@ -56,8 +56,9 @@ export const FileUpload = () => {
           return processTradingViewData(file.name, data)
         })
       )
-      const mergedTrades = results.flat()
+      let mergedTrades = results.flat()
       mergedTrades.sort((a, b) => a.exitDate.getTime() - b.exitDate.getTime())
+      mergedTrades = mergedTrades.map((trade, i) => ({ ...trade, tradeNo: i + 1 }))
       setTradeData(mergedTrades)
       setOriginalTradeData(mergedTrades)
     } catch (error) {
