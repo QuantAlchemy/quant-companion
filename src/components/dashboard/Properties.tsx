@@ -30,8 +30,7 @@ export const Properties: Component = () => {
     }
   })
 
-  const removeTopTrades = () => {
-    const data = originalTradeData()
+  const removeTopTrades = (data = originalTradeData()) => {
     if (data) {
       // Find the top k trades to remove
       const topTradesCount = topTradesCnt()
@@ -39,16 +38,13 @@ export const Properties: Component = () => {
         .sort((a, b) => b.exitProfit - a.exitProfit) // Sort in descending order to find the highest exitProfit trades
         .slice(0, topTradesCount)
 
-      // TODO: fix this since tradeNo is not unique when using muliple files
       const tradesToRemove = new Set(topTrades.map((trade) => trade.tradeNo))
       const filteredData = data.filter((trade) => !tradesToRemove.has(trade.tradeNo))
-
-      setTradeData(() => filteredData)
+      return filteredData
     }
   }
 
-  const removeBottomTrades = () => {
-    const data = originalTradeData()
+  const removeBottomTrades = (data = originalTradeData()) => {
     if (data) {
       // Find the bottom k trades to remove
       const bottomTradesCount = bottomTradesCnt()
@@ -58,9 +54,14 @@ export const Properties: Component = () => {
 
       const tradesToRemove = new Set(bottomTrades.map((trade) => trade.tradeNo))
       const filteredData = data.filter((trade) => !tradesToRemove.has(trade.tradeNo))
-
-      setTradeData(() => filteredData)
+      return filteredData
     }
+  }
+
+  const removeTopAndBottomTrades = () => {
+    const data = originalTradeData()
+    const filteredData = removeBottomTrades(removeTopTrades(data))
+    setTradeData(() => filteredData ?? null)
   }
 
   return (
@@ -80,7 +81,7 @@ export const Properties: Component = () => {
         value={topTradesCnt}
         onInput={(value) => {
           setTopTradesCnt(value)
-          removeTopTrades()
+          removeTopAndBottomTrades()
         }}
       />
       <NumberInput
@@ -91,7 +92,7 @@ export const Properties: Component = () => {
         value={bottomTradesCnt}
         onInput={(value) => {
           setBottomTradesCnt(value)
-          removeBottomTrades()
+          removeTopAndBottomTrades()
         }}
       />
       <FileFilter />
