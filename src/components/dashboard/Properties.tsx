@@ -64,6 +64,7 @@ export const Properties: Component = () => {
     setTradeData(() => filteredData ?? null)
   }
   console.log(tradeData())
+  console.log(tradeData())
 
   return (
     <>
