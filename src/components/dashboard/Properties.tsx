@@ -63,6 +63,7 @@ export const Properties: Component = () => {
     const filteredData = removeBottomTrades(removeTopTrades(data))
     setTradeData(() => filteredData ?? null)
   }
+  console.log(tradeData())
 
   return (
     <>
