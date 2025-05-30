@@ -1,9 +1,17 @@
 import { createSignal } from 'solid-js'
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
+import dayjs from 'dayjs'
 import { Button } from '@/components/ui/button'
 import { TextFieldErrorMessage, TextFieldRoot } from '@/components/ui/textfield'
 import { processTradingViewData, setTradeData, setOriginalTradeData } from '@/libs/stats'
+import {
+  defaultHeaderConfig,
+  type HeaderConfig,
+  validateHeaders,
+  transformDataByHeaderConfig,
+} from '@/config/headerMappings'
+import { HeaderConfigManager } from './HeaderConfigManager'
 
 import type { ParseResult } from 'papaparse'
 import type { TradingViewRecord } from '@/libs/stats'
@@ -13,9 +21,12 @@ const MESSAGES = {
   MALFORMED_DATA: 'The file does not contain the expected columns',
   XLSX_PARSE_FAILED: 'Failed to parse Excel file',
   UNSUPPORTED_FILE_TYPE: 'Unsupported file type',
+  INVALID_HEADERS: 'The file headers do not match the selected configuration',
 }
 
 export const [uploadError, setUploadError] = createSignal<string | null>(null)
+export const [selectedHeaderConfig, setSelectedHeaderConfig] =
+  createSignal<HeaderConfig>(defaultHeaderConfig)
 
 const processCSVFile = (file: File): Promise<TradingViewRecord[]> => {
   return new Promise((resolve, reject) => {
@@ -24,12 +35,17 @@ const processCSVFile = (file: File): Promise<TradingViewRecord[]> => {
       dynamicTyping: true,
       skipEmptyLines: true,
       complete: function (csv: ParseResult<TradingViewRecord>) {
-        const { data, errors } = csv
+        const { data, errors, meta } = csv
         if (errors.length) {
           reject(
             `${file.name} - ${MESSAGES.PAPA_PARSE_FAILED} - ${errors[0].message} - row ${errors[0].row}`
           )
         } else {
+          // Validate headers against selected configuration
+          if (!validateHeaders(meta.fields || [], selectedHeaderConfig())) {
+            reject(MESSAGES.INVALID_HEADERS)
+            return
+          }
           resolve(data)
         }
       },
@@ -56,23 +72,31 @@ const processXLSXFile = async (file: File): Promise<TradingViewRecord[]> => {
 
     // Remove header row and convert to TradingViewRecord format
     const headers = rawData[0] as string[]
+
+    // Validate headers against selected configuration
+    if (!validateHeaders(headers, selectedHeaderConfig())) {
+      throw new Error(MESSAGES.INVALID_HEADERS)
+    }
+
     return rawData.slice(1).map((row) => {
       const record: TradingViewRecord = {} as TradingViewRecord
-      headers.forEach((header: string, index: number) => {
-        const value = row[index]
-        // Convert the value to string or number based on the header
-        if (
-          header === 'Trade #' ||
-          header.includes('Price') ||
-          header.includes('Contracts') ||
-          header.includes('Profit') ||
-          header.includes('Run-up') ||
-          header.includes('Drawdown')
-        ) {
-          record[header] = Number(value)
-        } else {
-          record[header] = String(value)
-        }
+      // Create a map of header names to their values
+      const rowMap = new Map(
+        headers.map((header, index) => {
+          let value = row[index]
+          // Convert Excel date numbers to proper date strings
+          if (header === 'Date/Time' && typeof value === 'number') {
+            // Convert Excel date number to proper date string using dayjs
+            value = dayjs(new Date((value - 25569) * 86400 * 1000)).format('YYYY-MM-DD HH:mm:ss')
+          }
+          return [header, value]
+        })
+      )
+
+      // Map each header to its value using the header name
+      headers.forEach((header) => {
+        const value = rowMap.get(header)
+        record[header] = value as string | number
       })
       return record
     })
@@ -114,7 +138,9 @@ export const FileUpload = () => {
       const results = await Promise.all(
         selectedFiles.map(async (file) => {
           const data = await processFile(file)
-          return processTradingViewData(file.name, data)
+          // Transform the data according to the selected header configuration
+          const transformedData = transformDataByHeaderConfig(data, selectedHeaderConfig())
+          return processTradingViewData(file.name, transformedData)
         })
       )
       let mergedTrades = results.flat()
@@ -130,10 +156,13 @@ export const FileUpload = () => {
   }
 
   return (
-    <div>
+    <div class="mt-4 space-y-4">
+      <HeaderConfigManager
+        selectedConfig={selectedHeaderConfig()}
+        onConfigSelect={setSelectedHeaderConfig}
+      />
       <Button
         as="label"
-        class="mt-4"
         variant="default"
       >
         <input
