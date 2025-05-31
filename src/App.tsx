@@ -6,6 +6,8 @@ import SplashScreen from '@/components/splashScreen/SplashScreen'
 import Logo from '@/components/Logo'
 // import Chart from '@/components/charts/DemoChart'
 import Dashboard from '@/components/dashboard/Dashboard'
+import QuantAlchemyLink from '@/components/QuantAlchemyLink'
+import KrownQuantAlchemyLink from './components/KrownQuantAlchemyLink'
 
 const Popup: Component = () => {
   return (
@@ -19,8 +21,12 @@ const Popup: Component = () => {
         <ColorModeScript />
         <ColorModeProvider>
           <SplashScreen />
-          <header class="container mt-4 flex justify-center sm:justify-start">
+          <header class="container mt-4 flex justify-between">
             <Logo />
+            <div class="flex items-center gap-2">
+              <KrownQuantAlchemyLink />
+              <QuantAlchemyLink />
+            </div>
             {/* <ThemeToggle /> */}
           </header>
           <main class="container py-4">
