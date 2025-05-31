@@ -1,6 +1,6 @@
-import { createSignal, For, Show, type Component } from 'solid-js'
+import { createSignal, For, Show, type Component, createEffect } from 'solid-js'
 import { Button } from '@/components/ui/button'
-import { TextFieldRoot, TextField } from '@/components/ui/textfield'
+import { TextFieldRoot, TextField, TextFieldLabel } from '@/components/ui/textfield'
 import {
   type HeaderConfig,
   saveConfig,
@@ -18,6 +18,7 @@ export const HeaderConfigManager: Component<Props> = (props) => {
   const [isEditing, setIsEditing] = createSignal(false)
   const [editingConfig, setEditingConfig] = createSignal<HeaderConfig | null>(null)
   const [newConfigName, setNewConfigName] = createSignal('')
+  let configNameInput: HTMLInputElement | undefined
 
   const handleSaveConfig = () => {
     if (!editingConfig()) return
@@ -48,8 +49,25 @@ export const HeaderConfigManager: Component<Props> = (props) => {
     setIsEditing(true)
   }
 
+  createEffect(() => {
+    if (isEditing() && configNameInput) {
+      configNameInput.focus()
+    }
+  })
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape' && isEditing()) {
+      setIsEditing(false)
+      setEditingConfig(null)
+      setNewConfigName('')
+    }
+  }
+
   return (
-    <div class={props.class + ' space-y-4'}>
+    <div
+      class={`${props.class} space-y-4`}
+      onKeyDown={handleKeyDown}
+    >
       <FileFormatSelect />
       <div class="flex justify-end space-x-2">
         <Button
@@ -82,9 +100,16 @@ export const HeaderConfigManager: Component<Props> = (props) => {
       </div>
 
       <Show when={isEditing()}>
-        <div class="space-y-4 p-4 border rounded-md">
+        <form
+          class="space-y-4 p-4 border rounded-md"
+          onSubmit={(e) => {
+            e.preventDefault()
+            handleSaveConfig()
+          }}
+        >
           <TextFieldRoot>
             <TextField
+              ref={configNameInput}
               value={newConfigName() || editingConfig()?.name || ''}
               onChange={(e: Event & { target: HTMLInputElement }) =>
                 setNewConfigName(e.target.value)
@@ -95,10 +120,16 @@ export const HeaderConfigManager: Component<Props> = (props) => {
 
           <div class="space-y-2">
             <For each={editingConfig()?.mappings}>
-              {(mapping) => (
+              {(mapping, index) => (
                 <div class="flex items-center space-x-4">
-                  <TextFieldRoot>
+                  <TextFieldRoot class="w-full">
+                    {index() === 0 ? (
+                      <TextFieldLabel for={`source-header-${mapping.targetHeader}`}>
+                        Source Header
+                      </TextFieldLabel>
+                    ) : null}
                     <TextField
+                      id={`source-header-${mapping.targetHeader}`}
                       value={mapping.sourceHeader}
                       onChange={(e: Event & { target: HTMLInputElement }) => {
                         const newMappings = editingConfig()!.mappings.map((m) =>
@@ -109,27 +140,19 @@ export const HeaderConfigManager: Component<Props> = (props) => {
                       placeholder="Source Header Pattern"
                     />
                   </TextFieldRoot>
-                  <TextFieldRoot>
+                  <TextFieldRoot class="w-full">
+                    {index() === 0 ? (
+                      <TextFieldLabel for={`target-header-${mapping.targetHeader}`}>
+                        Target Header
+                      </TextFieldLabel>
+                    ) : null}
                     <TextField
+                      id={`target-header-${mapping.targetHeader}`}
                       value={mapping.targetHeader}
                       disabled
-                      class="bg-gray-50 text-gray-700 cursor-not-allowed"
                       placeholder="Target Header (Fixed)"
                     />
                   </TextFieldRoot>
-                  <select
-                    class="px-3 py-2 border rounded-md"
-                    value={mapping.type}
-                    onChange={(e: Event & { target: HTMLSelectElement }) => {
-                      const newMappings = editingConfig()!.mappings.map((m) =>
-                        m === mapping ? { ...m, type: e.target.value as 'number' | 'string' } : m
-                      )
-                      setEditingConfig({ ...editingConfig()!, mappings: newMappings })
-                    }}
-                  >
-                    <option value="string">String</option>
-                    <option value="number">Number</option>
-                  </select>
                 </div>
               )}
             </For>
@@ -137,6 +160,7 @@ export const HeaderConfigManager: Component<Props> = (props) => {
 
           <div class="flex justify-end space-x-4">
             <Button
+              type="button"
               variant="outline"
               onClick={() => {
                 setIsEditing(false)
@@ -146,9 +170,9 @@ export const HeaderConfigManager: Component<Props> = (props) => {
             >
               Cancel
             </Button>
-            <Button onClick={handleSaveConfig}>Save</Button>
+            <Button type="submit">Save</Button>
           </div>
-        </div>
+        </form>
       </Show>
     </div>
   )
