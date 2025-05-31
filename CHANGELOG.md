@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.0](https://github.com/QuantAlchemy/quant-companion/compare/v1.0.0...v1.1.0) (2025-05-31)
+
+
+### Features
+
+* add the ability to define custom column mappings for import files ([f505f15](https://github.com/QuantAlchemy/quant-companion/commit/f505f15aa7c6ff79d73b8202faf9d424a2d26ca9))
+
+
+### Bug Fixes
+
+* add QA and KQA logos ([a8d0922](https://github.com/QuantAlchemy/quant-companion/commit/a8d0922d2e9122ce110482f10def7a1b4c22eab5))
+
 ## 1.0.0 (2025-04-05)
 
 
