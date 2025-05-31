@@ -1,11 +1,13 @@
-export interface HeaderMapping {
+import { createSignal } from 'solid-js'
+
+export type HeaderMapping = {
   sourceHeader: string
   targetHeader: string
   type: 'number' | 'string'
   alternatives?: string[] // Optional array of alternative source headers
 }
 
-export interface HeaderConfig {
+export type HeaderConfig = {
   name: string
   mappings: HeaderMapping[]
 }
@@ -89,32 +91,46 @@ export const defaultHeaderConfig: HeaderConfig = {
   ],
 }
 
-// Function to get all saved configurations
-export function getSavedConfigs(): HeaderConfig[] {
-  const savedConfigs = localStorage.getItem('headerConfigs')
-  if (!savedConfigs) return [defaultHeaderConfig]
-  return JSON.parse(savedConfigs)
-}
+export const [currentHeaderConfig, setCurrentHeaderConfig] =
+  createSignal<HeaderConfig>(defaultHeaderConfig)
+
+// Signal to store all saved configurations
+const initialConfigs = (() => {
+  const configs = localStorage.getItem('headerConfigs')
+  return configs ? (JSON.parse(configs) as HeaderConfig[]) : [defaultHeaderConfig]
+})()
+
+export const [savedConfigs, setSavedConfigs] = createSignal<HeaderConfig[]>(initialConfigs)
 
 // Function to save a new configuration
 export function saveConfig(config: HeaderConfig): void {
-  const configs = getSavedConfigs()
+  const configs = savedConfigs()
   const existingIndex = configs.findIndex((c) => c.name === config.name)
 
   if (existingIndex >= 0) {
+    // If editing existing config, update it but don't change current config
     configs[existingIndex] = config
   } else {
+    // If creating new config, add it and set as current
     configs.push(config)
+    setCurrentHeaderConfig(config)
   }
 
+  setSavedConfigs([...configs])
   localStorage.setItem('headerConfigs', JSON.stringify(configs))
 }
 
 // Function to delete a configuration
 export function deleteConfig(configName: string): void {
-  const configs = getSavedConfigs()
+  const configs = savedConfigs()
   const filteredConfigs = configs.filter((c) => c.name !== configName)
+  setSavedConfigs(filteredConfigs)
   localStorage.setItem('headerConfigs', JSON.stringify(filteredConfigs))
+
+  // If we deleted the current config, set default as current
+  if (currentHeaderConfig().name === configName) {
+    setCurrentHeaderConfig(defaultHeaderConfig)
+  }
 }
 
 // Function to validate if all required headers are present

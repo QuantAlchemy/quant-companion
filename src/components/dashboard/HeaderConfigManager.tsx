@@ -1,33 +1,23 @@
-import { createSignal, For, Show, onMount } from 'solid-js'
+import { createSignal, For, Show, type Component } from 'solid-js'
 import { Button } from '@/components/ui/button'
 import { TextFieldRoot, TextField } from '@/components/ui/textfield'
 import {
   type HeaderConfig,
-  getSavedConfigs,
   saveConfig,
   deleteConfig,
   defaultHeaderConfig,
+  currentHeaderConfig,
 } from '@/config/headerMappings'
+import { FileFormatSelect } from '@/components/dashboard/HeaderConfigSelect'
 
-interface Props {
-  onConfigSelect: (config: HeaderConfig) => void
-  selectedConfig: HeaderConfig
+type Props = {
+  class?: string
 }
 
-export const HeaderConfigManager = (props: Props) => {
-  const [configs, setConfigs] = createSignal<HeaderConfig[]>([])
+export const HeaderConfigManager: Component<Props> = (props) => {
   const [isEditing, setIsEditing] = createSignal(false)
   const [editingConfig, setEditingConfig] = createSignal<HeaderConfig | null>(null)
   const [newConfigName, setNewConfigName] = createSignal('')
-
-  // Initialize configs on mount
-  onMount(() => {
-    const savedConfigs = getSavedConfigs()
-    // Ensure default config is always first
-    const defaultConfigExists = savedConfigs.some((c) => c.name === defaultHeaderConfig.name)
-    const configsToUse = defaultConfigExists ? savedConfigs : [defaultHeaderConfig, ...savedConfigs]
-    setConfigs(configsToUse)
-  })
 
   const handleSaveConfig = () => {
     if (!editingConfig()) return
@@ -38,13 +28,6 @@ export const HeaderConfigManager = (props: Props) => {
     }
 
     saveConfig(config)
-    const updatedConfigs = getSavedConfigs()
-    // Ensure default config is always first
-    const defaultConfigExists = updatedConfigs.some((c) => c.name === defaultHeaderConfig.name)
-    const configsToUse = defaultConfigExists
-      ? updatedConfigs
-      : [defaultHeaderConfig, ...updatedConfigs]
-    setConfigs(configsToUse)
     setIsEditing(false)
     setEditingConfig(null)
     setNewConfigName('')
@@ -55,17 +38,6 @@ export const HeaderConfigManager = (props: Props) => {
     if (configName === defaultHeaderConfig.name) return
 
     deleteConfig(configName)
-    const updatedConfigs = getSavedConfigs()
-    // Ensure default config is always first
-    const defaultConfigExists = updatedConfigs.some((c) => c.name === defaultHeaderConfig.name)
-    const configsToUse = defaultConfigExists
-      ? updatedConfigs
-      : [defaultHeaderConfig, ...updatedConfigs]
-    setConfigs(configsToUse)
-
-    if (props.selectedConfig.name === configName) {
-      props.onConfigSelect(defaultHeaderConfig)
-    }
   }
 
   const handleEditConfig = (config: HeaderConfig) => {
@@ -77,34 +49,9 @@ export const HeaderConfigManager = (props: Props) => {
   }
 
   return (
-    <div class="space-y-4">
-      <div class="flex items-center space-x-4">
-        <select
-          class="px-3 py-2 border rounded-md"
-          onChange={(e: Event & { target: HTMLSelectElement }) => {
-            const config = configs().find((c) => c.name === e.target.value)
-            if (config) props.onConfigSelect(config)
-          }}
-          value={props.selectedConfig.name}
-        >
-          <For each={configs()}>
-            {(config) => <option value={config.name}>{config.name}</option>}
-          </For>
-        </select>
-        <Button
-          variant="ghost"
-          onClick={() => handleEditConfig(props.selectedConfig)}
-          disabled={props.selectedConfig.name === defaultHeaderConfig.name}
-        >
-          Edit
-        </Button>
-        <Button
-          variant="ghost"
-          onClick={() => handleDeleteConfig(props.selectedConfig.name)}
-          disabled={props.selectedConfig.name === defaultHeaderConfig.name}
-        >
-          Delete
-        </Button>
+    <div class={props.class + ' space-y-4'}>
+      <FileFormatSelect />
+      <div class="flex justify-end space-x-2">
         <Button
           variant="ghost"
           onClick={() => {
@@ -116,7 +63,21 @@ export const HeaderConfigManager = (props: Props) => {
             setIsEditing(true)
           }}
         >
-          New
+          New Config
+        </Button>
+        <Button
+          variant="ghost"
+          onClick={() => handleEditConfig(currentHeaderConfig())}
+          disabled={currentHeaderConfig().name === defaultHeaderConfig.name}
+        >
+          Edit
+        </Button>
+        <Button
+          variant="ghost"
+          onClick={() => handleDeleteConfig(currentHeaderConfig().name)}
+          disabled={currentHeaderConfig().name === defaultHeaderConfig.name}
+        >
+          Delete
         </Button>
       </div>
 

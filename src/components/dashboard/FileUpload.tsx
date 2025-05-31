@@ -1,20 +1,20 @@
 import { createSignal } from 'solid-js'
-import Papa from 'papaparse'
+import Papa, { type ParseResult } from 'papaparse'
 import * as XLSX from 'xlsx'
 import dayjs from 'dayjs'
 import { Button } from '@/components/ui/button'
 import { TextFieldErrorMessage, TextFieldRoot } from '@/components/ui/textfield'
-import { processTradingViewData, setTradeData, setOriginalTradeData } from '@/libs/stats'
 import {
-  defaultHeaderConfig,
-  type HeaderConfig,
+  processTradingViewData,
+  setTradeData,
+  setOriginalTradeData,
+  type TradingViewRecord,
+} from '@/libs/stats'
+import {
+  currentHeaderConfig,
   validateHeaders,
   transformDataByHeaderConfig,
 } from '@/config/headerMappings'
-import { HeaderConfigManager } from './HeaderConfigManager'
-
-import type { ParseResult } from 'papaparse'
-import type { TradingViewRecord } from '@/libs/stats'
 
 const MESSAGES = {
   PAPA_PARSE_FAILED: 'Papa Parse failed',
@@ -25,8 +25,6 @@ const MESSAGES = {
 }
 
 export const [uploadError, setUploadError] = createSignal<string | null>(null)
-export const [selectedHeaderConfig, setSelectedHeaderConfig] =
-  createSignal<HeaderConfig>(defaultHeaderConfig)
 
 const processCSVFile = (file: File): Promise<TradingViewRecord[]> => {
   return new Promise((resolve, reject) => {
@@ -42,7 +40,7 @@ const processCSVFile = (file: File): Promise<TradingViewRecord[]> => {
           )
         } else {
           // Validate headers against selected configuration
-          if (!validateHeaders(meta.fields || [], selectedHeaderConfig())) {
+          if (!validateHeaders(meta.fields || [], currentHeaderConfig())) {
             reject(MESSAGES.INVALID_HEADERS)
             return
           }
@@ -74,7 +72,7 @@ const processXLSXFile = async (file: File): Promise<TradingViewRecord[]> => {
     const headers = rawData[0] as string[]
 
     // Validate headers against selected configuration
-    if (!validateHeaders(headers, selectedHeaderConfig())) {
+    if (!validateHeaders(headers, currentHeaderConfig())) {
       throw new Error(MESSAGES.INVALID_HEADERS)
     }
 
@@ -139,7 +137,7 @@ export const FileUpload = () => {
         selectedFiles.map(async (file) => {
           const data = await processFile(file)
           // Transform the data according to the selected header configuration
-          const transformedData = transformDataByHeaderConfig(data, selectedHeaderConfig())
+          const transformedData = transformDataByHeaderConfig(data, currentHeaderConfig())
           return processTradingViewData(file.name, transformedData)
         })
       )
@@ -156,13 +154,10 @@ export const FileUpload = () => {
   }
 
   return (
-    <div class="mt-4 space-y-4">
-      <HeaderConfigManager
-        selectedConfig={selectedHeaderConfig()}
-        onConfigSelect={setSelectedHeaderConfig}
-      />
+    <div>
       <Button
         as="label"
+        class="mt-4"
         variant="default"
       >
         <input

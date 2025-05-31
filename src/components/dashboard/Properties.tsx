@@ -1,8 +1,9 @@
-import { createEffect, createSignal } from 'solid-js'
+import { createEffect, createSignal, type Component } from 'solid-js'
 import { Button } from '@/components/ui/button'
 import { NumberInput } from '@/components/ui/NumberInput'
 import { FileUpload } from '@/components/dashboard/FileUpload'
 import { FileFilter } from '@/components/dashboard/FileFilter'
+import { HeaderConfigManager } from '@/components/dashboard/HeaderConfigManager'
 import {
   originalTradeData,
   processTradeMetrics,
@@ -14,8 +15,6 @@ import {
   startingEquity,
   tradeData,
 } from '@/libs/stats'
-
-import type { Component } from 'solid-js'
 
 export const Properties: Component = () => {
   const [topTradesCnt, setTopTradesCnt] = createSignal(0)
@@ -109,6 +108,7 @@ export const Properties: Component = () => {
           </Button>
         ) : null}
       </div>
+      <HeaderConfigManager class="mt-2" />
 
       {import.meta.env.VITE_USER_NODE_ENV === 'development' ? (
         <Button

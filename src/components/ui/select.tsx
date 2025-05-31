@@ -3,7 +3,7 @@ import type { PolymorphicProps } from '@kobalte/core/polymorphic'
 import type { SelectContentProps, SelectItemProps, SelectTriggerProps } from '@kobalte/core/select'
 import { Select as SelectPrimitive } from '@kobalte/core/select'
 import type { ParentProps, ValidComponent } from 'solid-js'
-import { splitProps } from 'solid-js'
+import { splitProps, createSignal, onMount } from 'solid-js'
 
 export const Select = SelectPrimitive
 export const SelectValue = SelectPrimitive.Value
@@ -21,6 +21,14 @@ export const SelectTrigger = <T extends ValidComponent = 'button'>(
   props: PolymorphicProps<T, selectTriggerProps<T>>
 ) => {
   const [local, rest] = splitProps(props as selectTriggerProps, ['class', 'children'])
+  const [textContent, setTextContent] = createSignal('')
+  let textRef: HTMLSpanElement | undefined
+
+  onMount(() => {
+    if (textRef) {
+      setTextContent(textRef.textContent || '')
+    }
+  })
 
   return (
     <SelectPrimitive.Trigger
@@ -30,7 +38,13 @@ export const SelectTrigger = <T extends ValidComponent = 'button'>(
       )}
       {...rest}
     >
-      {local.children}
+      <span
+        ref={textRef}
+        class="truncate"
+        title={textContent()}
+      >
+        {local.children}
+      </span>
       <SelectPrimitive.Icon
         as="svg"
         xmlns="http://www.w3.org/2000/svg"
