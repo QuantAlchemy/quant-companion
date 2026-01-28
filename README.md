@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./public/icon-128.png" alt="TradingView Companion Logo" width="80" height="80">
+</p>
+
 # TradingView Companion
 
 A powerful tool for analyzing and optimizing TradingView strategy results. This application allows you to export strategy data from TradingView and perform in-depth analysis of your trading performance.
