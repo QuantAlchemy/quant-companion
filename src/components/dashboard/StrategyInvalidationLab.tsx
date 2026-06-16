@@ -1,8 +1,8 @@
-import { For, Show, createMemo, createSignal } from 'solid-js'
+import { For, createMemo, createSignal } from 'solid-js'
 import { ChevronDown } from 'lucide-solid'
 import { NumberInput } from '@/components/ui/NumberInput'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
   Table,
   TableBody,
@@ -39,6 +39,17 @@ const StatusBadge: Component<{ status: InvalidationStatus }> = (props) => (
   <span class={badgeClasses(props.status)}>{statusLabel[props.status]}</span>
 )
 
+const SummaryStat: Component<{
+  label: string
+  value: number
+  class?: string
+}> = (props) => (
+  <div class={cn('rounded-lg border px-3 py-2 text-center', props.class)}>
+    <div class="text-xl font-bold tabular-nums">{props.value}</div>
+    <div class="text-xs text-muted-foreground">{props.label}</div>
+  </div>
+)
+
 export const StrategyInvalidationLab: Component = () => {
   const [isExpanded, setIsExpanded] = createSignal(false)
   const [trials, setTrials] = createSignal(500)
@@ -58,8 +69,11 @@ export const StrategyInvalidationLab: Component = () => {
       id="strategy-invalidation-lab"
       class="overflow-hidden border-primary/35 bg-card/95 2xl:col-span-2"
     >
-      <CardHeader class="space-y-4">
-        <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+      <Collapsible
+        open={isExpanded()}
+        onOpenChange={setIsExpanded}
+      >
+        <CardHeader class="space-y-4">
           <div class="max-w-3xl space-y-2">
             <div class="inline-flex rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-primary-foreground">
               Strategy Invalidation v1
@@ -90,169 +104,178 @@ export const StrategyInvalidationLab: Component = () => {
             </div>
           </div>
 
-          <div class="flex flex-col gap-3 xl:min-w-[480px] xl:items-end">
-            <Button
-              aria-controls="strategy-invalidation-lab-content"
-              aria-expanded={isExpanded()}
-              variant="outline"
-              onClick={() => setIsExpanded((expanded) => !expanded)}
-            >
-              {isExpanded() ? 'Hide lab' : 'Show lab'}
-              <ChevronDown
-                class={cn('ml-2 h-4 w-4 transition-transform', isExpanded() ? 'rotate-180' : '')}
+          <CollapsibleTrigger
+            aria-controls="strategy-invalidation-lab-content"
+            class={cn(
+              'flex w-full flex-col gap-4 rounded-xl border border-border/80 bg-background/35 p-4 text-left transition-colors',
+              'hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+            )}
+          >
+            <div class="grid w-full grid-cols-2 gap-2 sm:grid-cols-4">
+              <SummaryStat
+                label="tests"
+                value={report().summary.totalTests}
               />
-            </Button>
+              <SummaryStat
+                label="pass"
+                value={report().summary.passCount}
+                class="border-emerald-400/30 bg-emerald-400/10"
+              />
+              <SummaryStat
+                label="watch"
+                value={report().summary.watchCount}
+                class="border-amber-300/30 bg-amber-300/10"
+              />
+              <SummaryStat
+                label="invalidate"
+                value={report().summary.invalidateCount}
+                class="border-red-400/30 bg-red-400/10"
+              />
+            </div>
 
-            <Show when={isExpanded()}>
-              <div class="grid w-full grid-cols-2 gap-2 sm:grid-cols-4">
-                <div class="rounded-lg border border-border/80 p-3">
-                  <div class="text-2xl font-bold">{report().summary.totalTests}</div>
-                  <div class="text-xs text-muted-foreground">tests</div>
-                </div>
-                <div class="rounded-lg border border-emerald-400/30 bg-emerald-400/10 p-3">
-                  <div class="text-2xl font-bold">{report().summary.passCount}</div>
-                  <div class="text-xs text-muted-foreground">pass</div>
-                </div>
-                <div class="rounded-lg border border-amber-300/30 bg-amber-300/10 p-3">
-                  <div class="text-2xl font-bold">{report().summary.watchCount}</div>
-                  <div class="text-xs text-muted-foreground">watch</div>
-                </div>
-                <div class="rounded-lg border border-red-400/30 bg-red-400/10 p-3">
-                  <div class="text-2xl font-bold">{report().summary.invalidateCount}</div>
-                  <div class="text-xs text-muted-foreground">invalidate</div>
-                </div>
-              </div>
-            </Show>
-          </div>
-        </div>
+            <div class="flex w-full items-center justify-between gap-3 border-t border-border/60 pt-3 text-sm">
+              <span class="text-muted-foreground">
+                {isExpanded()
+                  ? 'Hide detailed invalidation results'
+                  : 'Show detailed invalidation results'}
+              </span>
+              <span class="inline-flex items-center gap-2 font-medium text-foreground">
+                {isExpanded() ? 'Hide lab' : 'Show lab'}
+                <ChevronDown
+                  class={cn(
+                    'h-4 w-4 shrink-0 transition-transform duration-200',
+                    isExpanded() ? 'rotate-180' : ''
+                  )}
+                />
+              </span>
+            </div>
+          </CollapsibleTrigger>
+        </CardHeader>
 
-        <Show when={isExpanded()}>
-          <div class="grid gap-3 rounded-xl border border-border/80 bg-background/35 p-4 md:grid-cols-3">
-            <NumberInput
-              id="invalidationTrials"
-              label="Random trials"
-              class="w-28"
-              min={50}
-              max={5000}
-              value={trials}
-              onInput={setTrials}
-            />
-            <NumberInput
-              id="invalidationFeePerTrade"
-              label="Fee / trade"
-              class="w-28"
-              min={0}
-              value={feePerTrade}
-              onInput={setFeePerTrade}
-            />
-            <NumberInput
-              id="invalidationRollingWindow"
-              label="Rolling window"
-              class="w-28"
-              min={5}
-              value={rollingWindow}
-              onInput={setRollingWindow}
-            />
-          </div>
-        </Show>
-      </CardHeader>
+        <CollapsibleContent id="strategy-invalidation-lab-content">
+          <div class="space-y-4 border-t border-border/50 px-6 pb-6">
+            <div class="grid gap-3 rounded-xl border border-border/80 bg-background/35 p-4 md:grid-cols-3">
+              <NumberInput
+                id="invalidationTrials"
+                label="Random trials"
+                class="w-28"
+                min={50}
+                max={5000}
+                value={trials}
+                onInput={setTrials}
+              />
+              <NumberInput
+                id="invalidationFeePerTrade"
+                label="Fee / trade"
+                class="w-28"
+                min={0}
+                value={feePerTrade}
+                onInput={setFeePerTrade}
+              />
+              <NumberInput
+                id="invalidationRollingWindow"
+                label="Rolling window"
+                class="w-28"
+                min={5}
+                value={rollingWindow}
+                onInput={setRollingWindow}
+              />
+            </div>
 
-      <Show when={isExpanded()}>
-        <CardContent
-          id="strategy-invalidation-lab-content"
-          class="space-y-4"
-        >
-          <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
-            <For each={report().results}>
-              {(result) => (
-                <article class="rounded-xl border border-border/80 bg-background/40 p-4">
-                  <div class="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 class="text-lg font-semibold leading-tight">{result.name}</h3>
-                      <p class="mt-1 text-sm text-muted-foreground">{result.whatItChecks}</p>
-                    </div>
-                    <StatusBadge status={result.status} />
-                  </div>
-
-                  <div class="mt-4 grid gap-2 sm:grid-cols-3">
-                    <For each={result.metrics}>
-                      {(metric) => (
-                        <div class="rounded-lg border border-border/70 bg-card/60 p-3">
-                          <div class="text-xs text-muted-foreground">{metric.label}</div>
-                          <div
-                            class={cn(
-                              'mt-1 text-sm font-semibold',
-                              metric.tone ? statusClasses[metric.tone].split(' ').at(-1) : ''
-                            )}
-                          >
-                            {metric.value}
-                          </div>
+            <CardContent class="space-y-4 p-0">
+              <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                <For each={report().results}>
+                  {(result) => (
+                    <article class="rounded-xl border border-border/80 bg-background/40 p-4">
+                      <div class="flex items-start justify-between gap-3">
+                        <div>
+                          <h3 class="text-lg font-semibold leading-tight">{result.name}</h3>
+                          <p class="mt-1 text-sm text-muted-foreground">{result.whatItChecks}</p>
                         </div>
-                      )}
-                    </For>
-                  </div>
+                        <StatusBadge status={result.status} />
+                      </div>
 
-                  <div class="mt-4 rounded-lg border border-border/70 bg-card/50 p-3 text-sm">
-                    <div class="font-semibold">Conclusion</div>
-                    <p class="mt-1 text-muted-foreground">{result.conclusion}</p>
-                  </div>
-                </article>
-              )}
-            </For>
-          </div>
+                      <div class="mt-4 grid gap-2 sm:grid-cols-3">
+                        <For each={result.metrics}>
+                          {(metric) => (
+                            <div class="rounded-lg border border-border/70 bg-card/60 p-3">
+                              <div class="text-xs text-muted-foreground">{metric.label}</div>
+                              <div
+                                class={cn(
+                                  'mt-1 text-sm font-semibold',
+                                  metric.tone ? statusClasses[metric.tone].split(' ').at(-1) : ''
+                                )}
+                              >
+                                {metric.value}
+                              </div>
+                            </div>
+                          )}
+                        </For>
+                      </div>
 
-          <div class="rounded-xl border border-border/80 bg-background/35 p-4">
-            <h3 class="text-lg font-semibold">Roadmap for deeper invalidations</h3>
-            <p class="mt-1 text-sm text-muted-foreground">
-              v1 stays intentionally trade-export-first. These are the next data unlocks without
-              pretending a TradingView trade list contains signals it does not contain.
-            </p>
-            <Table class="mt-4">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Version</TableHead>
-                  <TableHead>Feature</TableHead>
-                  <TableHead>Why it matters</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow>
-                  <TableCell class="font-medium">v1.1 / v2</TableCell>
-                  <TableCell>OHLC price data import</TableCell>
-                  <TableCell>
-                    Enables random entry timing, random price paths, benchmark overlays, and true
-                    path-dependent slippage tests.
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell class="font-medium">v1.1</TableCell>
-                  <TableCell>Multiple TradingView result files</TableCell>
-                  <TableCell>
-                    Already supported by upload. The lab now summarizes whether multiple uploaded
-                    files agree or expose cherry-picking.
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell class="font-medium">v3 option</TableCell>
-                  <TableCell>TradingView Optimizer / browser automation</TableCell>
-                  <TableCell>
-                    Could drive parameter reruns and randomized settings later, but it is heavier
-                    and should stay out of v1.
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell class="font-medium">v3 option</TableCell>
-                  <TableCell>Strategy signal export / Pine randomization</TableCell>
-                  <TableCell>
-                    Useful for true signal-shift tests, but unrealistic as a first dependency for
-                    broad users.
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
+                      <div class="mt-4 rounded-lg border border-border/70 bg-card/50 p-3 text-sm">
+                        <div class="font-semibold">Conclusion</div>
+                        <p class="mt-1 text-muted-foreground">{result.conclusion}</p>
+                      </div>
+                    </article>
+                  )}
+                </For>
+              </div>
+
+              <div class="rounded-xl border border-border/80 bg-background/35 p-4">
+                <h3 class="text-lg font-semibold">Roadmap for deeper invalidations</h3>
+                <p class="mt-1 text-sm text-muted-foreground">
+                  v1 stays intentionally trade-export-first. These are the next data unlocks without
+                  pretending a TradingView trade list contains signals it does not contain.
+                </p>
+                <Table class="mt-4">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Version</TableHead>
+                      <TableHead>Feature</TableHead>
+                      <TableHead>Why it matters</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell class="font-medium">v1.1 / v2</TableCell>
+                      <TableCell>OHLC price data import</TableCell>
+                      <TableCell>
+                        Enables random entry timing, random price paths, benchmark overlays, and
+                        true path-dependent slippage tests.
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell class="font-medium">v1.1</TableCell>
+                      <TableCell>Multiple TradingView result files</TableCell>
+                      <TableCell>
+                        Already supported by upload. The lab now summarizes whether multiple
+                        uploaded files agree or expose cherry-picking.
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell class="font-medium">v3 option</TableCell>
+                      <TableCell>TradingView Optimizer / browser automation</TableCell>
+                      <TableCell>
+                        Could drive parameter reruns and randomized settings later, but it is
+                        heavier and should stay out of v1.
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell class="font-medium">v3 option</TableCell>
+                      <TableCell>Strategy signal export / Pine randomization</TableCell>
+                      <TableCell>
+                        Useful for true signal-shift tests, but unrealistic as a first dependency
+                        for broad users.
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
           </div>
-        </CardContent>
-      </Show>
+        </CollapsibleContent>
+      </Collapsible>
     </Card>
   )
 }
