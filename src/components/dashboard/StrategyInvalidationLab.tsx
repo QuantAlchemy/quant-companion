@@ -111,6 +111,7 @@ export const StrategyInvalidationLab: Component = () => {
           <NumberInput
             id="invalidationTrials"
             label="Random trials"
+            class="w-28"
             min={50}
             max={5000}
             value={trials}
@@ -119,6 +120,7 @@ export const StrategyInvalidationLab: Component = () => {
           <NumberInput
             id="invalidationFeePerTrade"
             label="Fee / trade"
+            class="w-28"
             min={0}
             value={feePerTrade}
             onInput={setFeePerTrade}
@@ -126,6 +128,7 @@ export const StrategyInvalidationLab: Component = () => {
           <NumberInput
             id="invalidationRollingWindow"
             label="Rolling window"
+            class="w-28"
             min={5}
             value={rollingWindow}
             onInput={setRollingWindow}
