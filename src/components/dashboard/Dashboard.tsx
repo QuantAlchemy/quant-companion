@@ -11,6 +11,7 @@ import { ZScoreDistributionBox, ZScoreDistributionHist } from '@/components/char
 import ProbabilityConesCard from './ProbabilityConesCard'
 import MonteCarloChartCard from './MonteCarloCard'
 import MonteCarloStats from './MonteCarloStats'
+import StrategyInvalidationLab from './StrategyInvalidationLab'
 import TradeDataStats from './TradeDataStats'
 import { tradeMetrics } from '@/libs/stats'
 
@@ -48,6 +49,8 @@ const Dashboard = () => {
       </div>
 
       <div class="grid grid-cols-1 2xl:grid-cols-2 gap-6 mt-6">
+        <StrategyInvalidationLab />
+
         <MonteCarloChartCard data={tradeMetrics()} />
 
         <Card>

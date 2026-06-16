@@ -1,0 +1,855 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1"
+    />
+    <title>Strategy Invalidation Playbook · Quant Companion</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #070908;
+        --panel: rgba(17, 24, 20, 0.84);
+        --panel-strong: rgba(24, 37, 31, 0.92);
+        --ink: #edf7ee;
+        --muted: #9dafaa;
+        --line: rgba(167, 255, 204, 0.14);
+        --green: #6bff9f;
+        --gold: #f7c868;
+        --red: #ff6a5f;
+        --blue: #74b7ff;
+        --violet: #c79dff;
+        --shadow: 0 30px 90px rgba(0, 0, 0, 0.45);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--ink);
+        background: radial-gradient(circle at 12% 10%, rgba(107, 255, 159, 0.18), transparent 26rem),
+          radial-gradient(circle at 84% 18%, rgba(247, 200, 104, 0.12), transparent 24rem),
+          radial-gradient(circle at 50% 82%, rgba(116, 183, 255, 0.11), transparent 32rem),
+          linear-gradient(135deg, #030504 0%, #0c1110 44%, #050706 100%);
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        line-height: 1.5;
+      }
+
+      body::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0.24;
+        background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        background-size: 48px 48px;
+        mask-image: linear-gradient(to bottom, #000, transparent 88%);
+      }
+
+      a {
+        color: var(--green);
+      }
+
+      .cta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 22px;
+      }
+
+      .cta {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+        padding: 10px 14px;
+        border: 1px solid rgba(107, 255, 159, 0.32);
+        border-radius: 999px;
+        color: var(--ink);
+        background: rgba(107, 255, 159, 0.12);
+        font-size: 13px;
+        font-weight: 900;
+        letter-spacing: 0.04em;
+        text-decoration: none;
+      }
+
+      .cta.secondary {
+        border-color: var(--line);
+        background: rgba(255, 255, 255, 0.045);
+        color: var(--muted);
+      }
+
+      .wrap {
+        position: relative;
+        width: min(1180px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 40px 0 72px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        color: var(--green);
+        background: rgba(107, 255, 159, 0.08);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+      }
+
+      .eyebrow::before {
+        content: '';
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: var(--green);
+        box-shadow: 0 0 22px var(--green);
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
+        gap: 28px;
+        align-items: stretch;
+        margin-top: 34px;
+      }
+
+      h1 {
+        margin: 18px 0 0;
+        font-size: clamp(44px, 8vw, 98px);
+        line-height: 0.9;
+        letter-spacing: -0.075em;
+      }
+
+      .hero p {
+        max-width: 720px;
+        color: var(--muted);
+        font-size: clamp(17px, 2vw, 22px);
+      }
+
+      .callout,
+      .card,
+      .matrix,
+      .artifact-note {
+        border: 1px solid var(--line);
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(18px);
+      }
+
+      .callout {
+        border-radius: 28px;
+        padding: 28px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .callout::after {
+        content: 'NULL';
+        position: absolute;
+        right: -18px;
+        bottom: -34px;
+        color: rgba(255, 255, 255, 0.04);
+        font-size: 112px;
+        font-weight: 1000;
+        letter-spacing: -0.08em;
+      }
+
+      .callout h2 {
+        margin: 0;
+        font-size: 31px;
+        letter-spacing: -0.045em;
+      }
+
+      .metric-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-top: 30px;
+      }
+
+      .metric {
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.035);
+      }
+
+      .metric b {
+        display: block;
+        font-size: 24px;
+        color: var(--green);
+      }
+
+      .metric span {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .section {
+        margin-top: 56px;
+      }
+
+      .section-title {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 18px;
+      }
+
+      h2 {
+        margin: 0;
+        font-size: clamp(28px, 4.4vw, 48px);
+        letter-spacing: -0.055em;
+      }
+
+      .section-title p {
+        max-width: 580px;
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .card {
+        border-radius: 24px;
+        padding: 22px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .card::before {
+        content: attr(data-step);
+        position: absolute;
+        top: 12px;
+        right: 16px;
+        color: rgba(255, 255, 255, 0.055);
+        font-size: 62px;
+        font-weight: 1000;
+        line-height: 1;
+      }
+
+      .tag {
+        display: inline-flex;
+        padding: 5px 9px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        background: rgba(116, 183, 255, 0.11);
+        color: var(--blue);
+        border: 1px solid rgba(116, 183, 255, 0.2);
+      }
+
+      .tag.kill {
+        background: rgba(255, 106, 95, 0.11);
+        color: var(--red);
+        border-color: rgba(255, 106, 95, 0.25);
+      }
+      .tag.tv {
+        background: rgba(107, 255, 159, 0.1);
+        color: var(--green);
+        border-color: rgba(107, 255, 159, 0.24);
+      }
+      .tag.partial {
+        background: rgba(247, 200, 104, 0.1);
+        color: var(--gold);
+        border-color: rgba(247, 200, 104, 0.25);
+      }
+
+      .card h3 {
+        margin: 16px 0 8px;
+        font-size: 21px;
+        letter-spacing: -0.035em;
+      }
+
+      .card p,
+      .card li {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      ul {
+        padding-left: 18px;
+      }
+
+      code {
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(0, 0, 0, 0.28);
+        border-radius: 8px;
+        padding: 2px 6px;
+        color: #dfffe9;
+      }
+
+      .matrix {
+        border-radius: 28px;
+        overflow: hidden;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 16px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        color: var(--ink);
+        background: rgba(255, 255, 255, 0.04);
+        font-size: 12px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      td {
+        color: var(--muted);
+      }
+      td:first-child {
+        color: var(--ink);
+        font-weight: 800;
+      }
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .artifact-note {
+        border-radius: 28px;
+        padding: 28px;
+        background: linear-gradient(135deg, rgba(107, 255, 159, 0.12), rgba(116, 183, 255, 0.08));
+      }
+
+      .two-col {
+        display: grid;
+        grid-template-columns: 0.9fr 1.1fr;
+        gap: 16px;
+      }
+
+      .checklist {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      .checklist li {
+        display: grid;
+        grid-template-columns: 28px 1fr;
+        gap: 10px;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .checklist li:last-child {
+        border-bottom: 0;
+      }
+      .box {
+        width: 20px;
+        height: 20px;
+        border: 1px solid rgba(107, 255, 159, 0.45);
+        border-radius: 6px;
+        margin-top: 1px;
+      }
+
+      @media (max-width: 900px) {
+        .hero,
+        .two-col {
+          grid-template-columns: 1fr;
+        }
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        .section-title {
+          align-items: start;
+          flex-direction: column;
+        }
+        .metric-row {
+          grid-template-columns: 1fr;
+        }
+        th:nth-child(4),
+        td:nth-child(4) {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <span class="eyebrow">Quant Companion candidate page</span>
+
+      <section class="hero">
+        <div>
+          <h1>Strategy Invalidation Playbook</h1>
+          <p>
+            A practical test suite for proving a TradingView strategy is more than a pretty equity
+            curve. The goal is not to make the strategy look good. The goal is to attack it until
+            the weak parts confess.
+          </p>
+        </div>
+        <aside class="callout">
+          <div>
+            <h2>Null hypothesis first.</h2>
+            <p>
+              “My signal has no edge. Randomized trades, shuffled labels, or simple exposure can
+              explain the result.” Every test below tries to reject that null.
+            </p>
+          </div>
+          <div
+            class="metric-row"
+            aria-label="Playbook summary"
+          >
+            <div class="metric"><b>6</b><span>phases</span></div>
+            <div class="metric"><b>18</b><span>v1 tests</span></div>
+            <div class="metric"><b>TV</b><span>export-first</span></div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="section artifact-note">
+        <div class="two-col">
+          <div>
+            <h2>Fresh example direction</h2>
+            <p>
+              Use a simple, public TradingView strategy export rather than PQN notebooks: for
+              example, an
+              <strong>RSI pullback strategy on SPY, QQQ, BTCUSD, or ES</strong>. Users only need the
+              TradingView Strategy Tester export to begin.
+            </p>
+            <div class="cta-row">
+              <a
+                class="cta"
+                href="/#strategy-invalidation-lab"
+                >Open the v1 Invalidation Lab in app</a
+              >
+              <a
+                class="cta secondary"
+                href="/strategy-invalidation-playbook.md"
+                >Read the fully documented test specs</a
+              >
+            </div>
+          </div>
+          <ul class="checklist">
+            <li>
+              <span class="box"></span
+              ><span>Upload TradingView “List of Trades” CSV/XLSX into Quant Companion.</span>
+            </li>
+            <li>
+              <span class="box"></span
+              ><span
+                >Freeze baseline stats: net profit, Sharpe, drawdown, MAR, trade count, win
+                rate.</span
+              >
+            </li>
+            <li>
+              <span class="box"></span
+              ><span
+                >Run trade-level invalidation tests that work from exported results alone.</span
+              >
+            </li>
+            <li>
+              <span class="box"></span
+              ><span
+                >Flag deeper tests that require OHLC data, signal series, or TradingView
+                automation.</span
+              >
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">
+          <h2>Phase 1 · Reproduce</h2>
+          <p>These tests make the baseline trustworthy before we start punching it.</p>
+        </div>
+        <div class="grid">
+          <article
+            class="card"
+            data-step="01"
+          >
+            <span class="tag tv">TradingView export</span>
+            <h3>Baseline freeze</h3>
+            <p>
+              <strong>Run it:</strong> import the original trade list and lock starting equity,
+              market, timeframe, date range, and costs.
+            </p>
+            <p><strong>Invalidate if:</strong> the same export cannot reproduce the same stats.</p>
+          </article>
+          <article
+            class="card"
+            data-step="02"
+          >
+            <span class="tag tv">TradingView export</span>
+            <h3>Trade count sanity</h3>
+            <p>
+              <strong>Run it:</strong> count trades, wins/losses, average hold time, and exposure
+              proxy from entry/exit dates.
+            </p>
+            <p>
+              <strong>Invalidate if:</strong> too few trades or one date cluster explains most
+              results.
+            </p>
+          </article>
+          <article
+            class="card"
+            data-step="03"
+          >
+            <span class="tag partial">Needs settings</span>
+            <h3>Cost assumption audit</h3>
+            <p>
+              <strong>Run it:</strong> record commission, slippage, order sizing, pyramiding,
+              margin, and session settings from TradingView.
+            </p>
+            <p>
+              <strong>Invalidate if:</strong> the edge exists only with zero friction or impossible
+              sizing.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">
+          <h2>Phase 2 · Randomize</h2>
+          <p>
+            Build null distributions. If random can match the strategy, the strategy is not special.
+          </p>
+        </div>
+        <div class="grid">
+          <article
+            class="card"
+            data-step="04"
+          >
+            <span class="tag tv">TradingView export</span>
+            <h3>Trade-order shuffle</h3>
+            <p>
+              <strong>Run it:</strong> randomly reorder realized trade profits 1,000+ times and
+              rebuild equity curves.
+            </p>
+            <p>
+              <strong>Invalidate if:</strong> baseline drawdown or terminal equity is ordinary
+              inside the shuffled distribution.
+            </p>
+          </article>
+          <article
+            class="card"
+            data-step="05"
+          >
+            <span class="tag tv">TradingView export</span>
+            <h3>Trade bootstrap</h3>
+            <p>
+              <strong>Run it:</strong> sample trades with replacement to estimate outcome ranges
+              from the observed trade distribution.
+            </p>
+            <p>
+              <strong>Invalidate if:</strong> a large share of bootstraps are negative or exceed
+              acceptable drawdown.
+            </p>
+          </article>
+          <article
+            class="card"
+            data-step="06"
+          >
+            <span class="tag tv">TradingView export</span>
+            <h3>Sign-flip expectancy</h3>
+            <p>
+              <strong>Run it:</strong> randomly flip trade P/L signs while preserving magnitudes to
+              test if direction matters.
+            </p>
+            <p>
+              <strong>Invalidate if:</strong> original expectancy is not an outlier versus random
+              sign assignments.
+            </p>
+          </article>
+          <article
+            class="card"
+            data-step="07"
+          >
+            <span class="tag partial">Needs OHLC/signals</span>
+            <h3>Random entry timing</h3>
+            <p>
+              <strong>Run it:</strong> keep trade count and holding-period distribution, but
+              randomize entry dates on the same market.
+            </p>
+            <p>
+              <strong>Invalidate if:</strong> random entries produce similar Sharpe, return, or
+              drawdown.
+            </p>
+          </article>
+          <article
+            class="card"
+            data-step="08"
+          >
+            <span class="tag partial">Needs signals</span>
+            <h3>Circular signal shift</h3>
+            <p>
+              <strong>Run it:</strong> shift the entire signal series by random offsets, preserving
+              clustering but breaking timing.
+            </p>
+            <p>
+              <strong>Invalidate if:</strong> shifted signals perform similarly to real signals.
+            </p>
+          </article>
+          <article
+            class="card"
+            data-step="09"
+          >
+            <span class="tag partial">Needs strategy reruns</span>
+            <h3>Randomized settings rerun</h3>
+            <p>
+              <strong>Run it:</strong> rerun the TradingView strategy across random parameter sets
+              and compare the chosen setting.
+            </p>
+            <p>
+              <strong>Invalidate if:</strong> the selected parameter is not on a broad robust
+              plateau.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">
+          <h2>Phase 3 · Stress</h2>
+          <p>Keep the same trades, then make the world less friendly.</p>
+        </div>
+        <div class="grid">
+          <article
+            class="card"
+            data-step="10"
+          >
+            <span class="tag tv">TradingView export</span>
+            <h3>Remove best trades</h3>
+            <p>
+              <strong>Run it:</strong> remove top 1, top 5, and top 10% winning trades. Quant
+              Companion already has the beginning of this.
+            </p>
+            <p><strong>Invalidate if:</strong> one or two lucky trades carry the whole strategy.</p>
+          </article>
+          <article
+            class="card"
+            data-step="11"
+          >
+            <span class="tag tv">TradingView export</span>
+            <h3>Fee haircut</h3>
+            <p>
+              <strong>Run it:</strong> subtract fixed or bps cost from every trade and redraw
+              equity.
+            </p>
+            <p><strong>Invalidate if:</strong> realistic fees erase expectancy.</p>
+          </article>
+          <article
+            class="card"
+            data-step="12"
+          >
+            <span class="tag partial">Needs price/size</span>
+            <h3>Slippage haircut</h3>
+            <p>
+              <strong>Run it:</strong> subtract slippage per contract/share or as bps of notional.
+            </p>
+            <p><strong>Invalidate if:</strong> edge requires perfect fills.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">
+          <h2>Phase 4 · Validate alpha</h2>
+          <p>Separate actual signal value from beta, market drift, or trade distribution luck.</p>
+        </div>
+        <div class="grid">
+          <article
+            class="card"
+            data-step="13"
+          >
+            <span class="tag partial">Needs benchmark</span>
+            <h3>Benchmark overlay</h3>
+            <p>
+              <strong>Run it:</strong> compare equity curve to buy-and-hold, SPY/QQQ, sector ETF, or
+              underlying market.
+            </p>
+            <p>
+              <strong>Invalidate if:</strong> the strategy adds complexity without improving
+              risk-adjusted return.
+            </p>
+          </article>
+          <article
+            class="card"
+            data-step="14"
+          >
+            <span class="tag partial">Needs benchmark returns</span>
+            <h3>Regression alpha</h3>
+            <p><strong>Run it:</strong> regress strategy returns against benchmark returns.</p>
+            <p>
+              <strong>Invalidate if:</strong> alpha is insignificant or beta explains the result.
+            </p>
+          </article>
+          <article
+            class="card"
+            data-step="15"
+          >
+            <span class="tag partial">Needs factor labels</span>
+            <h3>Forward-label shuffle</h3>
+            <p>
+              <strong>Run it:</strong> shuffle forward returns against factor values and compare
+              IC/p-value distributions.
+            </p>
+            <p><strong>Invalidate if:</strong> the factor cannot beat shuffled labels.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">
+          <h2>Phase 5 · Robustness</h2>
+          <p>
+            Look for performance that survives different nearby worlds, not one lucky historical
+            path.
+          </p>
+        </div>
+        <div class="grid">
+          <article
+            class="card"
+            data-step="16"
+          >
+            <span class="tag tv">TradingView export</span>
+            <h3>Subperiod split</h3>
+            <p>
+              <strong>Run it:</strong> split trades into years, quarters, or regimes and recompute
+              stats for each period.
+            </p>
+            <p><strong>Invalidate if:</strong> one subperiod explains nearly all returns.</p>
+          </article>
+          <article
+            class="card"
+            data-step="17"
+          >
+            <span class="tag tv">TradingView export</span>
+            <h3>Rolling death watch</h3>
+            <p>
+              <strong>Run it:</strong> plot rolling net profit, Sharpe proxy, win rate, and drawdown
+              across fixed trade windows.
+            </p>
+            <p><strong>Invalidate if:</strong> edge decays or spends long windows below zero.</p>
+          </article>
+          <article
+            class="card"
+            data-step="18"
+          >
+            <span class="tag partial">Needs reruns</span>
+            <h3>Walk-forward comparison</h3>
+            <p>
+              <strong>Run it:</strong> optimize on one period in TradingView, test fixed settings on
+              the next period.
+            </p>
+            <p><strong>Invalidate if:</strong> in-sample settings do not transfer out of sample.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">
+          <h2>Quant Companion fit</h2>
+          <p>
+            What can become part of the current app versus what needs extension automation or more
+            data.
+          </p>
+        </div>
+        <div class="matrix">
+          <table>
+            <thead>
+              <tr>
+                <th>Test family</th>
+                <th>Works from TV export?</th>
+                <th>How to run it in Quant Companion</th>
+                <th>Implementation note</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Trade bootstrap / Monte Carlo</td>
+                <td><span class="tag tv">Yes</span></td>
+                <td>
+                  Use existing net profit array, sample with replacement, compare terminal equity
+                  and drawdown distribution.
+                </td>
+                <td>Already close: current Monte Carlo can be reframed as invalidation.</td>
+              </tr>
+              <tr>
+                <td>Remove best/worst trades</td>
+                <td><span class="tag tv">Yes</span></td>
+                <td>
+                  Existing controls remove best/worst trades; add pass/fail language and
+                  contribution stats.
+                </td>
+                <td>Turn into “lucky outlier dependency” test.</td>
+              </tr>
+              <tr>
+                <td>Subperiod / rolling stats</td>
+                <td><span class="tag tv">Yes</span></td>
+                <td>Group uploaded trades by date period and show a per-period stats grid.</td>
+                <td>No price data required.</td>
+              </tr>
+              <tr>
+                <td>Fee and slippage haircut</td>
+                <td><span class="tag partial">Partial</span></td>
+                <td>
+                  Subtract fixed fee per trade immediately; bps/notional requires contracts and
+                  price fields to be reliable.
+                </td>
+                <td>Start with fixed + percent-of-profit haircut; expand later.</td>
+              </tr>
+              <tr>
+                <td>Random entries / signal shifts</td>
+                <td><span class="tag kill">No</span></td>
+                <td>
+                  Needs OHLC series and strategy signal/holding rules, or TradingView automation to
+                  rerun variants.
+                </td>
+                <td>Could become extension workflow later.</td>
+              </tr>
+              <tr>
+                <td>Parameter randomization</td>
+                <td><span class="tag kill">No</span></td>
+                <td>
+                  Needs repeated TradingView strategy runs across settings or user-uploaded result
+                  batches.
+                </td>
+                <td>Batch upload is the lowest-friction v1 path.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </body>
+</html>
