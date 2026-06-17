@@ -95,7 +95,7 @@ export const StrategyInvalidationLab: Component = () => {
               </a>
               <a
                 class="rounded-full border border-border px-3 py-1 text-foreground underline-offset-4 hover:underline"
-                href="/strategy-invalidation-playbook.md"
+                href="/strategy-invalidation-playbook-specs.html"
                 target="_blank"
                 rel="noreferrer"
               >

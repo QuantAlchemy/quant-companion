@@ -1,5 +1,7 @@
 # Strategy Invalidation Playbook
 
+> Canonical HTML version: [/strategy-invalidation-playbook-specs.html](/strategy-invalidation-playbook-specs.html)
+
 A strategy is not valid because the equity curve looks good. It is valid only after the simplest ways to explain it away have failed.
 
 **Null hypothesis:** my signal has no edge. Randomized trades, shuffled labels, market beta, cost assumptions, or one lucky regime can explain the result.
@@ -23,7 +25,7 @@ Every invalidation test should be documented with:
 - Metrics to compare
 - Pass condition
 - Fail / invalidate condition
-- PQN example
+- Example
 - Python/VectorBT/Zipline implementation notes
 
 ---
@@ -37,7 +39,7 @@ Every invalidation test should be documented with:
 - **Metrics to compare:** trade count, net profit, win rate, average trade, median trade, max drawdown, MAR, Sharpe ratio.
 - **Pass condition:** Re-importing the same export produces the same baseline metrics.
 - **Fail / invalidate condition:** The export cannot be reproduced, required fields are missing, or the headline stats depend on an undocumented setting.
-- **PQN example:** `03 Jumpstart/03_jumpstart_backtest.ipynb` and `04 Jumpstart/04_jumpstart_performance.ipynb` establish baseline backtest/performance measurement before optimization.
+- **Example:** `03 Jumpstart/03_jumpstart_backtest.ipynb` and `04 Jumpstart/04_jumpstart_performance.ipynb` establish baseline backtest/performance measurement before optimization.
 - **Python/VectorBT/Zipline implementation notes:** Load the trade list into pandas, normalize dates/profits, freeze config in a JSON sidecar, and assert repeatable summary stats before running any additional test.
 
 ## 2. Trade count sanity
@@ -49,7 +51,7 @@ Every invalidation test should be documented with:
 - **Metrics to compare:** total trades, winning trades, losing trades, years/months covered, average hold time if entry/exit dates exist.
 - **Pass condition:** 100+ trades across a meaningful date range.
 - **Fail / invalidate condition:** Fewer than 30 trades, or nearly all trades come from one cluster/regime.
-- **PQN example:** `04 Jumpstart/04_jumpstart_performance.ipynb` uses performance summaries where sample size directly affects confidence.
+- **Example:** `04 Jumpstart/04_jumpstart_performance.ipynb` uses performance summaries where sample size directly affects confidence.
 - **Python/VectorBT/Zipline implementation notes:** Use pandas groupby/date counts; in VectorBT inspect `portfolio.trades.count()`; in Zipline aggregate transactions/orders by period.
 
 ## 3. Cost assumption audit
@@ -61,7 +63,7 @@ Every invalidation test should be documented with:
 - **Metrics to compare:** original net profit, fee-adjusted net profit, fee-adjusted expectancy, break-even fee per trade.
 - **Pass condition:** Realistic costs leave expectancy comfortably positive.
 - **Fail / invalidate condition:** Profit disappears under reasonable fees/slippage or requires perfect fills.
-- **PQN example:** `Module 7/01 Zipline Reloaded Tutorial.ipynb` demonstrates explicit commission/slippage modeling in an event-driven backtest.
+- **Example:** `Module 7/01 Zipline Reloaded Tutorial.ipynb` demonstrates explicit commission/slippage modeling in an event-driven backtest.
 - **Python/VectorBT/Zipline implementation notes:** In pandas subtract fixed or bps fees per completed trade. In VectorBT set fees/slippage on portfolio construction. In Zipline configure commission and slippage models.
 
 ## 4. Trade-order shuffle
@@ -73,7 +75,7 @@ Every invalidation test should be documented with:
 - **Metrics to compare:** baseline max drawdown percentile, median shuffled max drawdown, 95th percentile shuffled max drawdown.
 - **Pass condition:** Baseline drawdown is better than the median shuffled path.
 - **Fail / invalidate condition:** Baseline drawdown lands in the worst quartile of shuffled paths.
-- **PQN example:** `Module 4/Module 4/Treat Your Backtest Like an Experiment.ipynb` is the conceptual match: treat the result as an experiment and compare to randomized alternatives.
+- **Example:** `Module 4/Module 4/Treat Your Backtest Like an Experiment.ipynb` is the conceptual match: treat the result as an experiment and compare to randomized alternatives.
 - **Python/VectorBT/Zipline implementation notes:** In pandas use `np.random.permutation(profits)` and cumulative sum. VectorBT can construct synthetic return paths. Zipline is unnecessary for this trade-list-only test.
 
 ## 5. Trade bootstrap
@@ -85,7 +87,7 @@ Every invalidation test should be documented with:
 - **Metrics to compare:** probability of loss, 5th percentile terminal profit, median terminal profit, 95th percentile drawdown.
 - **Pass condition:** Probability of loss is low and the left tail remains acceptable.
 - **Fail / invalidate condition:** A large share of bootstraps lose money or exceed acceptable drawdown.
-- **PQN example:** `04 Jumpstart/04_jumpstart_performance.ipynb` and the experiment framing in Module 4 are the reference pattern.
+- **Example:** `04 Jumpstart/04_jumpstart_performance.ipynb` and the experiment framing in Module 4 are the reference pattern.
 - **Python/VectorBT/Zipline implementation notes:** Use pandas/numpy `rng.choice(profits, size=n, replace=True)`. Quant Companion already has Monte Carlo machinery; v1 reframes it as an invalidation test.
 
 ## 6. Sign-flip expectancy
@@ -97,7 +99,7 @@ Every invalidation test should be documented with:
 - **Metrics to compare:** empirical p-value, original profit percentile, random-sign median profit.
 - **Pass condition:** Original total profit is a strong right-tail outlier, e.g. empirical p-value ≤ 0.05.
 - **Fail / invalidate condition:** Random signs can frequently match or exceed the original result.
-- **PQN example:** `Module 4/Module 4/Treat Your Backtest Like an Experiment.ipynb`; factor-label shuffle ideas also connect to `Module 5/03 Assessing a market inefficiency based on volatility.ipynb`.
+- **Example:** `Module 4/Module 4/Treat Your Backtest Like an Experiment.ipynb`; factor-label shuffle ideas also connect to `Module 5/03 Assessing a market inefficiency based on volatility.ipynb`.
 - **Python/VectorBT/Zipline implementation notes:** In pandas use `np.abs(profits) * rng.choice([-1, 1], size=n)`; calculate `p = (1 + random_runs >= real) / (1 + runs)`.
 
 ## 7. Random entry timing
@@ -109,7 +111,7 @@ Every invalidation test should be documented with:
 - **Metrics to compare:** original return, Sharpe, max drawdown, win rate, expectancy versus random-entry distribution.
 - **Pass condition:** Original strategy is a strong outlier versus random entries.
 - **Fail / invalidate condition:** Random entries produce similar or better performance.
-- **PQN example:** `day6-backtest.ipynb`, `day6-crack-spread.ipynb`, and Module 6 VectorBT notebooks show strategy simulations against price data.
+- **Example:** `day6-backtest.ipynb`, `day6-crack-spread.ipynb`, and Module 6 VectorBT notebooks show strategy simulations against price data.
 - **Python/VectorBT/Zipline implementation notes:** Requires OHLC import. In VectorBT, generate random entry masks and use the same exit/hold logic. In Zipline, create random scheduled orders over historical bars.
 
 ## 8. Circular signal shift
@@ -121,7 +123,7 @@ Every invalidation test should be documented with:
 - **Metrics to compare:** original Sharpe/return/drawdown percentile versus shifted-signal runs.
 - **Pass condition:** Original timing is a strong outlier.
 - **Fail / invalidate condition:** Shifted signals perform similarly.
-- **PQN example:** Module 6 VectorBT optimization notebooks provide the closest implementation surface for mask-based signal experiments.
+- **Example:** Module 6 VectorBT optimization notebooks provide the closest implementation surface for mask-based signal experiments.
 - **Python/VectorBT/Zipline implementation notes:** VectorBT is ideal: use `np.roll(entries, shift)` and rebuild portfolios. Zipline can replay shifted signals but is heavier.
 
 ## 9. Randomized settings rerun
@@ -133,7 +135,7 @@ Every invalidation test should be documented with:
 - **Metrics to compare:** selected setting percentile, plateau width, neighbor degradation, out-of-sample performance.
 - **Pass condition:** Selected settings are part of a broad robust plateau.
 - **Fail / invalidate condition:** The selected setting is an isolated spike.
-- **PQN example:** `Module 6/Prototyping and Optimizing Strategies with VectorBT.ipynb` and `Module 6/Optimize with Surface Plot.ipynb`.
+- **Example:** `Module 6/Prototyping and Optimizing Strategies with VectorBT.ipynb` and `Module 6/Optimize with Surface Plot.ipynb`.
 - **Python/VectorBT/Zipline implementation notes:** VectorBT parameter broadcasting is the best fit. Zipline reruns are slower but possible. TradingView Optimizer/browser automation may become the v3 path.
 
 ## 10. Remove best trades / outlier dependency
@@ -145,7 +147,7 @@ Every invalidation test should be documented with:
 - **Metrics to compare:** top trade contribution, profit after top 5 winners removed, profit after top 10% winners removed.
 - **Pass condition:** Strategy remains profitable after removing top 10% of winning trades.
 - **Fail / invalidate condition:** One trade dominates or removing top winners turns net profit negative.
-- **PQN example:** `04 Jumpstart/04_jumpstart_performance.ipynb` performance decomposition; the concept fits any P/L series.
+- **Example:** `04 Jumpstart/04_jumpstart_performance.ipynb` performance decomposition; the concept fits any P/L series.
 - **Python/VectorBT/Zipline implementation notes:** Sort trade P/L descending in pandas and recompute summary stats after dropping top rows. Quant Companion already had best/worst removal controls; v1 formalizes the test.
 
 ## 11. Fee haircut
@@ -157,7 +159,7 @@ Every invalidation test should be documented with:
 - **Metrics to compare:** fee-adjusted net profit, fee-adjusted expectancy, percent of original edge retained.
 - **Pass condition:** Fee-adjusted profit remains comfortably positive.
 - **Fail / invalidate condition:** Reasonable fees erase expectancy.
-- **PQN example:** Zipline commission/slippage examples in `Module 7/01 Zipline Reloaded Tutorial.ipynb`.
+- **Example:** Zipline commission/slippage examples in `Module 7/01 Zipline Reloaded Tutorial.ipynb`.
 - **Python/VectorBT/Zipline implementation notes:** For trade-list tests, subtract directly from P/L. For VectorBT/Zipline, model commission at the order level.
 
 ## 12. Slippage haircut
@@ -169,7 +171,7 @@ Every invalidation test should be documented with:
 - **Metrics to compare:** slippage-adjusted net profit, adjusted drawdown, break-even slippage.
 - **Pass condition:** Edge survives realistic slippage assumptions.
 - **Fail / invalidate condition:** Small slippage turns the system negative.
-- **PQN example:** Zipline slippage modeling in Module 7.
+- **Example:** Zipline slippage modeling in Module 7.
 - **Python/VectorBT/Zipline implementation notes:** VectorBT supports slippage inputs; Zipline supports slippage models. From a TradingView export, fixed or percent haircut is only an approximation unless quantity/notional is reliable.
 
 ## 13. Benchmark overlay
@@ -181,7 +183,7 @@ Every invalidation test should be documented with:
 - **Metrics to compare:** total return, max drawdown, Sharpe, MAR, correlation, beta proxy.
 - **Pass condition:** Strategy improves risk-adjusted return or drawdown versus the benchmark.
 - **Fail / invalidate condition:** Complexity adds no improvement over passive exposure.
-- **PQN example:** `Module 5/02 Use regression to find and hedge beta.ipynb` and `Module 7/02 Backtesting Factor Portfolios with Zipline Reloaded.ipynb`.
+- **Example:** `Module 5/02 Use regression to find and hedge beta.ipynb` and `Module 7/02 Backtesting Factor Portfolios with Zipline Reloaded.ipynb`.
 - **Python/VectorBT/Zipline implementation notes:** Use pandas to align strategy equity returns with benchmark returns. VectorBT can construct benchmark portfolios. Zipline can run benchmark/factor comparisons.
 
 ## 14. Regression alpha
@@ -193,7 +195,7 @@ Every invalidation test should be documented with:
 - **Metrics to compare:** alpha, beta, t-stat/p-value, R², residual drawdown.
 - **Pass condition:** Alpha is positive and meaningful after beta adjustment.
 - **Fail / invalidate condition:** Beta explains the result or alpha is insignificant.
-- **PQN example:** `Module 5/02 Use regression to find and hedge beta.ipynb` and `Module 5/02 regression assignment use spy factor out mag7.ipynb`.
+- **Example:** `Module 5/02 Use regression to find and hedge beta.ipynb` and `Module 5/02 regression assignment use spy factor out mag7.ipynb`.
 - **Python/VectorBT/Zipline implementation notes:** Use statsmodels/OLS in pandas. VectorBT can export return series. Zipline factor outputs can be aligned to benchmark returns.
 
 ## 15. Forward-label shuffle
@@ -205,7 +207,7 @@ Every invalidation test should be documented with:
 - **Metrics to compare:** Spearman/Pearson IC, p-value, hit rate, realized return by factor bucket.
 - **Pass condition:** Real factor relationship is stronger than shuffled labels.
 - **Fail / invalidate condition:** Shuffled labels produce similar IC/performance.
-- **PQN example:** `Module 5/03 Assessing a market inefficiency based on volatility.ipynb` uses factor/inefficiency testing concepts.
+- **Example:** `Module 5/03 Assessing a market inefficiency based on volatility.ipynb` uses factor/inefficiency testing concepts.
 - **Python/VectorBT/Zipline implementation notes:** Use scipy/statsmodels for rank correlation. VectorBT can convert factor masks to entries. Zipline/Alphalens-style factor testing fits here.
 
 ## 16. Subperiod split
@@ -217,7 +219,7 @@ Every invalidation test should be documented with:
 - **Metrics to compare:** profitable period ratio, largest period contribution, worst period profit.
 - **Pass condition:** Most periods are profitable and no single period explains most profit.
 - **Fail / invalidate condition:** One subperiod explains nearly all returns or most periods lose money.
-- **PQN example:** `04 Jumpstart/04_jumpstart_performance.ipynb` and Module 4 experiment framing.
+- **Example:** `04 Jumpstart/04_jumpstart_performance.ipynb` and Module 4 experiment framing.
 - **Python/VectorBT/Zipline implementation notes:** Use pandas `Grouper` by exit date. VectorBT/Zipline can slice portfolios by date ranges.
 
 ## 17. Rolling death watch
@@ -229,7 +231,7 @@ Every invalidation test should be documented with:
 - **Metrics to compare:** percent of negative rolling windows, worst rolling window, recent rolling window versus historical distribution.
 - **Pass condition:** Rolling windows mostly stay positive and recent performance is not collapsing.
 - **Fail / invalidate condition:** More than half of rolling windows are negative or recent windows are in the left tail.
-- **PQN example:** Rolling statistics ideas appear across the performance notebooks; use Module 4’s experiment discipline.
+- **Example:** Rolling statistics ideas appear across the performance notebooks; use Module 4’s experiment discipline.
 - **Python/VectorBT/Zipline implementation notes:** Use pandas `.rolling(window).sum()` on trade P/L. For return series use rolling Sharpe/drawdown.
 
 ## 18. Walk-forward comparison
@@ -241,7 +243,7 @@ Every invalidation test should be documented with:
 - **Metrics to compare:** in-sample versus out-of-sample net profit, Sharpe, drawdown, degradation ratio.
 - **Pass condition:** Out-of-sample performance remains acceptable without re-optimization.
 - **Fail / invalidate condition:** In-sample settings do not transfer or collapse immediately out of sample.
-- **PQN example:** Module 6 VectorBT optimization notebooks and Module 7 Zipline backtests.
+- **Example:** Module 6 VectorBT optimization notebooks and Module 7 Zipline backtests.
 - **Python/VectorBT/Zipline implementation notes:** VectorBT can optimize across parameter grids and slice train/test periods. Zipline can rerun fixed settings over separate date ranges. Multiple TradingView exports can approximate this manually.
 
 ---
@@ -250,4 +252,4 @@ Every invalidation test should be documented with:
 
 - In app: `/#strategy-invalidation-lab`
 - Static playbook: `/strategy-invalidation-playbook.html`
-- Full documentation: `/strategy-invalidation-playbook.md`
+- Full documentation: `/strategy-invalidation-playbook-specs.html`
