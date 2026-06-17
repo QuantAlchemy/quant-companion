@@ -82,6 +82,16 @@ for (const section of sections) {
   tests.push({ num, name: fields['Name'] || m[2], fields })
 }
 
+function requireTest(num) {
+  const test = tests.find((x) => x.num === num)
+  if (!test) {
+    throw new Error(
+      `Missing test ${num} in public/strategy-invalidation-playbook.md (referenced by phases config)`
+    )
+  }
+  return test
+}
+
 function esc(s) {
   return s
     .replace(/&/g, '&amp;')
@@ -125,7 +135,7 @@ const toc = phases
   .map((p) => {
     const items = p.tests
       .map((n) => {
-        const t = tests.find((x) => x.num === n)
+        const t = requireTest(n)
         return `<li><a href="#test-${n}">${n}. ${esc(t.name)}</a></li>`
       })
       .join('')
@@ -135,7 +145,7 @@ const toc = phases
 
 const phaseSections = phases
   .map((p) => {
-    const cards = p.tests.map((n) => specCard(tests.find((x) => x.num === n))).join('\n')
+    const cards = p.tests.map((n) => specCard(requireTest(n))).join('\n')
     return `<section class="section" id="${p.id}">
       <div class="section-title">
         <h2>${esc(p.title)}</h2>
@@ -148,6 +158,11 @@ const phaseSections = phases
 
 const html = readFileSync(path.join(root, 'public/strategy-invalidation-playbook.html'), 'utf8')
 const styleMatch = html.match(/<style>([\s\S]*?)<\/style>/)
+if (!styleMatch) {
+  throw new Error(
+    'Could not extract <style> block from public/strategy-invalidation-playbook.html'
+  )
+}
 const baseStyle = styleMatch[1]
 
 const extraStyle = `
