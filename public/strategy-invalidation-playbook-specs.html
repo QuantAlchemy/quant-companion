@@ -1,0 +1,1756 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1"
+    />
+    <title>Strategy Invalidation Playbook · Full Test Specs · Quant Companion</title>
+    <meta
+      name="description"
+      content="Full specifications for all 18 strategy invalidation tests: pass conditions, fail conditions, inputs, metrics, and implementation notes."
+    />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="/playbook-favicon.svg"
+    />
+    <link
+      rel="apple-touch-icon"
+      href="/iconWhite-48.png"
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #070908;
+        --panel: rgba(17, 24, 20, 0.84);
+        --panel-strong: rgba(24, 37, 31, 0.92);
+        --ink: #edf7ee;
+        --muted: #9dafaa;
+        --line: rgba(167, 255, 204, 0.14);
+        --green: #6bff9f;
+        --gold: #f7c868;
+        --red: #ff6a5f;
+        --blue: #74b7ff;
+        --violet: #c79dff;
+        --shadow: 0 30px 90px rgba(0, 0, 0, 0.45);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--ink);
+        background: radial-gradient(circle at 12% 10%, rgba(107, 255, 159, 0.18), transparent 26rem),
+          radial-gradient(circle at 84% 18%, rgba(247, 200, 104, 0.12), transparent 24rem),
+          radial-gradient(circle at 50% 82%, rgba(116, 183, 255, 0.11), transparent 32rem),
+          linear-gradient(135deg, #030504 0%, #0c1110 44%, #050706 100%);
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        line-height: 1.5;
+      }
+
+      body::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0.24;
+        background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        background-size: 48px 48px;
+        mask-image: linear-gradient(to bottom, #000, transparent 88%);
+      }
+
+      a {
+        color: var(--green);
+      }
+
+      .cta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 22px;
+      }
+
+      .cta {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+        padding: 10px 14px;
+        border: 1px solid rgba(107, 255, 159, 0.32);
+        border-radius: 999px;
+        color: var(--ink);
+        background: rgba(107, 255, 159, 0.12);
+        font-size: 13px;
+        font-weight: 900;
+        letter-spacing: 0.04em;
+        text-decoration: none;
+      }
+
+      .cta.secondary {
+        border-color: var(--line);
+        background: rgba(255, 255, 255, 0.045);
+        color: var(--muted);
+      }
+
+      .wrap {
+        position: relative;
+        width: min(1180px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 40px 0 72px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        color: var(--green);
+        background: rgba(107, 255, 159, 0.08);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+      }
+
+      .eyebrow::before {
+        content: '';
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: var(--green);
+        box-shadow: 0 0 22px var(--green);
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
+        gap: 28px;
+        align-items: stretch;
+        margin-top: 34px;
+      }
+
+      h1 {
+        margin: 18px 0 0;
+        font-size: clamp(44px, 8vw, 98px);
+        line-height: 0.9;
+        letter-spacing: -0.075em;
+      }
+
+      .hero p {
+        max-width: 720px;
+        color: var(--muted);
+        font-size: clamp(17px, 2vw, 22px);
+      }
+
+      .callout,
+      .card,
+      .matrix,
+      .artifact-note {
+        border: 1px solid var(--line);
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(18px);
+      }
+
+      .callout {
+        border-radius: 28px;
+        padding: 28px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .callout::after {
+        content: 'NULL';
+        position: absolute;
+        right: -18px;
+        bottom: -34px;
+        color: rgba(255, 255, 255, 0.04);
+        font-size: 112px;
+        font-weight: 1000;
+        letter-spacing: -0.08em;
+      }
+
+      .callout h2 {
+        margin: 0;
+        font-size: 31px;
+        letter-spacing: -0.045em;
+      }
+
+      .metric-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-top: 30px;
+      }
+
+      .metric {
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.035);
+      }
+
+      .metric b {
+        display: block;
+        font-size: 24px;
+        color: var(--green);
+      }
+
+      .metric span {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .section {
+        margin-top: 56px;
+      }
+
+      .section-title {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 18px;
+      }
+
+      h2 {
+        margin: 0;
+        font-size: clamp(28px, 4.4vw, 48px);
+        letter-spacing: -0.055em;
+      }
+
+      .section-title p {
+        max-width: 580px;
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .card {
+        border-radius: 24px;
+        padding: 22px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .card::before {
+        content: attr(data-step);
+        position: absolute;
+        top: 12px;
+        right: 16px;
+        color: rgba(255, 255, 255, 0.055);
+        font-size: 62px;
+        font-weight: 1000;
+        line-height: 1;
+      }
+
+      .tag {
+        display: inline-flex;
+        padding: 5px 9px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        background: rgba(116, 183, 255, 0.11);
+        color: var(--blue);
+        border: 1px solid rgba(116, 183, 255, 0.2);
+      }
+
+      .tag.kill {
+        background: rgba(255, 106, 95, 0.11);
+        color: var(--red);
+        border-color: rgba(255, 106, 95, 0.25);
+      }
+      .tag.tv {
+        background: rgba(107, 255, 159, 0.1);
+        color: var(--green);
+        border-color: rgba(107, 255, 159, 0.24);
+      }
+      .tag.partial {
+        background: rgba(247, 200, 104, 0.1);
+        color: var(--gold);
+        border-color: rgba(247, 200, 104, 0.25);
+      }
+
+      .card h3 {
+        margin: 16px 0 8px;
+        font-size: 21px;
+        letter-spacing: -0.035em;
+      }
+
+      .card p,
+      .card li {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      ul {
+        padding-left: 18px;
+      }
+
+      code {
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(0, 0, 0, 0.28);
+        border-radius: 8px;
+        padding: 2px 6px;
+        color: #dfffe9;
+      }
+
+      .matrix {
+        border-radius: 28px;
+        overflow: hidden;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 16px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        color: var(--ink);
+        background: rgba(255, 255, 255, 0.04);
+        font-size: 12px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      td {
+        color: var(--muted);
+      }
+      td:first-child {
+        color: var(--ink);
+        font-weight: 800;
+      }
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .artifact-note {
+        border-radius: 28px;
+        padding: 28px;
+        background: linear-gradient(135deg, rgba(107, 255, 159, 0.12), rgba(116, 183, 255, 0.08));
+      }
+
+      .two-col {
+        display: grid;
+        grid-template-columns: 0.9fr 1.1fr;
+        gap: 16px;
+      }
+
+      .checklist {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      .checklist li {
+        display: grid;
+        grid-template-columns: 28px 1fr;
+        gap: 10px;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .checklist li:last-child {
+        border-bottom: 0;
+      }
+      .box {
+        width: 20px;
+        height: 20px;
+        border: 1px solid rgba(107, 255, 159, 0.45);
+        border-radius: 6px;
+        margin-top: 1px;
+      }
+
+      @media (max-width: 900px) {
+        .hero,
+        .two-col {
+          grid-template-columns: 1fr;
+        }
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        .section-title {
+          align-items: start;
+          flex-direction: column;
+        }
+        .metric-row {
+          grid-template-columns: 1fr;
+        }
+        th:nth-child(4),
+        td:nth-child(4) {
+          display: none;
+        }
+      }
+
+      .hero-compact h1 {
+        font-size: clamp(36px, 6vw, 72px);
+      }
+      .hero-compact p {
+        font-size: clamp(16px, 1.8vw, 20px);
+      }
+      .spec-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 18px;
+      }
+      .spec-card {
+        border-radius: 24px;
+        padding: 24px;
+        position: relative;
+        overflow: hidden;
+      }
+      .spec-card::before {
+        content: attr(data-step);
+        position: absolute;
+        top: 12px;
+        right: 16px;
+        color: rgba(255, 255, 255, 0.055);
+        font-size: 62px;
+        font-weight: 1000;
+        line-height: 1;
+      }
+      .spec-card h3 {
+        margin: 14px 0 16px;
+        font-size: 24px;
+        letter-spacing: -0.035em;
+      }
+      .spec-fields {
+        margin: 0;
+        display: grid;
+        gap: 12px;
+      }
+      .spec-field {
+        display: grid;
+        gap: 4px;
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.025);
+      }
+      .spec-field dt {
+        margin: 0;
+        color: var(--ink);
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+      .spec-field dd {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .spec-field-pass {
+        border-color: rgba(107, 255, 159, 0.28);
+        background: rgba(107, 255, 159, 0.06);
+      }
+      .spec-field-pass dd {
+        color: #c9f5d4;
+      }
+      .spec-field-fail {
+        border-color: rgba(255, 106, 95, 0.28);
+        background: rgba(255, 106, 95, 0.06);
+      }
+      .spec-field-fail dd {
+        color: #ffc8c3;
+      }
+      .spec-field-code dd {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 13px;
+      }
+      .toc {
+        border-radius: 28px;
+        padding: 24px;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        box-shadow: var(--shadow);
+      }
+      .toc-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 18px;
+        margin-top: 16px;
+      }
+      .toc-phase h3 {
+        margin: 0 0 8px;
+        font-size: 14px;
+        color: var(--green);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .toc-phase ol {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .toc-phase li {
+        margin: 6px 0;
+      }
+      .toc-phase a {
+        color: var(--muted);
+        text-decoration: none;
+      }
+      .toc-phase a:hover {
+        color: var(--green);
+      }
+      .scope-list {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--muted);
+      }
+      .scope-list li {
+        margin: 8px 0;
+        font-size: 14px;
+      }
+      .format-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 10px;
+        margin-top: 14px;
+      }
+      .format-pill {
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.03);
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .links-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 14px;
+      }
+      .links-row a {
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <span class="eyebrow">Quant Companion documentation</span>
+      <section class="hero hero-compact">
+        <div>
+          <h1>Full Test Specifications</h1>
+          <p>
+            A strategy is not valid because the equity curve looks good. It is valid only after the
+            simplest ways to explain it away have failed.
+          </p>
+          <p>
+            <strong>Null hypothesis:</strong> my signal has no edge. Randomized trades, shuffled
+            labels, market beta, cost assumptions, or one lucky regime can explain the result.
+          </p>
+          <div class="cta-row">
+            <a
+              class="cta"
+              href="/#strategy-invalidation-lab"
+              >Open the v1 Invalidation Lab</a
+            >
+            <a
+              class="cta secondary"
+              href="/strategy-invalidation-playbook.html"
+              >Back to playbook overview</a
+            >
+          </div>
+        </div>
+        <aside class="callout">
+          <div>
+            <h2>Fresh example</h2>
+            <p>
+              Use a simple public TradingView export, such as an
+              <strong>RSI pullback strategy on SPY, QQQ, BTCUSD, or ES</strong>. Use PQN as the
+              implementation reference library and build a Quant Alchemy-owned example.
+            </p>
+          </div>
+          <div
+            class="metric-row"
+            aria-label="Documentation summary"
+          >
+            <div class="metric"><b>18</b><span>documented tests</span></div>
+            <div class="metric"><b>5</b><span>phases</span></div>
+            <div class="metric"><b>TV</b><span>export-first v1</span></div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="section">
+        <div class="section-title"><h2>Version scope</h2></div>
+        <div
+          class="card"
+          style="border-radius: 24px; padding: 24px"
+        >
+          <ul class="scope-list">
+            <li>
+              <strong>v1 implemented in app:</strong> TradingView List of Trades export tests:
+              baseline, sample size, trade-order shuffle, bootstrap, sign-flip expectancy, outlier
+              dependency, fee haircut, subperiod stability, rolling death watch, and multi-file
+              comparison.
+            </li>
+            <li>
+              <strong>v1.1 / v2:</strong> OHLC price import and richer multiple-result comparison.
+            </li>
+            <li>
+              <strong>v3 options:</strong> strategy signal export, TradingView Optimizer/browser
+              automation for reruns, and Pine Script controlled randomization.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">
+          <h2>Test format</h2>
+          <p>Every invalidation test is documented with the fields below.</p>
+        </div>
+        <div class="format-grid">
+          <div class="format-pill">Name</div>
+          <div class="format-pill">What it checks</div>
+          <div class="format-pill">How to run it</div>
+          <div class="format-pill">Required inputs</div>
+          <div class="format-pill">Metrics to compare</div>
+          <div class="format-pill">Pass condition</div>
+          <div class="format-pill">Fail / invalidate condition</div>
+          <div class="format-pill">Example</div>
+          <div class="format-pill">Implementation notes</div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title"><h2>Table of contents</h2></div>
+        <div class="toc">
+          <div class="toc-grid">
+            <div class="toc-phase">
+              <h3>Phase 1 · Reproduce</h3>
+              <ol>
+                <li><a href="#test-1">1. Baseline freeze</a></li>
+                <li><a href="#test-2">2. Trade count sanity</a></li>
+                <li><a href="#test-3">3. Cost assumption audit</a></li>
+              </ol>
+            </div>
+            <div class="toc-phase">
+              <h3>Phase 2 · Randomize</h3>
+              <ol>
+                <li><a href="#test-4">4. Trade-order shuffle</a></li>
+                <li><a href="#test-5">5. Trade bootstrap</a></li>
+                <li><a href="#test-6">6. Sign-flip expectancy</a></li>
+                <li><a href="#test-7">7. Random entry timing</a></li>
+                <li><a href="#test-8">8. Circular signal shift</a></li>
+                <li><a href="#test-9">9. Randomized settings rerun</a></li>
+              </ol>
+            </div>
+            <div class="toc-phase">
+              <h3>Phase 3 · Stress</h3>
+              <ol>
+                <li><a href="#test-10">10. Remove best trades / outlier dependency</a></li>
+                <li><a href="#test-11">11. Fee haircut</a></li>
+                <li><a href="#test-12">12. Slippage haircut</a></li>
+              </ol>
+            </div>
+            <div class="toc-phase">
+              <h3>Phase 4 · Validate alpha</h3>
+              <ol>
+                <li><a href="#test-13">13. Benchmark overlay</a></li>
+                <li><a href="#test-14">14. Regression alpha</a></li>
+                <li><a href="#test-15">15. Forward-label shuffle</a></li>
+              </ol>
+            </div>
+            <div class="toc-phase">
+              <h3>Phase 5 · Robustness</h3>
+              <ol>
+                <li><a href="#test-16">16. Subperiod split</a></li>
+                <li><a href="#test-17">17. Rolling death watch</a></li>
+                <li><a href="#test-18">18. Walk-forward comparison</a></li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section
+        class="section"
+        id="reproduce"
+      >
+        <div class="section-title">
+          <h2>Phase 1 · Reproduce</h2>
+          <p>Make the baseline trustworthy before stress testing.</p>
+        </div>
+        <div class="spec-grid">
+          <article
+            class="spec-card card"
+            id="test-1"
+            data-step="01"
+          >
+            <span class="tag tv">TradingView export</span>
+            <h3>1. Baseline freeze</h3>
+            <dl class="spec-fields">
+              <div class="spec-field">
+                <dt>What it checks</dt>
+                <dd>
+                  Whether the imported backtest can be reproduced before any stress testing or
+                  randomization is trusted.
+                </dd>
+              </div>
+              <div class="spec-field">
+                <dt>How to run it</dt>
+                <dd>
+                  Export TradingView Strategy Tester → List of Trades, upload into Quant Companion,
+                  set starting equity, and record market, timeframe, date range, settings, fees,
+                  slippage, sizing, pyramiding, and session assumptions.
+                </dd>
+              </div>
+              <div class="spec-field">
+                <dt>Required inputs</dt>
+                <dd>
+                  TradingView List of Trades CSV/XLSX; starting equity; strategy settings notes.
+                </dd>
+              </div>
+              <div class="spec-field">
+                <dt>Metrics to compare</dt>
+                <dd>
+                  trade count, net profit, win rate, average trade, median trade, max drawdown, MAR,
+                  Sharpe ratio.
+                </dd>
+              </div>
+              <div class="spec-field spec-field-pass">
+                <dt>Pass condition</dt>
+                <dd>Re-importing the same export produces the same baseline metrics.</dd>
+              </div>
+              <div class="spec-field spec-field-fail">
+                <dt>Fail / invalidate condition</dt>
+                <dd>
+                  The export cannot be reproduced, required fields are missing, or the headline
+                  stats depend on an undocumented setting.
+                </dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Example</dt>
+                <dd>
+                  <code>03 Jumpstart/03_jumpstart_backtest.ipynb</code> and
+                  <code>04 Jumpstart/04_jumpstart_performance.ipynb</code> establish baseline
+                  backtest/performance measurement before optimization.
+                </dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Implementation notes</dt>
+                <dd>
+                  Load the trade list into pandas, normalize dates/profits, freeze config in a JSON
+                  sidecar, and assert repeatable summary stats before running any additional test.
+                </dd>
+              </div>
+            </dl>
+          </article>
+          <article
+            class="spec-card card"
+            id="test-2"
+            data-step="02"
+          >
+            <span class="tag tv">TradingView export</span>
+            <h3>2. Trade count sanity</h3>
+            <dl class="spec-fields">
+              <div class="spec-field">
+                <dt>What it checks</dt>
+                <dd>Whether there are enough observations for any statistical claim to matter.</dd>
+              </div>
+              <div class="spec-field">
+                <dt>How to run it</dt>
+                <dd>
+                  Count completed trades and inspect wins/losses and date coverage after import.
+                </dd>
+              </div>
+              <div class="spec-field">
+                <dt>Required inputs</dt>
+                <dd>TradingView List of Trades export.</dd>
+              </div>
+              <div class="spec-field">
+                <dt>Metrics to compare</dt>
+                <dd>
+                  total trades, winning trades, losing trades, years/months covered, average hold
+                  time if entry/exit dates exist.
+                </dd>
+              </div>
+              <div class="spec-field spec-field-pass">
+                <dt>Pass condition</dt>
+                <dd>100+ trades across a meaningful date range.</dd>
+              </div>
+              <div class="spec-field spec-field-fail">
+                <dt>Fail / invalidate condition</dt>
+                <dd>Fewer than 30 trades, or nearly all trades come from one cluster/regime.</dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Example</dt>
+                <dd>
+                  <code>04 Jumpstart/04_jumpstart_performance.ipynb</code> uses performance
+                  summaries where sample size directly affects confidence.
+                </dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Implementation notes</dt>
+                <dd>
+                  Use pandas groupby/date counts; in VectorBT inspect
+                  <code>portfolio.trades.count()</code>; in Zipline aggregate transactions/orders by
+                  period.
+                </dd>
+              </div>
+            </dl>
+          </article>
+          <article
+            class="spec-card card"
+            id="test-3"
+            data-step="03"
+          >
+            <span class="tag partial">Extended inputs</span>
+            <h3>3. Cost assumption audit</h3>
+            <dl class="spec-fields">
+              <div class="spec-field">
+                <dt>What it checks</dt>
+                <dd>Whether edge exists only under impossible friction assumptions.</dd>
+              </div>
+              <div class="spec-field">
+                <dt>How to run it</dt>
+                <dd>
+                  Record commission, slippage, order sizing, pyramiding, margin, fill model, and
+                  session settings from TradingView. Recompute simple per-trade fee haircut in Quant
+                  Companion.
+                </dd>
+              </div>
+              <div class="spec-field">
+                <dt>Required inputs</dt>
+                <dd>
+                  TradingView export plus manual strategy settings. Price/size data improves
+                  slippage modeling.
+                </dd>
+              </div>
+              <div class="spec-field">
+                <dt>Metrics to compare</dt>
+                <dd>
+                  original net profit, fee-adjusted net profit, fee-adjusted expectancy, break-even
+                  fee per trade.
+                </dd>
+              </div>
+              <div class="spec-field spec-field-pass">
+                <dt>Pass condition</dt>
+                <dd>Realistic costs leave expectancy comfortably positive.</dd>
+              </div>
+              <div class="spec-field spec-field-fail">
+                <dt>Fail / invalidate condition</dt>
+                <dd>Profit disappears under reasonable fees/slippage or requires perfect fills.</dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Example</dt>
+                <dd>
+                  <code>Module 7/01 Zipline Reloaded Tutorial.ipynb</code> demonstrates explicit
+                  commission/slippage modeling in an event-driven backtest.
+                </dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Implementation notes</dt>
+                <dd>
+                  In pandas subtract fixed or bps fees per completed trade. In VectorBT set
+                  fees/slippage on portfolio construction. In Zipline configure commission and
+                  slippage models.
+                </dd>
+              </div>
+            </dl>
+          </article>
+        </div>
+      </section>
+      <section
+        class="section"
+        id="randomize"
+      >
+        <div class="section-title">
+          <h2>Phase 2 · Randomize</h2>
+          <p>Build null distributions. If random can match the strategy, it is not special.</p>
+        </div>
+        <div class="spec-grid">
+          <article
+            class="spec-card card"
+            id="test-4"
+            data-step="04"
+          >
+            <span class="tag tv">TradingView export</span>
+            <h3>4. Trade-order shuffle</h3>
+            <dl class="spec-fields">
+              <div class="spec-field">
+                <dt>What it checks</dt>
+                <dd>
+                  Whether the realized trade sequence is unusually fragile compared with the same
+                  trades in random order.
+                </dd>
+              </div>
+              <div class="spec-field">
+                <dt>How to run it</dt>
+                <dd>
+                  Randomly reorder realized trade profits 500–5,000 times, rebuild equity curves,
+                  and compare drawdown distribution.
+                </dd>
+              </div>
+              <div class="spec-field">
+                <dt>Required inputs</dt>
+                <dd>TradingView List of Trades export.</dd>
+              </div>
+              <div class="spec-field">
+                <dt>Metrics to compare</dt>
+                <dd>
+                  baseline max drawdown percentile, median shuffled max drawdown, 95th percentile
+                  shuffled max drawdown.
+                </dd>
+              </div>
+              <div class="spec-field spec-field-pass">
+                <dt>Pass condition</dt>
+                <dd>Baseline drawdown is better than the median shuffled path.</dd>
+              </div>
+              <div class="spec-field spec-field-fail">
+                <dt>Fail / invalidate condition</dt>
+                <dd>Baseline drawdown lands in the worst quartile of shuffled paths.</dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Example</dt>
+                <dd>
+                  <code>Module 4/Module 4/Treat Your Backtest Like an Experiment.ipynb</code> is the
+                  conceptual match: treat the result as an experiment and compare to randomized
+                  alternatives.
+                </dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Implementation notes</dt>
+                <dd>
+                  In pandas use <code>np.random.permutation(profits)</code> and cumulative sum.
+                  VectorBT can construct synthetic return paths. Zipline is unnecessary for this
+                  trade-list-only test.
+                </dd>
+              </div>
+            </dl>
+          </article>
+          <article
+            class="spec-card card"
+            id="test-5"
+            data-step="05"
+          >
+            <span class="tag tv">TradingView export</span>
+            <h3>5. Trade bootstrap</h3>
+            <dl class="spec-fields">
+              <div class="spec-field">
+                <dt>What it checks</dt>
+                <dd>Whether the observed trade distribution survives sampling with replacement.</dd>
+              </div>
+              <div class="spec-field">
+                <dt>How to run it</dt>
+                <dd>
+                  Sample N trades with replacement from the N observed trades, repeat
+                  hundreds/thousands of times, and build terminal profit/drawdown distributions.
+                </dd>
+              </div>
+              <div class="spec-field">
+                <dt>Required inputs</dt>
+                <dd>TradingView List of Trades export.</dd>
+              </div>
+              <div class="spec-field">
+                <dt>Metrics to compare</dt>
+                <dd>
+                  probability of loss, 5th percentile terminal profit, median terminal profit, 95th
+                  percentile drawdown.
+                </dd>
+              </div>
+              <div class="spec-field spec-field-pass">
+                <dt>Pass condition</dt>
+                <dd>Probability of loss is low and the left tail remains acceptable.</dd>
+              </div>
+              <div class="spec-field spec-field-fail">
+                <dt>Fail / invalidate condition</dt>
+                <dd>A large share of bootstraps lose money or exceed acceptable drawdown.</dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Example</dt>
+                <dd>
+                  <code>04 Jumpstart/04_jumpstart_performance.ipynb</code> and the experiment
+                  framing in Module 4 are the reference pattern.
+                </dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Implementation notes</dt>
+                <dd>
+                  Use pandas/numpy <code>rng.choice(profits, size=n, replace=True)</code>. Quant
+                  Companion already has Monte Carlo machinery; v1 reframes it as an invalidation
+                  test.
+                </dd>
+              </div>
+            </dl>
+          </article>
+          <article
+            class="spec-card card"
+            id="test-6"
+            data-step="06"
+          >
+            <span class="tag tv">TradingView export</span>
+            <h3>6. Sign-flip expectancy</h3>
+            <dl class="spec-fields">
+              <div class="spec-field">
+                <dt>What it checks</dt>
+                <dd>
+                  Whether realized win/loss direction matters after preserving trade magnitude.
+                </dd>
+              </div>
+              <div class="spec-field">
+                <dt>How to run it</dt>
+                <dd>
+                  Convert each trade to <code>abs(P/L)</code>, randomly assign positive/negative
+                  signs, repeat many times, and compare original total profit to the random-sign
+                  distribution.
+                </dd>
+              </div>
+              <div class="spec-field">
+                <dt>Required inputs</dt>
+                <dd>TradingView List of Trades export.</dd>
+              </div>
+              <div class="spec-field">
+                <dt>Metrics to compare</dt>
+                <dd>empirical p-value, original profit percentile, random-sign median profit.</dd>
+              </div>
+              <div class="spec-field spec-field-pass">
+                <dt>Pass condition</dt>
+                <dd>
+                  Original total profit is a strong right-tail outlier, e.g. empirical p-value ≤
+                  0.05.
+                </dd>
+              </div>
+              <div class="spec-field spec-field-fail">
+                <dt>Fail / invalidate condition</dt>
+                <dd>Random signs can frequently match or exceed the original result.</dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Example</dt>
+                <dd>
+                  <code>Module 4/Module 4/Treat Your Backtest Like an Experiment.ipynb</code>;
+                  factor-label shuffle ideas also connect to
+                  <code>Module 5/03 Assessing a market inefficiency based on volatility.ipynb</code
+                  >.
+                </dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Implementation notes</dt>
+                <dd>
+                  In pandas use <code>np.abs(profits) * rng.choice([-1, 1], size=n)</code>;
+                  calculate <code>p = (1 + random_runs &gt;= real) / (1 + runs)</code>.
+                </dd>
+              </div>
+            </dl>
+          </article>
+          <article
+            class="spec-card card"
+            id="test-7"
+            data-step="07"
+          >
+            <span class="tag partial">Extended inputs</span>
+            <h3>7. Random entry timing</h3>
+            <dl class="spec-fields">
+              <div class="spec-field">
+                <dt>What it checks</dt>
+                <dd>
+                  Whether the actual signal timing beats random entries on the same market path.
+                </dd>
+              </div>
+              <div class="spec-field">
+                <dt>How to run it</dt>
+                <dd>
+                  Preserve trade count and holding-period distribution, randomize entry dates on the
+                  same OHLC series, simulate exits after equivalent holds, and compare results.
+                </dd>
+              </div>
+              <div class="spec-field">
+                <dt>Required inputs</dt>
+                <dd>
+                  OHLC price data; trade count; holding-period distribution; direction/sizing
+                  assumptions.
+                </dd>
+              </div>
+              <div class="spec-field">
+                <dt>Metrics to compare</dt>
+                <dd>
+                  original return, Sharpe, max drawdown, win rate, expectancy versus random-entry
+                  distribution.
+                </dd>
+              </div>
+              <div class="spec-field spec-field-pass">
+                <dt>Pass condition</dt>
+                <dd>Original strategy is a strong outlier versus random entries.</dd>
+              </div>
+              <div class="spec-field spec-field-fail">
+                <dt>Fail / invalidate condition</dt>
+                <dd>Random entries produce similar or better performance.</dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Example</dt>
+                <dd>
+                  <code>day6-backtest.ipynb</code>, <code>day6-crack-spread.ipynb</code>, and Module
+                  6 VectorBT notebooks show strategy simulations against price data.
+                </dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Implementation notes</dt>
+                <dd>
+                  Requires OHLC import. In VectorBT, generate random entry masks and use the same
+                  exit/hold logic. In Zipline, create random scheduled orders over historical bars.
+                </dd>
+              </div>
+            </dl>
+          </article>
+          <article
+            class="spec-card card"
+            id="test-8"
+            data-step="08"
+          >
+            <span class="tag partial">Extended inputs</span>
+            <h3>8. Circular signal shift</h3>
+            <dl class="spec-fields">
+              <div class="spec-field">
+                <dt>What it checks</dt>
+                <dd>
+                  Whether signal timing matters after preserving signal clustering/autocorrelation.
+                </dd>
+              </div>
+              <div class="spec-field">
+                <dt>How to run it</dt>
+                <dd>
+                  Shift the full signal series by random offsets, rerun the strategy, and compare
+                  shifted performance to real performance.
+                </dd>
+              </div>
+              <div class="spec-field">
+                <dt>Required inputs</dt>
+                <dd>Signal series or reproducible strategy code plus OHLC data.</dd>
+              </div>
+              <div class="spec-field">
+                <dt>Metrics to compare</dt>
+                <dd>original Sharpe/return/drawdown percentile versus shifted-signal runs.</dd>
+              </div>
+              <div class="spec-field spec-field-pass">
+                <dt>Pass condition</dt>
+                <dd>Original timing is a strong outlier.</dd>
+              </div>
+              <div class="spec-field spec-field-fail">
+                <dt>Fail / invalidate condition</dt>
+                <dd>Shifted signals perform similarly.</dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Example</dt>
+                <dd>
+                  Module 6 VectorBT optimization notebooks provide the closest implementation
+                  surface for mask-based signal experiments.
+                </dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Implementation notes</dt>
+                <dd>
+                  VectorBT is ideal: use <code>np.roll(entries, shift)</code> and rebuild
+                  portfolios. Zipline can replay shifted signals but is heavier.
+                </dd>
+              </div>
+            </dl>
+          </article>
+          <article
+            class="spec-card card"
+            id="test-9"
+            data-step="09"
+          >
+            <span class="tag partial">Extended inputs</span>
+            <h3>9. Randomized settings rerun</h3>
+            <dl class="spec-fields">
+              <div class="spec-field">
+                <dt>What it checks</dt>
+                <dd>Whether chosen parameters sit on a robust plateau or a cherry-picked spike.</dd>
+              </div>
+              <div class="spec-field">
+                <dt>How to run it</dt>
+                <dd>
+                  Run random or grid parameter sets, compare the selected parameter to the
+                  distribution and local neighborhood.
+                </dd>
+              </div>
+              <div class="spec-field">
+                <dt>Required inputs</dt>
+                <dd>
+                  Strategy code or repeated TradingView exports from different settings. Multiple
+                  uploaded result files can approximate this if each file represents a settings run.
+                </dd>
+              </div>
+              <div class="spec-field">
+                <dt>Metrics to compare</dt>
+                <dd>
+                  selected setting percentile, plateau width, neighbor degradation, out-of-sample
+                  performance.
+                </dd>
+              </div>
+              <div class="spec-field spec-field-pass">
+                <dt>Pass condition</dt>
+                <dd>Selected settings are part of a broad robust plateau.</dd>
+              </div>
+              <div class="spec-field spec-field-fail">
+                <dt>Fail / invalidate condition</dt>
+                <dd>The selected setting is an isolated spike.</dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Example</dt>
+                <dd>
+                  <code>Module 6/Prototyping and Optimizing Strategies with VectorBT.ipynb</code>
+                  and <code>Module 6/Optimize with Surface Plot.ipynb</code>.
+                </dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Implementation notes</dt>
+                <dd>
+                  VectorBT parameter broadcasting is the best fit. Zipline reruns are slower but
+                  possible. TradingView Optimizer/browser automation may become the v3 path.
+                </dd>
+              </div>
+            </dl>
+          </article>
+        </div>
+      </section>
+      <section
+        class="section"
+        id="stress"
+      >
+        <div class="section-title">
+          <h2>Phase 3 · Stress</h2>
+          <p>Keep the same trades, then make the world less friendly.</p>
+        </div>
+        <div class="spec-grid">
+          <article
+            class="spec-card card"
+            id="test-10"
+            data-step="10"
+          >
+            <span class="tag tv">TradingView export</span>
+            <h3>10. Remove best trades / outlier dependency</h3>
+            <dl class="spec-fields">
+              <div class="spec-field">
+                <dt>What it checks</dt>
+                <dd>Whether the strategy is just one or two lucky trades wearing a trench coat.</dd>
+              </div>
+              <div class="spec-field">
+                <dt>How to run it</dt>
+                <dd>
+                  Remove the top 1 winner, top 5 winners, and top 10% of winners, then recompute net
+                  profit and expectancy.
+                </dd>
+              </div>
+              <div class="spec-field">
+                <dt>Required inputs</dt>
+                <dd>TradingView List of Trades export.</dd>
+              </div>
+              <div class="spec-field">
+                <dt>Metrics to compare</dt>
+                <dd>
+                  top trade contribution, profit after top 5 winners removed, profit after top 10%
+                  winners removed.
+                </dd>
+              </div>
+              <div class="spec-field spec-field-pass">
+                <dt>Pass condition</dt>
+                <dd>Strategy remains profitable after removing top 10% of winning trades.</dd>
+              </div>
+              <div class="spec-field spec-field-fail">
+                <dt>Fail / invalidate condition</dt>
+                <dd>One trade dominates or removing top winners turns net profit negative.</dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Example</dt>
+                <dd>
+                  <code>04 Jumpstart/04_jumpstart_performance.ipynb</code> performance
+                  decomposition; the concept fits any P/L series.
+                </dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Implementation notes</dt>
+                <dd>
+                  Sort trade P/L descending in pandas and recompute summary stats after dropping top
+                  rows. Quant Companion already had best/worst removal controls; v1 formalizes the
+                  test.
+                </dd>
+              </div>
+            </dl>
+          </article>
+          <article
+            class="spec-card card"
+            id="test-11"
+            data-step="11"
+          >
+            <span class="tag tv">TradingView export</span>
+            <h3>11. Fee haircut</h3>
+            <dl class="spec-fields">
+              <div class="spec-field">
+                <dt>What it checks</dt>
+                <dd>Whether fixed transaction costs erase the trade-level edge.</dd>
+              </div>
+              <div class="spec-field">
+                <dt>How to run it</dt>
+                <dd>
+                  Subtract a fixed assumed fee from every completed trade and recompute total
+                  profit/expectancy.
+                </dd>
+              </div>
+              <div class="spec-field">
+                <dt>Required inputs</dt>
+                <dd>TradingView export plus fee assumption.</dd>
+              </div>
+              <div class="spec-field">
+                <dt>Metrics to compare</dt>
+                <dd>
+                  fee-adjusted net profit, fee-adjusted expectancy, percent of original edge
+                  retained.
+                </dd>
+              </div>
+              <div class="spec-field spec-field-pass">
+                <dt>Pass condition</dt>
+                <dd>Fee-adjusted profit remains comfortably positive.</dd>
+              </div>
+              <div class="spec-field spec-field-fail">
+                <dt>Fail / invalidate condition</dt>
+                <dd>Reasonable fees erase expectancy.</dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Example</dt>
+                <dd>
+                  Zipline commission/slippage examples in
+                  <code>Module 7/01 Zipline Reloaded Tutorial.ipynb</code>.
+                </dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Implementation notes</dt>
+                <dd>
+                  For trade-list tests, subtract directly from P/L. For VectorBT/Zipline, model
+                  commission at the order level.
+                </dd>
+              </div>
+            </dl>
+          </article>
+          <article
+            class="spec-card card"
+            id="test-12"
+            data-step="12"
+          >
+            <span class="tag partial">Extended inputs</span>
+            <h3>12. Slippage haircut</h3>
+            <dl class="spec-fields">
+              <div class="spec-field">
+                <dt>What it checks</dt>
+                <dd>Whether the edge requires perfect fills.</dd>
+              </div>
+              <div class="spec-field">
+                <dt>How to run it</dt>
+                <dd>Subtract slippage per share/contract or bps of notional from each trade.</dd>
+              </div>
+              <div class="spec-field">
+                <dt>Required inputs</dt>
+                <dd>Price/size/notional per trade; better with OHLC or intrabar data.</dd>
+              </div>
+              <div class="spec-field">
+                <dt>Metrics to compare</dt>
+                <dd>slippage-adjusted net profit, adjusted drawdown, break-even slippage.</dd>
+              </div>
+              <div class="spec-field spec-field-pass">
+                <dt>Pass condition</dt>
+                <dd>Edge survives realistic slippage assumptions.</dd>
+              </div>
+              <div class="spec-field spec-field-fail">
+                <dt>Fail / invalidate condition</dt>
+                <dd>Small slippage turns the system negative.</dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Example</dt>
+                <dd>Zipline slippage modeling in Module 7.</dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Implementation notes</dt>
+                <dd>
+                  VectorBT supports slippage inputs; Zipline supports slippage models. From a
+                  TradingView export, fixed or percent haircut is only an approximation unless
+                  quantity/notional is reliable.
+                </dd>
+              </div>
+            </dl>
+          </article>
+        </div>
+      </section>
+      <section
+        class="section"
+        id="alpha"
+      >
+        <div class="section-title">
+          <h2>Phase 4 · Validate alpha</h2>
+          <p>Separate signal value from beta, drift, or trade distribution luck.</p>
+        </div>
+        <div class="spec-grid">
+          <article
+            class="spec-card card"
+            id="test-13"
+            data-step="13"
+          >
+            <span class="tag partial">Extended inputs</span>
+            <h3>13. Benchmark overlay</h3>
+            <dl class="spec-fields">
+              <div class="spec-field">
+                <dt>What it checks</dt>
+                <dd>Whether the strategy adds value beyond passive exposure.</dd>
+              </div>
+              <div class="spec-field">
+                <dt>How to run it</dt>
+                <dd>
+                  Compare equity curve to buy-and-hold SPY/QQQ, sector ETF, or the underlying market
+                  over the same dates.
+                </dd>
+              </div>
+              <div class="spec-field">
+                <dt>Required inputs</dt>
+                <dd>Strategy equity/trade dates plus benchmark OHLC/returns.</dd>
+              </div>
+              <div class="spec-field">
+                <dt>Metrics to compare</dt>
+                <dd>total return, max drawdown, Sharpe, MAR, correlation, beta proxy.</dd>
+              </div>
+              <div class="spec-field spec-field-pass">
+                <dt>Pass condition</dt>
+                <dd>Strategy improves risk-adjusted return or drawdown versus the benchmark.</dd>
+              </div>
+              <div class="spec-field spec-field-fail">
+                <dt>Fail / invalidate condition</dt>
+                <dd>Complexity adds no improvement over passive exposure.</dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Example</dt>
+                <dd>
+                  <code>Module 5/02 Use regression to find and hedge beta.ipynb</code> and
+                  <code>Module 7/02 Backtesting Factor Portfolios with Zipline Reloaded.ipynb</code
+                  >.
+                </dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Implementation notes</dt>
+                <dd>
+                  Use pandas to align strategy equity returns with benchmark returns. VectorBT can
+                  construct benchmark portfolios. Zipline can run benchmark/factor comparisons.
+                </dd>
+              </div>
+            </dl>
+          </article>
+          <article
+            class="spec-card card"
+            id="test-14"
+            data-step="14"
+          >
+            <span class="tag partial">Extended inputs</span>
+            <h3>14. Regression alpha</h3>
+            <dl class="spec-fields">
+              <div class="spec-field">
+                <dt>What it checks</dt>
+                <dd>Whether returns are alpha or explained by market/factor beta.</dd>
+              </div>
+              <div class="spec-field">
+                <dt>How to run it</dt>
+                <dd>Regress strategy returns against benchmark or factor returns.</dd>
+              </div>
+              <div class="spec-field">
+                <dt>Required inputs</dt>
+                <dd>Strategy periodic returns and benchmark/factor returns.</dd>
+              </div>
+              <div class="spec-field">
+                <dt>Metrics to compare</dt>
+                <dd>alpha, beta, t-stat/p-value, R², residual drawdown.</dd>
+              </div>
+              <div class="spec-field spec-field-pass">
+                <dt>Pass condition</dt>
+                <dd>Alpha is positive and meaningful after beta adjustment.</dd>
+              </div>
+              <div class="spec-field spec-field-fail">
+                <dt>Fail / invalidate condition</dt>
+                <dd>Beta explains the result or alpha is insignificant.</dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Example</dt>
+                <dd>
+                  <code>Module 5/02 Use regression to find and hedge beta.ipynb</code> and
+                  <code>Module 5/02 regression assignment use spy factor out mag7.ipynb</code>.
+                </dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Implementation notes</dt>
+                <dd>
+                  Use statsmodels/OLS in pandas. VectorBT can export return series. Zipline factor
+                  outputs can be aligned to benchmark returns.
+                </dd>
+              </div>
+            </dl>
+          </article>
+          <article
+            class="spec-card card"
+            id="test-15"
+            data-step="15"
+          >
+            <span class="tag partial">Extended inputs</span>
+            <h3>15. Forward-label shuffle</h3>
+            <dl class="spec-fields">
+              <div class="spec-field">
+                <dt>What it checks</dt>
+                <dd>
+                  Whether factor/signal values predict forward returns better than shuffled labels.
+                </dd>
+              </div>
+              <div class="spec-field">
+                <dt>How to run it</dt>
+                <dd>
+                  Pair signal/factor values with forward returns, shuffle forward returns, and
+                  compare information coefficient or strategy result to shuffled distribution.
+                </dd>
+              </div>
+              <div class="spec-field">
+                <dt>Required inputs</dt>
+                <dd>Signal/factor series and forward returns.</dd>
+              </div>
+              <div class="spec-field">
+                <dt>Metrics to compare</dt>
+                <dd>Spearman/Pearson IC, p-value, hit rate, realized return by factor bucket.</dd>
+              </div>
+              <div class="spec-field spec-field-pass">
+                <dt>Pass condition</dt>
+                <dd>Real factor relationship is stronger than shuffled labels.</dd>
+              </div>
+              <div class="spec-field spec-field-fail">
+                <dt>Fail / invalidate condition</dt>
+                <dd>Shuffled labels produce similar IC/performance.</dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Example</dt>
+                <dd>
+                  <code>Module 5/03 Assessing a market inefficiency based on volatility.ipynb</code>
+                  uses factor/inefficiency testing concepts.
+                </dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Implementation notes</dt>
+                <dd>
+                  Use scipy/statsmodels for rank correlation. VectorBT can convert factor masks to
+                  entries. Zipline/Alphalens-style factor testing fits here.
+                </dd>
+              </div>
+            </dl>
+          </article>
+        </div>
+      </section>
+      <section
+        class="section"
+        id="robustness"
+      >
+        <div class="section-title">
+          <h2>Phase 5 · Robustness</h2>
+          <p>Performance that survives nearby worlds, not one lucky path.</p>
+        </div>
+        <div class="spec-grid">
+          <article
+            class="spec-card card"
+            id="test-16"
+            data-step="16"
+          >
+            <span class="tag tv">TradingView export</span>
+            <h3>16. Subperiod split</h3>
+            <dl class="spec-fields">
+              <div class="spec-field">
+                <dt>What it checks</dt>
+                <dd>Whether returns survive across years/quarters/regimes.</dd>
+              </div>
+              <div class="spec-field">
+                <dt>How to run it</dt>
+                <dd>
+                  Group trades by exit year/quarter/month and recompute net profit, drawdown, and
+                  expectancy for each period.
+                </dd>
+              </div>
+              <div class="spec-field">
+                <dt>Required inputs</dt>
+                <dd>TradingView List of Trades export with dates.</dd>
+              </div>
+              <div class="spec-field">
+                <dt>Metrics to compare</dt>
+                <dd>profitable period ratio, largest period contribution, worst period profit.</dd>
+              </div>
+              <div class="spec-field spec-field-pass">
+                <dt>Pass condition</dt>
+                <dd>Most periods are profitable and no single period explains most profit.</dd>
+              </div>
+              <div class="spec-field spec-field-fail">
+                <dt>Fail / invalidate condition</dt>
+                <dd>One subperiod explains nearly all returns or most periods lose money.</dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Example</dt>
+                <dd>
+                  <code>04 Jumpstart/04_jumpstart_performance.ipynb</code> and Module 4 experiment
+                  framing.
+                </dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Implementation notes</dt>
+                <dd>
+                  Use pandas <code>Grouper</code> by exit date. VectorBT/Zipline can slice
+                  portfolios by date ranges.
+                </dd>
+              </div>
+            </dl>
+          </article>
+          <article
+            class="spec-card card"
+            id="test-17"
+            data-step="17"
+          >
+            <span class="tag tv">TradingView export</span>
+            <h3>17. Rolling death watch</h3>
+            <dl class="spec-fields">
+              <div class="spec-field">
+                <dt>What it checks</dt>
+                <dd>Whether the edge decays or has long dead zones.</dd>
+              </div>
+              <div class="spec-field">
+                <dt>How to run it</dt>
+                <dd>
+                  Compute rolling N-trade net profit, rolling win rate, and rolling drawdown
+                  proxies.
+                </dd>
+              </div>
+              <div class="spec-field">
+                <dt>Required inputs</dt>
+                <dd>TradingView List of Trades export.</dd>
+              </div>
+              <div class="spec-field">
+                <dt>Metrics to compare</dt>
+                <dd>
+                  percent of negative rolling windows, worst rolling window, recent rolling window
+                  versus historical distribution.
+                </dd>
+              </div>
+              <div class="spec-field spec-field-pass">
+                <dt>Pass condition</dt>
+                <dd>
+                  Rolling windows mostly stay positive and recent performance is not collapsing.
+                </dd>
+              </div>
+              <div class="spec-field spec-field-fail">
+                <dt>Fail / invalidate condition</dt>
+                <dd>
+                  More than half of rolling windows are negative or recent windows are in the left
+                  tail.
+                </dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Example</dt>
+                <dd>
+                  Rolling statistics ideas appear across the performance notebooks; use Module 4’s
+                  experiment discipline.
+                </dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Implementation notes</dt>
+                <dd>
+                  Use pandas <code>.rolling(window).sum()</code> on trade P/L. For return series use
+                  rolling Sharpe/drawdown.
+                </dd>
+              </div>
+            </dl>
+          </article>
+          <article
+            class="spec-card card"
+            id="test-18"
+            data-step="18"
+          >
+            <span class="tag partial">Extended inputs</span>
+            <h3>18. Walk-forward comparison</h3>
+            <dl class="spec-fields">
+              <div class="spec-field">
+                <dt>What it checks</dt>
+                <dd>Whether optimized settings transfer out of sample.</dd>
+              </div>
+              <div class="spec-field">
+                <dt>How to run it</dt>
+                <dd>Optimize on period A, freeze settings, test period B, then roll forward.</dd>
+              </div>
+              <div class="spec-field">
+                <dt>Required inputs</dt>
+                <dd>Strategy code or repeated TradingView result files by train/test period.</dd>
+              </div>
+              <div class="spec-field">
+                <dt>Metrics to compare</dt>
+                <dd>
+                  in-sample versus out-of-sample net profit, Sharpe, drawdown, degradation ratio.
+                </dd>
+              </div>
+              <div class="spec-field spec-field-pass">
+                <dt>Pass condition</dt>
+                <dd>Out-of-sample performance remains acceptable without re-optimization.</dd>
+              </div>
+              <div class="spec-field spec-field-fail">
+                <dt>Fail / invalidate condition</dt>
+                <dd>In-sample settings do not transfer or collapse immediately out of sample.</dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Example</dt>
+                <dd>Module 6 VectorBT optimization notebooks and Module 7 Zipline backtests.</dd>
+              </div>
+              <div class="spec-field spec-field-code">
+                <dt>Implementation notes</dt>
+                <dd>
+                  VectorBT can optimize across parameter grids and slice train/test periods. Zipline
+                  can rerun fixed settings over separate date ranges. Multiple TradingView exports
+                  can approximate this manually.
+                </dd>
+              </div>
+            </dl>
+          </article>
+        </div>
+      </section>
+
+      <section class="section artifact-note">
+        <h2>Implementation links</h2>
+        <div class="links-row">
+          <a href="/#strategy-invalidation-lab">In app: Invalidation Lab</a>
+          <a href="/strategy-invalidation-playbook.html">Playbook overview</a>
+          <a href="/strategy-invalidation-playbook-specs.html"
+            >Full test specifications (this page)</a
+          >
+        </div>
+      </section>
+    </div>
+  </body>
+</html>
