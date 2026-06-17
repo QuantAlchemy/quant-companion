@@ -11,6 +11,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "prepare": "husky",
+    "check:pnpm-workspace": "node scripts/check-pnpm-workspace.mjs",
     "preinstall": "npx only-allow pnpm",
     "serve": "vite preview",
     "rebase:production": "git checkout production && git rebase main && git push && git checkout main"
