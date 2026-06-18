@@ -30,9 +30,9 @@ export const TARGET_HEADERS = {
   DRAWDOWN_PCT: 'Drawdown %',
 } as const
 
-// Default header configuration that matches the current format
+// Default v1 header configuration that matches the original TradingView format
 export const defaultHeaderConfig: HeaderConfig = {
-  name: 'Default',
+  name: 'Default v1',
   mappings: [
     { sourceHeader: 'Trade #', targetHeader: TARGET_HEADERS.TRADE_NO, type: 'number' },
     { sourceHeader: 'Type', targetHeader: TARGET_HEADERS.TYPE, type: 'string' },
@@ -91,13 +91,70 @@ export const defaultHeaderConfig: HeaderConfig = {
   ],
 }
 
+export const tradingViewExportHeaderConfig: HeaderConfig = {
+  name: 'Default v2',
+  mappings: [
+    { sourceHeader: 'Trade number', targetHeader: TARGET_HEADERS.TRADE_NO, type: 'number' },
+    { sourceHeader: 'Type', targetHeader: TARGET_HEADERS.TYPE, type: 'string' },
+    { sourceHeader: 'Signal', targetHeader: TARGET_HEADERS.SIGNAL, type: 'string' },
+    { sourceHeader: 'Date and time', targetHeader: TARGET_HEADERS.DATE_TIME, type: 'string' },
+    { sourceHeader: 'Price USD', targetHeader: TARGET_HEADERS.PRICE, type: 'number' },
+    { sourceHeader: 'Size (qty)', targetHeader: TARGET_HEADERS.CONTRACTS, type: 'number' },
+    { sourceHeader: 'Net PnL USD', targetHeader: TARGET_HEADERS.PROFIT, type: 'number' },
+    { sourceHeader: 'Net PnL %', targetHeader: TARGET_HEADERS.PROFIT_PCT, type: 'number' },
+    {
+      sourceHeader: 'Cumulative PnL USD',
+      targetHeader: TARGET_HEADERS.CUM_PROFIT,
+      type: 'number',
+    },
+    {
+      sourceHeader: 'Cumulative PnL %',
+      targetHeader: TARGET_HEADERS.CUM_PROFIT_PCT,
+      type: 'number',
+    },
+    {
+      sourceHeader: 'Favorable excursion USD',
+      targetHeader: TARGET_HEADERS.RUNUP,
+      type: 'number',
+    },
+    {
+      sourceHeader: 'Favorable excursion %',
+      targetHeader: TARGET_HEADERS.RUNUP_PCT,
+      type: 'number',
+    },
+    {
+      sourceHeader: 'Adverse excursion USD',
+      targetHeader: TARGET_HEADERS.DRAWDOWN,
+      type: 'number',
+    },
+    {
+      sourceHeader: 'Adverse excursion %',
+      targetHeader: TARGET_HEADERS.DRAWDOWN_PCT,
+      type: 'number',
+    },
+  ],
+}
+
+export const builtInHeaderConfigs = [defaultHeaderConfig, tradingViewExportHeaderConfig]
+const legacyBuiltInConfigNames = new Set(['Default', 'TradingView Export'])
+
 export const [currentHeaderConfig, setCurrentHeaderConfig] =
   createSignal<HeaderConfig>(defaultHeaderConfig)
 
 // Signal to store all saved configurations
 const initialConfigs = (() => {
   const configs = localStorage.getItem('headerConfigs')
-  return configs ? (JSON.parse(configs) as HeaderConfig[]) : [defaultHeaderConfig]
+  if (!configs) return builtInHeaderConfigs
+
+  const savedConfigs = (JSON.parse(configs) as HeaderConfig[]).filter(
+    (config) => !legacyBuiltInConfigNames.has(config.name)
+  )
+  const savedConfigNames = new Set(savedConfigs.map((config) => config.name))
+  const missingBuiltInConfigs = builtInHeaderConfigs.filter(
+    (config) => !savedConfigNames.has(config.name)
+  )
+
+  return [...missingBuiltInConfigs, ...savedConfigs]
 })()
 
 export const [savedConfigs, setSavedConfigs] = createSignal<HeaderConfig[]>(initialConfigs)
