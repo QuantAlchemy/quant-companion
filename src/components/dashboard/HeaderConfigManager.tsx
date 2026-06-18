@@ -5,7 +5,7 @@ import {
   type HeaderConfig,
   saveConfig,
   deleteConfig,
-  defaultHeaderConfig,
+  builtInHeaderConfigs,
   currentHeaderConfig,
 } from '@/config/headerMappings'
 import { FileFormatSelect } from '@/components/dashboard/HeaderConfigSelect'
@@ -16,9 +16,17 @@ type Props = {
 
 export const HeaderConfigManager: Component<Props> = (props) => {
   const [isEditing, setIsEditing] = createSignal(false)
+  const [isEditingNewConfig, setIsEditingNewConfig] = createSignal(false)
+  const [isEditingDirty, setIsEditingDirty] = createSignal(false)
   const [editingConfig, setEditingConfig] = createSignal<HeaderConfig | null>(null)
   const [newConfigName, setNewConfigName] = createSignal('')
   let configNameInput: HTMLInputElement | undefined
+  const isBuiltInConfig = (configName: string) =>
+    builtInHeaderConfigs.some((config) => config.name === configName)
+  const createConfigFromCurrentSelection = (): HeaderConfig => ({
+    name: 'New Config',
+    mappings: currentHeaderConfig().mappings.map((m) => ({ ...m })),
+  })
 
   const handleSaveConfig = () => {
     if (!editingConfig()) return
@@ -30,22 +38,26 @@ export const HeaderConfigManager: Component<Props> = (props) => {
 
     saveConfig(config)
     setIsEditing(false)
+    setIsEditingNewConfig(false)
+    setIsEditingDirty(false)
     setEditingConfig(null)
     setNewConfigName('')
   }
 
   const handleDeleteConfig = (configName: string) => {
-    // Don't allow deleting the default config
-    if (configName === defaultHeaderConfig.name) return
+    // Don't allow deleting built-in configs
+    if (isBuiltInConfig(configName)) return
 
     deleteConfig(configName)
   }
 
   const handleEditConfig = (config: HeaderConfig) => {
-    // Don't allow editing the default config
-    if (config.name === defaultHeaderConfig.name) return
+    // Don't allow editing built-in configs
+    if (isBuiltInConfig(config.name)) return
 
     setEditingConfig({ ...config })
+    setIsEditingNewConfig(false)
+    setIsEditingDirty(false)
     setIsEditing(true)
   }
 
@@ -55,9 +67,17 @@ export const HeaderConfigManager: Component<Props> = (props) => {
     }
   })
 
+  createEffect(() => {
+    if (!isEditing() || !isEditingNewConfig() || isEditingDirty()) return
+
+    setEditingConfig(createConfigFromCurrentSelection())
+  })
+
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape' && isEditing()) {
       setIsEditing(false)
+      setIsEditingNewConfig(false)
+      setIsEditingDirty(false)
       setEditingConfig(null)
       setNewConfigName('')
     }
@@ -73,11 +93,10 @@ export const HeaderConfigManager: Component<Props> = (props) => {
         <Button
           variant="ghost"
           onClick={() => {
-            const newConfig = {
-              name: 'New Config',
-              mappings: defaultHeaderConfig.mappings.map((m) => ({ ...m })),
-            }
-            setEditingConfig(newConfig)
+            setEditingConfig(createConfigFromCurrentSelection())
+            setIsEditingNewConfig(true)
+            setIsEditingDirty(false)
+            setNewConfigName('')
             setIsEditing(true)
           }}
         >
@@ -86,14 +105,14 @@ export const HeaderConfigManager: Component<Props> = (props) => {
         <Button
           variant="ghost"
           onClick={() => handleEditConfig(currentHeaderConfig())}
-          disabled={currentHeaderConfig().name === defaultHeaderConfig.name}
+          disabled={isBuiltInConfig(currentHeaderConfig().name)}
         >
           Edit
         </Button>
         <Button
           variant="ghost"
           onClick={() => handleDeleteConfig(currentHeaderConfig().name)}
-          disabled={currentHeaderConfig().name === defaultHeaderConfig.name}
+          disabled={isBuiltInConfig(currentHeaderConfig().name)}
         >
           Delete
         </Button>
@@ -111,9 +130,10 @@ export const HeaderConfigManager: Component<Props> = (props) => {
             <TextField
               ref={configNameInput}
               value={newConfigName() || editingConfig()?.name || ''}
-              onChange={(e: Event & { target: HTMLInputElement }) =>
+              onChange={(e: Event & { target: HTMLInputElement }) => {
+                setIsEditingDirty(true)
                 setNewConfigName(e.target.value)
-              }
+              }}
               placeholder="Configuration Name"
             />
           </TextFieldRoot>
@@ -135,6 +155,7 @@ export const HeaderConfigManager: Component<Props> = (props) => {
                         const newMappings = editingConfig()!.mappings.map((m) =>
                           m === mapping ? { ...m, sourceHeader: e.target.value } : m
                         )
+                        setIsEditingDirty(true)
                         setEditingConfig({ ...editingConfig()!, mappings: newMappings })
                       }}
                       placeholder="Source Header Pattern"
@@ -164,6 +185,8 @@ export const HeaderConfigManager: Component<Props> = (props) => {
               variant="outline"
               onClick={() => {
                 setIsEditing(false)
+                setIsEditingNewConfig(false)
+                setIsEditingDirty(false)
                 setEditingConfig(null)
                 setNewConfigName('')
               }}
