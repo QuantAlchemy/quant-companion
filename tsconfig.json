@@ -1,32 +1,29 @@
 {
+  "include": ["**/*.ts", "**/*.tsx", "eslint.config.js", "prettier.config.js", "vite.config.js"],
+  
   "compilerOptions": {
-    "baseUrl": "./",
-    "paths": {
-      "@/*": ["./src/*"],
-      // TODO: update this when @tsparticles/solid@3.1.0 is released
-      "@tsparticles/solid": ["./node_modules/@ralphsmith80/tsparticles-solid"]
-    },
-    "target": "ESNext",
+    "target": "ES2022",
+    "jsx": "react-jsx",
     "module": "ESNext",
-    "skipLibCheck": true,
-    "types": ["chrome", "vite/client"],
+    "paths": {
+      "#/*": ["./src/*"],
+      "@/*": ["./src/*"]
+    },
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["vite/client"],
 
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
-    "isolatedModules": true,
-    "moduleDetection": "force",
+    "verbatimModuleSyntax": true,
     "noEmit": true,
-    "jsx": "preserve",
-    "jsxImportSource": "solid-js",
 
     /* Linting */
+    "skipLibCheck": true,
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
-  },
-  "include": ["src"]
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  }
 }

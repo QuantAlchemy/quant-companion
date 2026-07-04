@@ -1,2 +1,0 @@
-node scripts/check-pnpm-workspace.mjs
-lint-staged

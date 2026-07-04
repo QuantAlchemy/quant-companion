@@ -1,7 +1,0 @@
-packages:
-  - '.'
-
-allowBuilds:
-  '@tsparticles/engine': true
-  es5-ext: true
-  esbuild: true
