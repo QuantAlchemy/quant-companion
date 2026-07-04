@@ -27,6 +27,8 @@ import type { AssetType, JournalTrade, NewTrade, TradeType } from '@/lib/journal
 
 const today = () => new Date().toISOString().slice(0, 10)
 
+const isIsoDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value)
+
 const emptyForm = (): NewTrade => ({
   assetName: '',
   assetType: 'crypto',
@@ -74,6 +76,9 @@ export function TradeFormDialog({ open, onOpenChange, trade }: TradeFormDialogPr
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.assetName.trim()) return toast.error('Asset symbol is required')
+    if (!isIsoDate(form.tradeDate)) {
+      return toast.error('Entry date must use YYYY-MM-DD')
+    }
     if (form.quantity <= 0) return toast.error('Quantity must be greater than 0')
     if (form.price <= 0) return toast.error('Entry price must be greater than 0')
 
@@ -249,6 +254,9 @@ export function CloseTradeDialog({ open, onOpenChange, trade }: CloseTradeDialog
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (closingPrice <= 0) return toast.error('Closing price must be greater than 0')
+    if (!isIsoDate(closingDate)) {
+      return toast.error('Closing date must use YYYY-MM-DD')
+    }
     const pnl = closeTrade(trade.id, closingPrice, closingDate)
     toast.success(
       `Closed ${trade.assetName} for ${currencyFormatter.format(pnl)} ${pnl >= 0 ? 'profit' : 'loss'}`
@@ -333,6 +341,9 @@ export function SplitTradeDialog({ open, onOpenChange, trade }: SplitTradeDialog
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (closingPrice <= 0) return toast.error('Closing price must be greater than 0')
+    if (!isIsoDate(closingDate)) {
+      return toast.error('Closing date must use YYYY-MM-DD')
+    }
     if (closingQuantity <= 0 || closingQuantity >= trade.quantity) {
       return toast.error(
         `Quantity must be between 0 and ${trade.quantity} (exclusive)`

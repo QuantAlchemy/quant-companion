@@ -33,6 +33,7 @@ const formatMonteCarloData = (
     type: 'scatter' as const,
     x: xAxis,
     y: simulation,
+    hovertemplate: '%{fullData.name}<br>Point: %{x}<br>Value: %{y:,.2f}<extra></extra>',
     ...params,
   }
 }
@@ -48,12 +49,19 @@ export function MonteCarloChart({ data, staticPoints = true }: ChartProps) {
         simulation,
         `run ${i + 1}`,
         staticPoints ? undefined : (data?.dates ?? undefined),
-        { line: { width: 1 }, opacity: 0.55, hoverinfo: 'skip' as const }
+        { line: { width: 1 }, opacity: 0.55 }
       )
     )
     const averageMonteCarlo = averageOfArrays(monteCarloData)
     const avgPlotData = formatMonteCarloData(averageMonteCarlo, 'average', undefined, {
       line: { color: '#E8B45A', width: 3 },
+      hoverlabel: {
+        bgcolor: '#E8B45A',
+        bordercolor: '#F4CF87',
+        font: { color: '#0A0D16' },
+      },
+      hovertemplate:
+        '<b>Average Monte Carlo Line</b><br>Point: %{x}<br>Average value: %{y:,.2f}<extra></extra>',
     })
     return [...runs, avgPlotData]
   }, [monteCarloData, data, staticPoints])

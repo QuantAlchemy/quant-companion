@@ -3,6 +3,7 @@
 # Clerk authentication (created by `clerk init`)
 VITE_CLERK_PUBLISHABLE_KEY={{ op://code-env/quant-companion-local/VITE_CLERK_PUBLISHABLE_KEY }}
 CLERK_SECRET_KEY={{ op://code-env/quant-companion-local/CLERK_SECRET_KEY }}
+CLERK_JWT_ISSUER_DOMAIN={{ op://code-env/quant-companion-local/CLERK_JWT_ISSUER_DOMAIN }}
 
 # Convex backend (used by `pnpm dev:convex`)
 CONVEX_DEPLOYMENT={{ op://code-env/quant-companion-local/CONVEX_DEPLOYMENT }}

@@ -97,6 +97,12 @@ describe('importTrades', () => {
     expect(trades.find((t) => t.assetName === 'NVDA')?.status).toBe('open')
   })
 
+  it('does not duplicate trades when the same legacy export is imported again', () => {
+    expect(importTrades(legacyExport)).toBe(2)
+    expect(importTrades(legacyExport)).toBe(0)
+    expect(journalStore.state).toHaveLength(2)
+  })
+
   it('imports a Convex snapshot JSONL export, dropping system fields', () => {
     expect(importTrades(convexJsonl)).toBe(2)
     const trades = journalStore.state
@@ -109,6 +115,44 @@ describe('importTrades', () => {
     })
     expect(spy).not.toHaveProperty('userId')
     expect(spy?.id).toMatch(/^t_/)
+  })
+
+  it('backfills realized P&L for closed imports without a stored realizedPnl', () => {
+    expect(
+      importTrades(
+        JSON.stringify([
+          {
+            assetName: 'AAPL',
+            assetType: 'traditional',
+            quantity: 10,
+            price: 100,
+            tradeType: 'buy',
+            tradeDate: '2026-01-01',
+            status: 'closed',
+            closingPrice: 115,
+            closingDate: '2026-02-01',
+          },
+          {
+            assetName: 'TSLA',
+            assetType: 'traditional',
+            quantity: 5,
+            price: 200,
+            tradeType: 'sell',
+            tradeDate: '2026-01-01',
+            status: 'closed',
+            closingPrice: 180,
+            closingDate: '2026-02-01',
+          },
+        ])
+      )
+    ).toBe(2)
+
+    expect(journalStore.state.find((t) => t.assetName === 'AAPL')?.realizedPnl).toBe(
+      150
+    )
+    expect(journalStore.state.find((t) => t.assetName === 'TSLA')?.realizedPnl).toBe(
+      100
+    )
   })
 
   it('round-trips: importing our own export shape', () => {

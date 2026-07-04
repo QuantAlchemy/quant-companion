@@ -20,15 +20,24 @@ interface SeoInput {
   title: string
   description?: string
   image?: string
+  imageAlt?: string
   /** route path used for canonical + og:url, e.g. '/analytics' */
   path?: string
   keywords?: string
 }
 
-export function seo({ title, description, image, path, keywords }: SeoInput) {
+export function seo({
+  title,
+  description,
+  image,
+  imageAlt,
+  path,
+  keywords,
+}: SeoInput) {
   const desc = description ?? SITE.description
-  const img = image ?? SITE.image
-  const url = `${SITE.url}${path ?? ''}`
+  const img = new URL(image ?? SITE.image, SITE.url).toString()
+  const alt = imageAlt ?? title
+  const url = new URL(path ?? '', SITE.url).toString()
 
   const meta = [
     { title },
@@ -40,14 +49,18 @@ export function seo({ title, description, image, path, keywords }: SeoInput) {
     { property: 'og:title', content: title },
     { property: 'og:description', content: desc },
     { property: 'og:image', content: img },
+    { property: 'og:image:secure_url', content: img },
+    { property: 'og:image:type', content: 'image/png' },
     { property: 'og:image:width', content: '1200' },
     { property: 'og:image:height', content: '630' },
+    { property: 'og:image:alt', content: alt },
     { property: 'og:url', content: url },
     // Twitter / X
     { name: 'twitter:card', content: SITE.twitterCard },
     { name: 'twitter:title', content: title },
     { name: 'twitter:description', content: desc },
     { name: 'twitter:image', content: img },
+    { name: 'twitter:image:alt', content: alt },
     { name: 'twitter:url', content: url },
   ]
 

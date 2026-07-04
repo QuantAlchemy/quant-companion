@@ -42,9 +42,9 @@ const statusLabel: Record<InvalidationStatus, string> = {
 }
 
 const statusClasses: Record<InvalidationStatus, string> = {
-  pass: 'border-emerald-400/40 bg-emerald-400/10 text-emerald-200',
+  pass: 'border-profit/40 bg-profit/10 text-profit',
   watch: 'border-amber-300/40 bg-amber-300/10 text-amber-100',
-  invalidate: 'border-red-400/40 bg-red-400/10 text-red-100',
+  invalidate: 'border-loss/40 bg-loss/10 text-loss',
   info: 'border-sky-300/40 bg-sky-300/10 text-sky-100',
 }
 
@@ -163,7 +163,7 @@ export function StrategyInvalidationLab() {
               <SummaryStat
                 label="pass"
                 value={report.summary.passCount}
-                className="border-emerald-400/30 bg-emerald-400/10"
+                className="border-profit/30 bg-profit/10"
               />
               <SummaryStat
                 label="watch"
@@ -173,7 +173,7 @@ export function StrategyInvalidationLab() {
               <SummaryStat
                 label="invalidate"
                 value={report.summary.invalidateCount}
-                className="border-red-400/30 bg-red-400/10"
+                className="border-loss/30 bg-loss/10"
               />
             </div>
 

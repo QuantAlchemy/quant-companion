@@ -82,6 +82,48 @@ const update = (fn: (trades: JournalTrade[]) => JournalTrade[]) => {
 const newId = () =>
   `t_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 9)}`
 
+const realizedPnlFor = (
+  tradeType: TradeType,
+  entryPrice: number,
+  closingPrice: number,
+  quantity: number
+) => {
+  const entryValue = entryPrice * quantity
+  const closingValue = closingPrice * quantity
+  // sell = short position being bought back
+  return tradeType === 'buy' ? closingValue - entryValue : entryValue - closingValue
+}
+
+const tradeSignature = (trade: Omit<JournalTrade, 'id' | 'createdAt'>) =>
+  JSON.stringify([
+    trade.assetName.toUpperCase(),
+    trade.assetType,
+    trade.quantity,
+    trade.price,
+    trade.tradeType,
+    trade.tradeDate,
+    trade.status,
+    trade.closingPrice ?? null,
+    trade.closingDate ?? null,
+    trade.realizedPnl ?? null,
+    trade.commission ?? null,
+    trade.exchange ?? null,
+    trade.comments ?? null,
+  ])
+
+const dedupeTrades = (trades: JournalTrade[]) => {
+  const seen = new Set<string>()
+  const deduped: JournalTrade[] = []
+  for (const trade of trades) {
+    const { id: _id, createdAt: _createdAt, ...signatureInput } = trade
+    const signature = tradeSignature(signatureInput)
+    if (seen.has(signature)) continue
+    seen.add(signature)
+    deduped.push(trade)
+  }
+  return deduped
+}
+
 export function addTrade(input: NewTrade): JournalTrade {
   const trade: JournalTrade = {
     ...input,
@@ -104,18 +146,6 @@ export function editTrade(id: string, input: NewTrade) {
         : t
     )
   )
-}
-
-const realizedPnlFor = (
-  tradeType: TradeType,
-  entryPrice: number,
-  closingPrice: number,
-  quantity: number
-) => {
-  const entryValue = entryPrice * quantity
-  const closingValue = closingPrice * quantity
-  // sell = short position being bought back
-  return tradeType === 'buy' ? closingValue - entryValue : entryValue - closingValue
 }
 
 export function closeTrade(id: string, closingPrice: number, closingDate: string) {
@@ -240,18 +270,26 @@ export function importTrades(input: string): number {
     ) {
       throw new Error(`Trade ${index + 1} is missing required fields`)
     }
+    const tradeType = raw.tradeType === 'sell' ? 'sell' : 'buy'
+    const status = raw.status === 'closed' ? 'closed' : 'open'
+    const realizedPnl =
+      status === 'closed' &&
+      raw.realizedPnl == null &&
+      typeof raw.closingPrice === 'number'
+        ? realizedPnlFor(tradeType, raw.price, raw.closingPrice, raw.quantity)
+        : raw.realizedPnl
     const trade: JournalTrade = {
       id: newId(),
       assetName: String(raw.assetName).toUpperCase(),
       assetType: raw.assetType === 'crypto' ? 'crypto' : 'traditional',
       quantity: raw.quantity,
       price: raw.price,
-      tradeType: raw.tradeType === 'sell' ? 'sell' : 'buy',
+      tradeType,
       tradeDate: raw.tradeDate,
-      status: raw.status === 'closed' ? 'closed' : 'open',
+      status,
       closingPrice: raw.closingPrice,
       closingDate: raw.closingDate,
-      realizedPnl: raw.realizedPnl,
+      realizedPnl,
       commission: raw.commission,
       exchange: raw.exchange,
       comments: raw.comments,
@@ -260,8 +298,22 @@ export function importTrades(input: string): number {
     return trade
   })
 
-  update((trades) => [...imported, ...trades])
-  return imported.length
+  let addedCount = 0
+  update((trades) => {
+    const dedupedExisting = dedupeTrades(trades)
+    const existingSignatures = new Set(
+      dedupedExisting.map(({ id: _id, createdAt: _createdAt, ...trade }) =>
+        tradeSignature(trade)
+      )
+    )
+    const newTrades = imported.filter(
+      ({ id: _id, createdAt: _createdAt, ...trade }) =>
+        !existingSignatures.has(tradeSignature(trade))
+    )
+    addedCount = newTrades.length
+    return [...newTrades, ...dedupedExisting]
+  })
+  return addedCount
 }
 
 /** Demo data so new users can explore the journal before logging real trades. */

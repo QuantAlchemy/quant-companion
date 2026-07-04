@@ -16,6 +16,7 @@ import {
 } from '@/components/journal/TradeDialogs'
 import TradeTable from '@/components/journal/TradeTable'
 import { Button } from '@/components/ui/button'
+import { isLocalhostHostname } from '@/lib/environment'
 import {
   deleteTrades,
   exportTrades,
@@ -58,12 +59,17 @@ function JournalPage() {
   const [editingTrade, setEditingTrade] = useState<JournalTrade | null>(null)
   const [closingTrade, setClosingTrade] = useState<JournalTrade | null>(null)
   const [splittingTrade, setSplittingTrade] = useState<JournalTrade | null>(null)
+  const [isLocalhost, setIsLocalhost] = useState(false)
   const importInputRef = useRef<HTMLInputElement>(null)
 
   // bind the journal to the signed-in user
   useEffect(() => {
     setJournalUser(user?.id)
   }, [user?.id])
+
+  useEffect(() => {
+    setIsLocalhost(isLocalhostHostname(window.location.hostname))
+  }, [])
 
   const openSymbols = useMemo(() => {
     const open = trades.filter((t) => t.status === 'open')
@@ -146,7 +152,7 @@ function JournalPage() {
           >
             <Download className="mr-1.5 h-4 w-4" /> Export
           </Button>
-          {trades.length === 0 && (
+          {isLocalhost && trades.length === 0 && (
             <Button
               variant="secondary"
               size="sm"

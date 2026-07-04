@@ -1,3 +1,5 @@
+import { PROFIT_LOSS_COLORS } from '@/lib/colors'
+
 import type { Layout } from 'plotly.js'
 
 const cssVar = (name: string, fallback: string): string => {
@@ -8,14 +10,14 @@ const cssVar = (name: string, fallback: string): string => {
   )
 }
 
-// Alchemist's Terminal chart palette — indigo, sky, violet, gold, emerald
+// Alchemist's Terminal chart palette plus shared profit/loss colors.
 export const CHART_COLORWAY = [
   '#7C5CFF',
   '#5AA3F2',
   '#B48CFF',
   '#E8B45A',
-  '#3ECF8E',
-  '#F26D85',
+  PROFIT_LOSS_COLORS.profit,
+  PROFIT_LOSS_COLORS.loss,
 ]
 
 export const darkTheme = (): Partial<Layout> => ({

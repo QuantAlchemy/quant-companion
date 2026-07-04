@@ -12,9 +12,16 @@ import {
 
 import { LogoMark } from '@/components/Logo'
 import { Button } from '@/components/ui/button'
+import { isClerkClientConfigured } from '@/lib/clerk'
 import { gamificationStore, rankForXp } from '@/lib/gamification'
+import { seo } from '@/lib/seo'
 
 export const Route = createFileRoute('/')({
+  head: () =>
+    seo({
+      title: 'Quant Companion · Quant Alchemy',
+      path: '/',
+    }),
   component: HomePage,
 })
 
@@ -87,26 +94,7 @@ function HomePage() {
           className="rise-in mt-8 flex flex-wrap items-center justify-center gap-3"
           style={{ animationDelay: '240ms' }}
         >
-          <Show when="signed-out">
-            <SignUpButton mode="modal">
-              <Button size="lg">
-                Begin your transmutation
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </SignUpButton>
-            <Button render={<Link to="/analytics" />} size="lg" variant="outline">
-              Explore without an account
-            </Button>
-          </Show>
-          <Show when="signed-in">
-            <Button render={<Link to="/journal" />} size="lg">
-              Open your journal
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-            <Button render={<Link to="/analytics" />} size="lg" variant="outline">
-              Analyze a strategy
-            </Button>
-          </Show>
+          <HeroActions />
         </div>
 
         {/* progress strip */}
@@ -170,5 +158,46 @@ function HomePage() {
         </p>
       </section>
     </div>
+  )
+}
+
+function HeroActions() {
+  if (!isClerkClientConfigured()) {
+    return (
+      <>
+        <Button render={<Link to="/analytics" />} size="lg">
+          Explore analytics
+          <ArrowRight className="ml-2 h-4 w-4" />
+        </Button>
+        <Button render={<Link to="/calculator" />} size="lg" variant="outline">
+          Size a position
+        </Button>
+      </>
+    )
+  }
+
+  return (
+    <>
+      <Show when="signed-out">
+        <SignUpButton mode="modal">
+          <Button size="lg">
+            Begin your transmutation
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </SignUpButton>
+        <Button render={<Link to="/analytics" />} size="lg" variant="outline">
+          Explore without an account
+        </Button>
+      </Show>
+      <Show when="signed-in">
+        <Button render={<Link to="/journal" />} size="lg">
+          Open your journal
+          <ArrowRight className="ml-2 h-4 w-4" />
+        </Button>
+        <Button render={<Link to="/analytics" />} size="lg" variant="outline">
+          Analyze a strategy
+        </Button>
+      </Show>
+    </>
   )
 }

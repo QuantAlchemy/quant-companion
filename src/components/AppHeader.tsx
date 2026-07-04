@@ -9,6 +9,7 @@ import { Link } from '@tanstack/react-router'
 import Logo from '@/components/Logo'
 import XPBadge from '@/components/gamification/XPBadge'
 import { Button } from '@/components/ui/button'
+import { isClerkClientConfigured } from '@/lib/clerk'
 
 const NAV = [
   { to: '/analytics', label: 'Analytics' },
@@ -40,19 +41,7 @@ export default function AppHeader() {
 
         <div className="flex items-center gap-3">
           <XPBadge />
-          <Show when="signed-out">
-            <SignInButton mode="modal">
-              <Button variant="ghost" size="sm">
-                Sign in
-              </Button>
-            </SignInButton>
-            <SignUpButton mode="modal">
-              <Button size="sm">Get started</Button>
-            </SignUpButton>
-          </Show>
-          <Show when="signed-in">
-            <UserButton />
-          </Show>
+          <AuthControls />
         </div>
       </div>
 
@@ -70,5 +59,27 @@ export default function AppHeader() {
         ))}
       </nav>
     </header>
+  )
+}
+
+function AuthControls() {
+  if (!isClerkClientConfigured()) return null
+
+  return (
+    <>
+      <Show when="signed-out">
+        <SignInButton mode="modal">
+          <Button variant="ghost" size="sm">
+            Sign in
+          </Button>
+        </SignInButton>
+        <SignUpButton mode="modal">
+          <Button size="sm">Get started</Button>
+        </SignUpButton>
+      </Show>
+      <Show when="signed-in">
+        <UserButton />
+      </Show>
+    </>
   )
 }

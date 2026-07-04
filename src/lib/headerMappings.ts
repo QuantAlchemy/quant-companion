@@ -138,7 +138,9 @@ export const tradingViewExportHeaderConfig: HeaderConfig = {
 export const builtInHeaderConfigs = [defaultHeaderConfig, tradingViewExportHeaderConfig]
 const legacyBuiltInConfigNames = new Set(['Default', 'TradingView Export'])
 
-export const currentHeaderConfigStore = new Store<HeaderConfig>(defaultHeaderConfig)
+export const currentHeaderConfigStore = new Store<HeaderConfig>(
+  tradingViewExportHeaderConfig
+)
 
 // SSR-safe: built-ins on the server, merged with saved configs in the browser
 const loadInitialConfigs = (): HeaderConfig[] => {
@@ -191,7 +193,7 @@ export function deleteConfig(configName: string): void {
 
   // If we deleted the current config, set default as current
   if (currentHeaderConfigStore.state.name === configName) {
-    currentHeaderConfigStore.setState(() => defaultHeaderConfig)
+    currentHeaderConfigStore.setState(() => tradingViewExportHeaderConfig)
   }
 }
 

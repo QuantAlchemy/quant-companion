@@ -3,7 +3,19 @@ import { useMemo } from 'react'
 import Plot from '@/components/Plot'
 import { unrealizedPnl } from '@/components/journal/TradeTable'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { currencyFormatter, percentageFormatter } from '@/lib/format'
+import {
+  PROFIT_LOSS_COLORS,
+  profitLossColor,
+} from '@/lib/colors'
 import { createLayout } from '@/lib/plotly'
 import { cn } from '@/lib/utils'
 
@@ -19,19 +31,21 @@ function StatCard({
   label,
   value,
   sub,
+  footnote,
   tone,
 }: {
   label: string
   value: string
   sub?: string
+  footnote?: string
   tone?: 'profit' | 'loss' | null
 }) {
   return (
-    <div className="panel px-4 py-3">
+    <div className="panel min-h-30 px-4 py-3">
       <div className="text-xs text-muted-foreground">{label}</div>
       <div
         className={cn(
-          'tabular mt-1 text-lg font-semibold',
+          'tabular mt-1 text-2xl font-semibold',
           tone === 'profit' && 'text-profit',
           tone === 'loss' && 'text-loss'
         )}
@@ -39,8 +53,22 @@ function StatCard({
         {value}
       </div>
       {sub && <div className="text-xs text-muted-foreground">{sub}</div>}
+      {footnote && <div className="text-xs text-muted-foreground">{footnote}</div>}
     </div>
   )
+}
+
+const valueTone = (value: number) => (value >= 0 ? 'profit' : 'loss')
+
+const formatPercentNumber = (value: number, digits = 2) =>
+  `${value.toFixed(digits)}%`
+
+const holdingDays = (trade: JournalTrade) => {
+  const exit = new Date(trade.closingDate ?? trade.tradeDate).getTime()
+  const entry = new Date(trade.tradeDate).getTime()
+  return Number.isFinite(exit) && Number.isFinite(entry)
+    ? (exit - entry) / 86_400_000
+    : 0
 }
 
 export function JournalStats({ trades, prices }: JournalStatsProps) {
@@ -66,10 +94,52 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
     const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0
     const avgWin = wins.length > 0 ? grossProfit / wins.length : 0
     const avgLoss = losses.length > 0 ? grossLoss / losses.length : 0
+    const lossRate = closed.length > 0 ? losses.length / closed.length : 0
     const expectancy =
       closed.length > 0
-        ? winRate * avgWin - (1 - winRate) * avgLoss
+        ? winRate * avgWin - lossRate * avgLoss
         : 0
+    const closedCostBasis = closed.reduce(
+      (sum, t) => sum + t.price * t.quantity,
+      0
+    )
+    const avgDollarAtWork = closed.length > 0 ? closedCostBasis / closed.length : 0
+    const openCostBasis = open.reduce((sum, t) => sum + t.price * t.quantity, 0)
+    const openMarketValue = openCostBasis + unrealizedPnlTotal
+    const expectancyPct =
+      avgDollarAtWork > 0 ? (expectancy / avgDollarAtWork) * 100 : 0
+    const unrealizedPct =
+      openCostBasis > 0 ? (unrealizedPnlTotal / openCostBasis) * 100 : 0
+    const totalPnlPct =
+      avgDollarAtWork > 0 ? (realizedPnlTotal / avgDollarAtWork) * 100 : 0
+    const rMultiples = closed.map((trade) => {
+      const riskAmount = trade.price * trade.quantity * 0.01
+      return riskAmount > 0 ? (trade.realizedPnl ?? 0) / riskAmount : 0
+    })
+    const avgRMultiple =
+      rMultiples.length > 0
+        ? rMultiples.reduce((sum, r) => sum + r, 0) / rMultiples.length
+        : 0
+    const longTermPnl = closed
+      .filter((t) => holdingDays(t) >= 365)
+      .reduce((sum, t) => sum + (t.realizedPnl ?? 0), 0)
+    const shortTermPnl = closed
+      .filter((t) => holdingDays(t) < 365)
+      .reduce((sum, t) => sum + (t.realizedPnl ?? 0), 0)
+    const assetPerformance = [...closed.reduce((assetMap, trade) => {
+      const current = assetMap.get(trade.assetName) ?? { pnl: 0, trades: 0 }
+      current.pnl += trade.realizedPnl ?? 0
+      current.trades += 1
+      assetMap.set(trade.assetName, current)
+      return assetMap
+    }, new Map<string, { pnl: number; trades: number }>()).entries()]
+      .map(([asset, data]) => ({
+        asset,
+        pnl: data.pnl,
+        trades: data.trades,
+        avgPnl: data.trades > 0 ? data.pnl / data.trades : 0,
+      }))
+      .sort((a, b) => b.pnl - a.pnl)
 
     return {
       closed,
@@ -83,6 +153,16 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
       avgWin,
       avgLoss,
       expectancy,
+      expectancyPct,
+      unrealizedPct,
+      totalPnlPct,
+      avgDollarAtWork,
+      openCostBasis,
+      openMarketValue,
+      avgRMultiple,
+      longTermPnl,
+      shortTermPnl,
+      assetPerformance,
     }
   }, [trades, prices])
 
@@ -128,32 +208,81 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
         type: 'bar',
         name: 'Monthly P&L',
         marker: {
-          color: values.map((v) =>
-            v >= 0 ? 'rgba(62, 207, 142, 0.75)' : 'rgba(242, 109, 133, 0.75)'
-          ),
+          color: values.map(profitLossColor),
         },
       },
     ]
   }, [stats.closed])
 
+  const rMultipleBars = useMemo<Partial<PlotData>[]>(() => {
+    const y = stats.closed.map((trade) => {
+      const riskAmount = trade.price * trade.quantity * 0.01
+      return riskAmount > 0 ? (trade.realizedPnl ?? 0) / riskAmount : 0
+    })
+    return [
+      {
+        x: stats.closed.map((_, index) => index + 1),
+        y,
+        type: 'bar',
+        name: 'R-Multiple',
+        marker: {
+          color: y.map(profitLossColor),
+        },
+        hovertemplate: 'Trade #%{x}<br>%{y:.2f}R<extra></extra>',
+      },
+    ]
+  }, [stats.closed])
+
+  const winLossPie = useMemo<Partial<PlotData>[]>(
+    () => [
+      {
+        values: [stats.wins.length, stats.losses.length],
+        labels: ['Wins', 'Losses'],
+        type: 'pie',
+        marker: { colors: [PROFIT_LOSS_COLORS.profit, PROFIT_LOSS_COLORS.loss] },
+        textinfo: 'label+percent',
+        hovertemplate: '%{label}: %{value}<extra></extra>',
+        sort: false,
+      },
+    ],
+    [stats.wins.length, stats.losses.length]
+  )
+
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="Win rate"
-          value={percentageFormatter.format(stats.winRate)}
-          sub={`${stats.wins.length}W / ${stats.losses.length}L of ${stats.closed.length}`}
+          label="Expectancy"
+          value={formatPercentNumber(stats.expectancyPct)}
+          sub={currencyFormatter.format(stats.expectancy)}
+          footnote="Per trade expected value"
+          tone={valueTone(stats.expectancy)}
         />
         <StatCard
-          label="Realized P&L"
-          value={currencyFormatter.format(stats.realizedPnlTotal)}
-          tone={stats.realizedPnlTotal >= 0 ? 'profit' : 'loss'}
+          label="R-Multiple"
+          value={`${stats.avgRMultiple.toFixed(2)}R`}
+          footnote="Average risk multiple"
+          tone={valueTone(stats.avgRMultiple)}
         />
         <StatCard
           label="Unrealized P&L"
-          value={currencyFormatter.format(stats.unrealizedPnlTotal)}
-          sub={`${stats.open.length} open`}
-          tone={stats.unrealizedPnlTotal >= 0 ? 'profit' : 'loss'}
+          value={formatPercentNumber(stats.unrealizedPct)}
+          sub={currencyFormatter.format(stats.unrealizedPnlTotal)}
+          footnote="Current open positions"
+          tone={valueTone(stats.unrealizedPnlTotal)}
+        />
+        <StatCard
+          label="Total P&L"
+          value={formatPercentNumber(stats.totalPnlPct)}
+          sub={currencyFormatter.format(stats.realizedPnlTotal)}
+          footnote="All closed trades"
+          tone={valueTone(stats.realizedPnlTotal)}
+        />
+        <StatCard
+          label="Win rate"
+          value={percentageFormatter.format(stats.winRate)}
+          sub={`${stats.wins.length}W / ${stats.losses.length}L`}
+          tone={stats.winRate >= 0.5 ? 'profit' : 'loss'}
         />
         <StatCard
           label="Profit factor"
@@ -168,10 +297,9 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
           value={`${currencyFormatter.format(stats.avgWin)} / ${currencyFormatter.format(-stats.avgLoss)}`}
         />
         <StatCard
-          label="Expectancy"
-          value={currencyFormatter.format(stats.expectancy)}
-          sub="per closed trade"
-          tone={stats.expectancy >= 0 ? 'profit' : 'loss'}
+          label="Avg $ at Work"
+          value={currencyFormatter.format(stats.avgDollarAtWork)}
+          footnote="Average position size"
         />
       </div>
 
@@ -191,6 +319,18 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
           </Card>
           <Card className="panel">
             <CardHeader>
+              <CardTitle>R-Multiple per Trade</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Plot
+                data={rMultipleBars}
+                layout={createLayout()}
+                style={{ width: '100%', height: 320 }}
+              />
+            </CardContent>
+          </Card>
+          <Card className="panel">
+            <CardHeader>
               <CardTitle>Monthly P&L</CardTitle>
             </CardHeader>
             <CardContent>
@@ -201,7 +341,133 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
               />
             </CardContent>
           </Card>
+          <Card className="panel">
+            <CardHeader>
+              <CardTitle>Win/Loss Distribution</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Plot
+                data={winLossPie}
+                layout={{
+                  ...createLayout(),
+                  showlegend: false,
+                  margin: { t: 16, r: 16, b: 16, l: 16 },
+                }}
+                style={{ width: '100%', height: 320 }}
+              />
+            </CardContent>
+          </Card>
         </div>
+      )}
+
+      {stats.assetPerformance.length > 0 && (
+        <Card className="panel">
+          <CardHeader>
+            <CardTitle>Performance by Asset</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="max-h-[400px] overflow-auto">
+              <Table>
+                <TableHeader className="sticky top-0 z-10 bg-muted">
+                  <TableRow>
+                    <TableHead>Asset</TableHead>
+                    <TableHead>Total P&L</TableHead>
+                    <TableHead>Trades</TableHead>
+                    <TableHead>Avg P&L/Trade</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {stats.assetPerformance.map((asset) => (
+                    <TableRow key={asset.asset}>
+                      <TableCell className="font-mono font-semibold">
+                        {asset.asset}
+                      </TableCell>
+                      <TableCell
+                        className={cn(
+                          'tabular font-semibold',
+                          asset.pnl >= 0 ? 'text-profit' : 'text-loss'
+                        )}
+                      >
+                        {currencyFormatter.format(asset.pnl)}
+                      </TableCell>
+                      <TableCell className="tabular">{asset.trades}</TableCell>
+                      <TableCell
+                        className={cn(
+                          'tabular font-semibold',
+                          asset.avgPnl >= 0 ? 'text-profit' : 'text-loss'
+                        )}
+                      >
+                        {currencyFormatter.format(asset.avgPnl)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {(stats.open.length > 0 || stats.closed.length > 0) && (
+        <Card className="panel">
+          <CardHeader>
+            <CardTitle>Portfolio Summary</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3 text-base md:text-lg">
+              <div>
+                Cost Basis (Open):{' '}
+                <span className="tabular font-semibold">
+                  {currencyFormatter.format(stats.openCostBasis)}
+                </span>
+              </div>
+              <div>
+                Market Value (Open):{' '}
+                <span className="tabular font-semibold">
+                  {currencyFormatter.format(stats.openMarketValue)}
+                </span>
+              </div>
+              <div className={stats.unrealizedPnlTotal >= 0 ? 'text-profit' : 'text-loss'}>
+                Unrealized P&L (Open):{' '}
+                <span className="tabular font-semibold">
+                  {currencyFormatter.format(stats.unrealizedPnlTotal)}
+                </span>
+              </div>
+              <div className={stats.realizedPnlTotal >= 0 ? 'text-profit' : 'text-loss'}>
+                Realized P&L (Closed):{' '}
+                <span className="tabular font-semibold">
+                  {currencyFormatter.format(stats.realizedPnlTotal)}
+                </span>
+              </div>
+              <div className={stats.longTermPnl >= 0 ? 'text-profit' : 'text-loss'}>
+                Long-term Gains/Losses:{' '}
+                <span className="tabular font-semibold">
+                  {currencyFormatter.format(stats.longTermPnl)}
+                </span>
+              </div>
+              <div className={stats.shortTermPnl >= 0 ? 'text-profit' : 'text-loss'}>
+                Short-term Gains/Losses:{' '}
+                <span className="tabular font-semibold">
+                  {currencyFormatter.format(stats.shortTermPnl)}
+                </span>
+              </div>
+            </div>
+            <div className="mt-5 grid gap-3 border-t border-border pt-4 md:grid-cols-2">
+              <div className="rounded-lg bg-muted/40 p-3">
+                <div className="text-xs text-muted-foreground">Open Trades</div>
+                <div className="tabular mt-1 text-xl font-semibold text-sky">
+                  {stats.open.length}
+                </div>
+              </div>
+              <div className="rounded-lg bg-muted/40 p-3">
+                <div className="text-xs text-muted-foreground">Closed Trades</div>
+                <div className="tabular mt-1 text-xl font-semibold">
+                  {stats.closed.length}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   )

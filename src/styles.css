@@ -43,8 +43,8 @@
   --gold-deep: oklch(0.7 0.13 72);
   --violet: oklch(0.72 0.15 295);
   --sky: oklch(0.72 0.12 250);
-  --profit: oklch(0.75 0.15 162);
-  --loss: oklch(0.68 0.18 13);
+  --profit: #00d084;
+  --loss: #ff3366;
 
   /* Charts */
   --chart-1: oklch(0.62 0.21 288);

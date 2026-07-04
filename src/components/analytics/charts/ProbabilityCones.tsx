@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 
 import Plot from '@/components/Plot'
+import { PROFIT_LOSS_COLORS } from '@/lib/colors'
 import { createLayout } from '@/lib/plotly'
 import {
   generateLinearProbabilityCones,
@@ -82,14 +83,14 @@ export function ProbabilityCones({
         y: coneDataB.upperCone,
         type: 'scatter',
         name: `${stdDevB}σ Upper Cone`,
-        line: { color: '#F26D85', dash: 'dot' },
+        line: { color: PROFIT_LOSS_COLORS.loss, dash: 'dot' },
       },
       {
         x: coneDataB.futureDates,
         y: coneDataB.lowerCone,
         type: 'scatter',
         name: `${stdDevB}σ Lower Cone`,
-        line: { color: '#F26D85', dash: 'dot' },
+        line: { color: PROFIT_LOSS_COLORS.loss, dash: 'dot' },
       },
     ]
   }, [data, stdDevA, stdDevB, coneType, coneLength, coneStartPercentage])

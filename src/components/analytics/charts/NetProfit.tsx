@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 
 import Plot from '@/components/Plot'
+import { profitLossBorderColor, profitLossColor } from '@/lib/colors'
 import { createLayout } from '@/lib/plotly'
 
 import type { PlotData } from 'plotly.js'
@@ -11,21 +12,28 @@ interface ChartProps {
 }
 
 export function NetProfitChart({ data }: ChartProps) {
+  const tradeDates = useMemo(
+    () => data?.dates.slice(-data.netProfit.length),
+    [data]
+  )
+
   const plotData = useMemo<Partial<PlotData>[]>(
     () => [
       {
-        x: data?.dates,
+        x: tradeDates,
         y: data?.netProfit,
         type: 'bar',
         name: 'Net Profit',
         marker: {
-          color: (data?.netProfit ?? []).map((p) =>
-            p >= 0 ? 'rgba(62, 207, 142, 0.75)' : 'rgba(242, 109, 133, 0.75)'
-          ),
+          color: (data?.netProfit ?? []).map(profitLossColor),
+          line: {
+            color: (data?.netProfit ?? []).map(profitLossBorderColor),
+            width: 0.7,
+          },
         },
       },
     ],
-    [data]
+    [data, tradeDates]
   )
 
   const layout = useMemo(() => createLayout(), [])

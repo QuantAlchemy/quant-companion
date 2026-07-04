@@ -27,9 +27,9 @@ export const Route = createFileRoute('/calculator')({
 })
 
 const bufferStyles = {
-  safe: 'border-emerald-400/40 bg-emerald-400/10 text-emerald-200',
+  safe: 'border-profit/40 bg-profit/10 text-profit',
   moderate: 'border-amber-300/40 bg-amber-300/10 text-amber-100',
-  risky: 'border-red-400/40 bg-red-400/10 text-red-100',
+  risky: 'border-loss/40 bg-loss/10 text-loss',
 } as const
 
 const bufferIcons = {

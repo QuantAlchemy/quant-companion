@@ -7,6 +7,7 @@ import FileUpload from '@/components/analytics/FileUpload'
 import HeaderConfigManager from '@/components/analytics/HeaderConfigManager'
 import NumberField from '@/components/NumberField'
 import { Button } from '@/components/ui/button'
+import { isLocalhostHostname } from '@/lib/environment'
 import { initSavedConfigs } from '@/lib/headerMappings'
 import {
   originalTradeDataStore,
@@ -22,10 +23,12 @@ export function Properties() {
   const tradeData = useStore(tradeDataStore)
   const [topTradesCnt, setTopTradesCnt] = useState(0)
   const [bottomTradesCnt, setBottomTradesCnt] = useState(0)
+  const [isLocalhost, setIsLocalhost] = useState(false)
 
   // hydrate saved header configs from localStorage once on the client
   useEffect(() => {
     initSavedConfigs()
+    setIsLocalhost(isLocalhostHostname(window.location.hostname))
   }, [])
 
   // recompute derived metrics whenever the working data set or equity changes
@@ -90,18 +93,20 @@ export function Properties() {
 
       <div className="flex flex-wrap justify-between gap-2">
         <FileUpload />
-        <Button
-          className="mt-4"
-          variant="secondary"
-          onClick={() => {
-            const data = simulateTradeData()
-            originalTradeDataStore.setState(() => data)
-            tradeDataStore.setState(() => data)
-          }}
-        >
-          <FlaskConical className="mr-1.5 h-4 w-4" />
-          Demo Data
-        </Button>
+        {isLocalhost && (
+          <Button
+            className="mt-4"
+            variant="secondary"
+            onClick={() => {
+              const data = simulateTradeData()
+              originalTradeDataStore.setState(() => data)
+              tradeDataStore.setState(() => data)
+            }}
+          >
+            <FlaskConical className="mr-1.5 h-4 w-4" />
+            Demo Data
+          </Button>
+        )}
       </div>
       <HeaderConfigManager className="mt-2" />
     </div>

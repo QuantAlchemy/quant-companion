@@ -5,6 +5,7 @@
 # Clerk authentication — use the PRODUCTION Clerk instance keys
 VITE_CLERK_PUBLISHABLE_KEY={{ op://code-env/quant-companion-production/VITE_CLERK_PUBLISHABLE_KEY }}
 CLERK_SECRET_KEY={{ op://code-env/quant-companion-production/CLERK_SECRET_KEY }}
+CLERK_JWT_ISSUER_DOMAIN={{ op://code-env/quant-companion-production/CLERK_JWT_ISSUER_DOMAIN }}
 
 # Convex backend (production deployment)
 CONVEX_DEPLOYMENT={{ op://code-env/quant-companion-production/CONVEX_DEPLOYMENT }}
