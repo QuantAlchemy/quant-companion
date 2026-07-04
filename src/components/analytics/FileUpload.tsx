@@ -11,11 +11,7 @@ import {
   transformDataByHeaderConfig,
   validateHeaders,
 } from '@/lib/headerMappings'
-import {
-  originalTradeDataStore,
-  processTradingViewData,
-  tradeDataStore,
-} from '@/lib/stats'
+import { processTradingViewData, setOriginalTradeData } from '@/lib/stats'
 
 import type { ParseResult } from 'papaparse'
 import type { TradingViewRecord } from '@/lib/stats'
@@ -38,11 +34,13 @@ const processCSVFile = (file: File): Promise<TradingViewRecord[]> => {
         const { data, errors, meta } = csv
         if (errors.length) {
           reject(
-            `${file.name} - ${MESSAGES.PAPA_PARSE_FAILED} - ${errors[0].message} - row ${errors[0].row}`
+            `${file.name} - ${MESSAGES.PAPA_PARSE_FAILED} - ${errors[0].message} - row ${errors[0].row}`,
           )
         } else {
           // Validate headers against selected configuration
-          if (!validateHeaders(meta.fields || [], currentHeaderConfigStore.state)) {
+          if (
+            !validateHeaders(meta.fields || [], currentHeaderConfigStore.state)
+          ) {
             reject(MESSAGES.INVALID_HEADERS)
             return
           }
@@ -61,14 +59,16 @@ const processXLSXFile = async (file: File): Promise<TradingViewRecord[]> => {
 
     // Find the 'List of trades' sheet
     const sheetName = workbook.SheetNames.find((name) =>
-      name.toLowerCase().includes('list of trades')
+      name.toLowerCase().includes('list of trades'),
     )
     if (!sheetName) {
       throw new Error('Could not find "List of trades" sheet')
     }
 
     const worksheet = workbook.Sheets[sheetName]
-    const rawData = XLSX.utils.sheet_to_json<unknown[]>(worksheet, { header: 1 })
+    const rawData = XLSX.utils.sheet_to_json<unknown[]>(worksheet, {
+      header: 1,
+    })
 
     // Remove header row and convert to TradingViewRecord format
     const headers = rawData[0] as string[]
@@ -87,11 +87,11 @@ const processXLSXFile = async (file: File): Promise<TradingViewRecord[]> => {
           // Convert Excel date numbers to proper date strings
           if (header === 'Date/Time' && typeof value === 'number') {
             value = dayjs(new Date((value - 25569) * 86400 * 1000)).format(
-              'YYYY-MM-DD HH:mm:ss'
+              'YYYY-MM-DD HH:mm:ss',
             )
           }
           return [header, value]
-        })
+        }),
       )
 
       headers.forEach((header) => {
@@ -102,7 +102,7 @@ const processXLSXFile = async (file: File): Promise<TradingViewRecord[]> => {
     })
   } catch (error) {
     throw new Error(
-      `${file.name} - ${MESSAGES.XLSX_PARSE_FAILED} - ${error instanceof Error ? error.message : 'Unknown error'}`
+      `${file.name} - ${MESSAGES.XLSX_PARSE_FAILED} - ${error instanceof Error ? error.message : 'Unknown error'}`,
     )
   }
 }
@@ -124,7 +124,9 @@ export function FileUpload() {
   const inputRef = useRef<HTMLInputElement>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const uploadedFiles = event.target.files
     if (!uploadedFiles || uploadedFiles.length === 0) return
     const selectedFiles = Array.from(uploadedFiles)
@@ -138,21 +140,25 @@ export function FileUpload() {
           // Transform the data according to the selected header configuration
           const transformedData = transformDataByHeaderConfig(
             data,
-            currentHeaderConfigStore.state
+            currentHeaderConfigStore.state,
           )
           return processTradingViewData(file.name, transformedData)
-        })
+        }),
       )
       let mergedTrades = results.flat()
       mergedTrades.sort((a, b) => a.exitDate.getTime() - b.exitDate.getTime())
-      mergedTrades = mergedTrades.map((trade, i) => ({ ...trade, tradeNo: i + 1 }))
-      tradeDataStore.setState(() => mergedTrades)
-      originalTradeDataStore.setState(() => mergedTrades)
+      mergedTrades = mergedTrades.map((trade, i) => ({
+        ...trade,
+        tradeNo: i + 1,
+      }))
+      setOriginalTradeData(mergedTrades)
       award('csv-uploaded')
     } catch (error) {
       console.error({ message: error })
-      tradeDataStore.setState(() => null)
-      setUploadError(typeof error === 'string' ? error : MESSAGES.MALFORMED_DATA)
+      setOriginalTradeData(null)
+      setUploadError(
+        typeof error === 'string' ? error : MESSAGES.MALFORMED_DATA,
+      )
     } finally {
       // allow re-uploading the same file
       if (inputRef.current) inputRef.current.value = ''
@@ -174,7 +180,9 @@ export function FileUpload() {
         Upload Data
       </Button>
       {uploadError && (
-        <p className="mt-2 text-sm text-destructive-foreground">{uploadError}</p>
+        <p className="mt-2 text-sm text-destructive-foreground">
+          {uploadError}
+        </p>
       )}
     </div>
   )

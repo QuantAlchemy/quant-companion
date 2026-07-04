@@ -10,8 +10,10 @@ import { TanStackDevtools } from '@tanstack/react-devtools'
 import { Toaster } from 'sonner'
 
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
+import TanstackQueryProvider from '../integrations/tanstack-query/root-provider'
 import AppHeader from '@/components/AppHeader'
 import GamificationBridge from '@/components/gamification/GamificationBridge'
+import { TooltipProvider } from '@/components/ui/tooltip'
 
 import appCss from '../styles.css?url'
 import { isClerkClientConfigured } from '@/lib/clerk'
@@ -45,48 +47,56 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  const { queryClient } = Route.useRouteContext()
   const content = (
-    <>
-      <GamificationBridge />
-      <div className="flex min-h-screen flex-col">
-        <AppHeader />
-        <main className="flex-1">{children}</main>
-        <footer className="mt-16 border-t border-border/40 py-6">
-          <div className="mx-auto flex w-full max-w-[1400px] flex-wrap items-center justify-between gap-3 px-4 text-xs text-muted-foreground md:px-8">
-            <span>
-              Forged by{' '}
-              <a href="https://quantalchemy.io" target="_blank" rel="noreferrer">
-                Quant Alchemy
-              </a>
-            </span>
-            <span>
-              Your data stays yours — uploads are processed locally in your browser.
-            </span>
-          </div>
-        </footer>
-      </div>
-      <Toaster
-        theme="dark"
-        position="bottom-right"
-        toastOptions={{
-          style: {
-            background: 'oklch(0.21 0.033 274)',
-            border: '1px solid rgba(146,155,205,0.2)',
-            color: 'var(--foreground)',
-          },
-        }}
-      />
-      <TanStackDevtools
-        config={{ position: 'bottom-right' }}
-        plugins={[
-          {
-            name: 'Tanstack Router',
-            render: <TanStackRouterDevtoolsPanel />,
-          },
-          TanStackQueryDevtools,
-        ]}
-      />
-    </>
+    <TanstackQueryProvider queryClient={queryClient}>
+      <TooltipProvider>
+        <GamificationBridge />
+        <div className="flex min-h-screen flex-col">
+          <AppHeader />
+          <main className="flex-1">{children}</main>
+          <footer className="mt-16 border-t border-border/40 py-6">
+            <div className="mx-auto flex w-full max-w-[1400px] flex-wrap items-center justify-between gap-3 px-4 text-xs text-muted-foreground md:px-8">
+              <span>
+                Forged by{' '}
+                <a
+                  href="https://quantalchemy.io"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Quant Alchemy
+                </a>
+              </span>
+              <span>
+                Your data stays yours — uploads are processed locally in your
+                browser.
+              </span>
+            </div>
+          </footer>
+        </div>
+        <Toaster
+          theme="dark"
+          position="bottom-right"
+          toastOptions={{
+            style: {
+              background: 'oklch(0.21 0.033 274)',
+              border: '1px solid rgba(146,155,205,0.2)',
+              color: 'var(--foreground)',
+            },
+          }}
+        />
+        <TanStackDevtools
+          config={{ position: 'bottom-right' }}
+          plugins={[
+            {
+              name: 'Tanstack Router',
+              render: <TanStackRouterDevtoolsPanel />,
+            },
+            TanStackQueryDevtools,
+          ]}
+        />
+      </TooltipProvider>
+    </TanstackQueryProvider>
   )
 
   return (
@@ -96,7 +106,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         {isClerkClientConfigured() ? (
-          <ClerkProvider appearance={{ theme: shadcn }}>{content}</ClerkProvider>
+          <ClerkProvider appearance={{ theme: shadcn }}>
+            {content}
+          </ClerkProvider>
         ) : (
           content
         )}

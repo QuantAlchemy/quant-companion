@@ -1,5 +1,5 @@
 import { useStore } from '@tanstack/react-store'
-import { useState } from 'react'
+import { useEffect } from 'react'
 
 import { Label } from '@/components/ui/label'
 import {
@@ -9,23 +9,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { originalTradeDataStore, tradeDataStore } from '@/lib/stats'
-
-const ALL_FILES = 'All Files'
+import {
+  ALL_TRADE_FILES,
+  originalTradeDataStore,
+  selectedTradeFileStore,
+  setSelectedTradeFile,
+} from '@/lib/stats'
 
 export function FileFilter() {
   const originalTradeData = useStore(originalTradeDataStore)
-  const allFiles = [ALL_FILES, ...new Set(originalTradeData?.map((t) => t.filename))]
-  const [file, setFile] = useState(ALL_FILES)
+  const file = useStore(selectedTradeFileStore)
+  const allFiles = [
+    ALL_TRADE_FILES,
+    ...new Set(originalTradeData?.map((t) => t.filename)),
+  ]
 
-  const filterData = (selected: string) => {
-    if (selected === ALL_FILES) {
-      tradeDataStore.setState(() => originalTradeData)
-    } else {
-      const filteredFiles = originalTradeData?.filter((t) => t.filename === selected)
-      tradeDataStore.setState(() => filteredFiles ?? null)
+  useEffect(() => {
+    if (!allFiles.includes(file)) {
+      setSelectedTradeFile(ALL_TRADE_FILES)
     }
-  }
+  }, [allFiles, file])
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -34,8 +37,7 @@ export function FileFilter() {
         value={file}
         onValueChange={(value) => {
           if (value == null) return
-          setFile(value)
-          filterData(value)
+          setSelectedTradeFile(value)
         }}
       >
         <SelectTrigger className="min-w-48">

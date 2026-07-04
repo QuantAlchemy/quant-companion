@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 
 import Plot from '@/components/Plot'
-import { unrealizedPnl } from '@/components/journal/TradeTable'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
@@ -12,10 +11,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { currencyFormatter, percentageFormatter } from '@/lib/format'
-import {
-  PROFIT_LOSS_COLORS,
-  profitLossColor,
-} from '@/lib/colors'
+import { unrealizedPnl } from '@/lib/performance'
+import { PROFIT_LOSS_COLORS, profitLossColor } from '@/lib/colors'
 import { createLayout } from '@/lib/plotly'
 import { cn } from '@/lib/utils'
 
@@ -47,13 +44,15 @@ function StatCard({
         className={cn(
           'tabular mt-1 text-2xl font-semibold',
           tone === 'profit' && 'text-profit',
-          tone === 'loss' && 'text-loss'
+          tone === 'loss' && 'text-loss',
         )}
       >
         {value}
       </div>
       {sub && <div className="text-xs text-muted-foreground">{sub}</div>}
-      {footnote && <div className="text-xs text-muted-foreground">{footnote}</div>}
+      {footnote && (
+        <div className="text-xs text-muted-foreground">{footnote}</div>
+      )}
     </div>
   )
 }
@@ -71,10 +70,18 @@ const holdingDays = (trade: JournalTrade) => {
     : 0
 }
 
+const riskAmountFor = (trade: JournalTrade) =>
+  trade.price * trade.quantity * 0.01
+
+const rMultipleFor = (trade: JournalTrade) => {
+  const riskAmount = riskAmountFor(trade)
+  return riskAmount > 0 ? (trade.realizedPnl ?? 0) / riskAmount : 0
+}
+
 export function JournalStats({ trades, prices }: JournalStatsProps) {
   const stats = useMemo(() => {
     const closed = trades.filter(
-      (t) => t.status === 'closed' && t.realizedPnl != null
+      (t) => t.status === 'closed' && t.realizedPnl != null,
     )
     const open = trades.filter((t) => t.status === 'open')
 
@@ -82,28 +89,31 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
     const losses = closed.filter((t) => (t.realizedPnl ?? 0) < 0)
     const winRate = closed.length > 0 ? wins.length / closed.length : 0
 
-    const realizedPnlTotal = closed.reduce((sum, t) => sum + (t.realizedPnl ?? 0), 0)
+    const realizedPnlTotal = closed.reduce(
+      (sum, t) => sum + (t.realizedPnl ?? 0),
+      0,
+    )
     const unrealizedPnlTotal = open.reduce(
       (sum, t) => sum + (unrealizedPnl(t, prices) ?? 0),
-      0
+      0,
     )
     const grossProfit = wins.reduce((sum, t) => sum + (t.realizedPnl ?? 0), 0)
     const grossLoss = Math.abs(
-      losses.reduce((sum, t) => sum + (t.realizedPnl ?? 0), 0)
+      losses.reduce((sum, t) => sum + (t.realizedPnl ?? 0), 0),
     )
-    const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0
+    const profitFactor =
+      grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0
     const avgWin = wins.length > 0 ? grossProfit / wins.length : 0
     const avgLoss = losses.length > 0 ? grossLoss / losses.length : 0
     const lossRate = closed.length > 0 ? losses.length / closed.length : 0
     const expectancy =
-      closed.length > 0
-        ? winRate * avgWin - lossRate * avgLoss
-        : 0
+      closed.length > 0 ? winRate * avgWin - lossRate * avgLoss : 0
     const closedCostBasis = closed.reduce(
       (sum, t) => sum + t.price * t.quantity,
-      0
+      0,
     )
-    const avgDollarAtWork = closed.length > 0 ? closedCostBasis / closed.length : 0
+    const avgDollarAtWork =
+      closed.length > 0 ? closedCostBasis / closed.length : 0
     const openCostBasis = open.reduce((sum, t) => sum + t.price * t.quantity, 0)
     const openMarketValue = openCostBasis + unrealizedPnlTotal
     const expectancyPct =
@@ -111,11 +121,8 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
     const unrealizedPct =
       openCostBasis > 0 ? (unrealizedPnlTotal / openCostBasis) * 100 : 0
     const totalPnlPct =
-      avgDollarAtWork > 0 ? (realizedPnlTotal / avgDollarAtWork) * 100 : 0
-    const rMultiples = closed.map((trade) => {
-      const riskAmount = trade.price * trade.quantity * 0.01
-      return riskAmount > 0 ? (trade.realizedPnl ?? 0) / riskAmount : 0
-    })
+      closedCostBasis > 0 ? (realizedPnlTotal / closedCostBasis) * 100 : 0
+    const rMultiples = closed.map(rMultipleFor)
     const avgRMultiple =
       rMultiples.length > 0
         ? rMultiples.reduce((sum, r) => sum + r, 0) / rMultiples.length
@@ -126,13 +133,17 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
     const shortTermPnl = closed
       .filter((t) => holdingDays(t) < 365)
       .reduce((sum, t) => sum + (t.realizedPnl ?? 0), 0)
-    const assetPerformance = [...closed.reduce((assetMap, trade) => {
-      const current = assetMap.get(trade.assetName) ?? { pnl: 0, trades: 0 }
-      current.pnl += trade.realizedPnl ?? 0
-      current.trades += 1
-      assetMap.set(trade.assetName, current)
-      return assetMap
-    }, new Map<string, { pnl: number; trades: number }>()).entries()]
+    const assetPerformance = [
+      ...closed
+        .reduce((assetMap, trade) => {
+          const current = assetMap.get(trade.assetName) ?? { pnl: 0, trades: 0 }
+          current.pnl += trade.realizedPnl ?? 0
+          current.trades += 1
+          assetMap.set(trade.assetName, current)
+          return assetMap
+        }, new Map<string, { pnl: number; trades: number }>())
+        .entries(),
+    ]
       .map(([asset, data]) => ({
         asset,
         pnl: data.pnl,
@@ -170,7 +181,7 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
     const sorted = [...stats.closed].sort(
       (a, b) =>
         new Date(a.closingDate ?? a.tradeDate).getTime() -
-        new Date(b.closingDate ?? b.tradeDate).getTime()
+        new Date(b.closingDate ?? b.tradeDate).getTime(),
     )
     let cumulative = 0
     const x: string[] = []
@@ -215,10 +226,7 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
   }, [stats.closed])
 
   const rMultipleBars = useMemo<Partial<PlotData>[]>(() => {
-    const y = stats.closed.map((trade) => {
-      const riskAmount = trade.price * trade.quantity * 0.01
-      return riskAmount > 0 ? (trade.realizedPnl ?? 0) / riskAmount : 0
-    })
+    const y = stats.closed.map(rMultipleFor)
     return [
       {
         x: stats.closed.map((_, index) => index + 1),
@@ -239,13 +247,15 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
         values: [stats.wins.length, stats.losses.length],
         labels: ['Wins', 'Losses'],
         type: 'pie',
-        marker: { colors: [PROFIT_LOSS_COLORS.profit, PROFIT_LOSS_COLORS.loss] },
+        marker: {
+          colors: [PROFIT_LOSS_COLORS.profit, PROFIT_LOSS_COLORS.loss],
+        },
         textinfo: 'label+percent',
         hovertemplate: '%{label}: %{value}<extra></extra>',
         sort: false,
       },
     ],
-    [stats.wins.length, stats.losses.length]
+    [stats.wins.length, stats.losses.length],
   )
 
   return (
@@ -385,7 +395,7 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
                       <TableCell
                         className={cn(
                           'tabular font-semibold',
-                          asset.pnl >= 0 ? 'text-profit' : 'text-loss'
+                          asset.pnl >= 0 ? 'text-profit' : 'text-loss',
                         )}
                       >
                         {currencyFormatter.format(asset.pnl)}
@@ -394,7 +404,7 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
                       <TableCell
                         className={cn(
                           'tabular font-semibold',
-                          asset.avgPnl >= 0 ? 'text-profit' : 'text-loss'
+                          asset.avgPnl >= 0 ? 'text-profit' : 'text-loss',
                         )}
                       >
                         {currencyFormatter.format(asset.avgPnl)}
@@ -427,25 +437,39 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
                   {currencyFormatter.format(stats.openMarketValue)}
                 </span>
               </div>
-              <div className={stats.unrealizedPnlTotal >= 0 ? 'text-profit' : 'text-loss'}>
+              <div
+                className={
+                  stats.unrealizedPnlTotal >= 0 ? 'text-profit' : 'text-loss'
+                }
+              >
                 Unrealized P&L (Open):{' '}
                 <span className="tabular font-semibold">
                   {currencyFormatter.format(stats.unrealizedPnlTotal)}
                 </span>
               </div>
-              <div className={stats.realizedPnlTotal >= 0 ? 'text-profit' : 'text-loss'}>
+              <div
+                className={
+                  stats.realizedPnlTotal >= 0 ? 'text-profit' : 'text-loss'
+                }
+              >
                 Realized P&L (Closed):{' '}
                 <span className="tabular font-semibold">
                   {currencyFormatter.format(stats.realizedPnlTotal)}
                 </span>
               </div>
-              <div className={stats.longTermPnl >= 0 ? 'text-profit' : 'text-loss'}>
+              <div
+                className={stats.longTermPnl >= 0 ? 'text-profit' : 'text-loss'}
+              >
                 Long-term Gains/Losses:{' '}
                 <span className="tabular font-semibold">
                   {currencyFormatter.format(stats.longTermPnl)}
                 </span>
               </div>
-              <div className={stats.shortTermPnl >= 0 ? 'text-profit' : 'text-loss'}>
+              <div
+                className={
+                  stats.shortTermPnl >= 0 ? 'text-profit' : 'text-loss'
+                }
+              >
                 Short-term Gains/Losses:{' '}
                 <span className="tabular font-semibold">
                   {currencyFormatter.format(stats.shortTermPnl)}
@@ -460,7 +484,9 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
                 </div>
               </div>
               <div className="rounded-lg bg-muted/40 p-3">
-                <div className="text-xs text-muted-foreground">Closed Trades</div>
+                <div className="text-xs text-muted-foreground">
+                  Closed Trades
+                </div>
                 <div className="tabular mt-1 text-xl font-semibold">
                   {stats.closed.length}
                 </div>

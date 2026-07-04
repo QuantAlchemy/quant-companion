@@ -11,12 +11,17 @@ import type { TradeMetrics } from '@/lib/stats'
  * regression. Pure functions — bars come from the getDailyBars server fn.
  */
 
-const dayStr = (d: Date) => d.toISOString().slice(0, 10)
+const dayStr = (date: Date) => {
+  const normalized = new Date(
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
+  )
+  return normalized.toISOString().slice(0, 10)
+}
 
 /** Forward-fill the irregular per-trade equity curve onto the benchmark's daily grid. */
 function alignDailyReturns(
   metrics: TradeMetrics,
-  bars: DailyBar[]
+  bars: DailyBar[],
 ): { strategy: number[]; benchmark: number[] } {
   const equityByDay = new Map<string, number>()
   metrics.dates.forEach((date, i) => {
@@ -37,13 +42,16 @@ function alignDailyReturns(
   const returns = (series: number[]) =>
     series.slice(1).map((v, i) => (v - series[i]) / series[i])
 
-  return { strategy: returns(strategyEquity), benchmark: returns(benchmarkClose) }
+  return {
+    strategy: returns(strategyEquity),
+    benchmark: returns(benchmarkClose),
+  }
 }
 
 export function benchmarkComparison(
   metrics: TradeMetrics,
   bars: DailyBar[],
-  symbol: string
+  symbol: string,
 ): InvalidationResult {
   const base = {
     id: 'benchmark-comparison',
@@ -51,7 +59,8 @@ export function benchmarkComparison(
     requiredInputs: 'Strategy equity/trade dates plus benchmark daily bars.',
     whatItChecks:
       'Whether the strategy actually beats simply buying and holding the benchmark over the same dates.',
-    metricsToCompare: 'Total return, max drawdown, Sharpe ratio vs buy-and-hold.',
+    metricsToCompare:
+      'Total return, max drawdown, Sharpe ratio vs buy-and-hold.',
     passCondition:
       'Strategy improves risk-adjusted return or drawdown versus the benchmark.',
     invalidateCondition:
@@ -82,10 +91,10 @@ export function benchmarkComparison(
     (benchEquity[benchEquity.length - 1] - benchEquity[0]) / benchEquity[0]
 
   const stratMaxDd = Math.max(
-    ...calculateDrawdowns(metrics.equity).map((d) => d.drawdownPercent)
+    ...calculateDrawdowns(metrics.equity).map((d) => d.drawdownPercent),
   )
   const benchMaxDd = Math.max(
-    ...calculateDrawdowns(benchEquity).map((d) => d.drawdownPercent)
+    ...calculateDrawdowns(benchEquity).map((d) => d.drawdownPercent),
   )
 
   let stratSharpe = NaN
@@ -104,7 +113,12 @@ export function benchmarkComparison(
       ? stratSharpe > benchSharpe
       : betterReturn
 
-  const status = betterSharpe || betterDrawdown ? 'pass' : betterReturn ? 'watch' : 'invalidate'
+  const status =
+    betterSharpe || betterDrawdown
+      ? 'pass'
+      : betterReturn
+        ? 'watch'
+        : 'invalidate'
 
   return {
     ...base,
@@ -145,7 +159,7 @@ export function benchmarkComparison(
 export function alphaBetaRegression(
   metrics: TradeMetrics,
   bars: DailyBar[],
-  symbol: string
+  symbol: string,
 ): InvalidationResult {
   const base = {
     id: 'alpha-beta-regression',
@@ -209,7 +223,12 @@ export function alphaBetaRegression(
       {
         label: 'Alpha (annualized)',
         value: percentageFormatter.format(alphaAnnual),
-        tone: alphaAnnual > 0.02 ? 'pass' : alphaAnnual > -0.02 ? 'watch' : 'invalidate',
+        tone:
+          alphaAnnual > 0.02
+            ? 'pass'
+            : alphaAnnual > -0.02
+              ? 'watch'
+              : 'invalidate',
       },
       { label: 'Beta', value: beta.toFixed(2) },
       { label: 'R²', value: r2.toFixed(2) },

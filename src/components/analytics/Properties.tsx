@@ -10,19 +10,20 @@ import { Button } from '@/components/ui/button'
 import { isLocalhostHostname } from '@/lib/environment'
 import { initSavedConfigs } from '@/lib/headerMappings'
 import {
-  originalTradeDataStore,
   processTradeMetrics,
+  setOriginalTradeData,
+  setTradeTrim,
   simulateTradeData,
   startingEquityStore,
   tradeDataStore,
   tradeMetricsStore,
+  tradeTrimStore,
 } from '@/lib/stats'
 
 export function Properties() {
   const startingEquity = useStore(startingEquityStore)
   const tradeData = useStore(tradeDataStore)
-  const [topTradesCnt, setTopTradesCnt] = useState(0)
-  const [bottomTradesCnt, setBottomTradesCnt] = useState(0)
+  const tradeTrim = useStore(tradeTrimStore)
   const [isLocalhost, setIsLocalhost] = useState(false)
 
   // hydrate saved header configs from localStorage once on the client
@@ -41,26 +42,6 @@ export function Properties() {
     }
   }, [tradeData, startingEquity])
 
-  const removeTopAndBottomTrades = (topCount: number, bottomCount: number) => {
-    const data = originalTradeDataStore.state
-    if (!data) return
-
-    const topTrades = [...data]
-      .sort((a, b) => b.exitProfit - a.exitProfit)
-      .slice(0, topCount)
-    const bottomTrades = [...data]
-      .sort((a, b) => a.exitProfit - b.exitProfit)
-      .slice(0, bottomCount)
-
-    const tradesToRemove = new Set([
-      ...topTrades.map((trade) => trade.tradeNo),
-      ...bottomTrades.map((trade) => trade.tradeNo),
-    ])
-    tradeDataStore.setState(
-      () => data.filter((trade) => !tradesToRemove.has(trade.tradeNo))
-    )
-  }
-
   return (
     <div className="space-y-4">
       <NumberField
@@ -73,20 +54,18 @@ export function Properties() {
         className="w-auto"
         label="Remove Best Trades"
         min={0}
-        value={topTradesCnt}
+        value={tradeTrim.topCount}
         onValueChange={(value) => {
-          setTopTradesCnt(value)
-          removeTopAndBottomTrades(value, bottomTradesCnt)
+          setTradeTrim(value, tradeTrim.bottomCount)
         }}
       />
       <NumberField
         className="w-auto"
         label="Remove Worst Trades"
         min={0}
-        value={bottomTradesCnt}
+        value={tradeTrim.bottomCount}
         onValueChange={(value) => {
-          setBottomTradesCnt(value)
-          removeTopAndBottomTrades(topTradesCnt, value)
+          setTradeTrim(tradeTrim.topCount, value)
         }}
       />
       <FileFilter />
@@ -99,8 +78,7 @@ export function Properties() {
             variant="secondary"
             onClick={() => {
               const data = simulateTradeData()
-              originalTradeDataStore.setState(() => data)
-              tradeDataStore.setState(() => data)
+              setOriginalTradeData(data)
             }}
           >
             <FlaskConical className="mr-1.5 h-4 w-4" />
