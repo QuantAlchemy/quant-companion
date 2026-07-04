@@ -202,10 +202,32 @@ export function exportTrades(): string {
   return JSON.stringify(exportData, null, 2)
 }
 
-/** Import trades from a JSON export; validates shape and merges into the journal. */
-export function importTrades(json: string): number {
-  const parsed = JSON.parse(json) as Partial<JournalTrade>[]
-  if (!Array.isArray(parsed)) throw new Error('Expected an array of trades')
+/**
+ * Import trades and merge them into the journal. Accepts either a JSON array
+ * (this app's export, or the legacy trading-journal download) or JSONL — one
+ * document per line — as produced by a Convex dashboard snapshot export.
+ * Unknown fields (userId, _id, _creationTime, marketPrice, …) are ignored.
+ */
+export function importTrades(input: string): number {
+  let parsed: Partial<JournalTrade>[]
+  const trimmed = input.trim()
+  try {
+    const json = JSON.parse(trimmed) as unknown
+    if (!Array.isArray(json)) throw new Error('Expected an array of trades')
+    parsed = json as Partial<JournalTrade>[]
+  } catch (arrayError) {
+    // fall back to JSONL (Convex snapshot export: documents.jsonl)
+    try {
+      parsed = trimmed
+        .split('\n')
+        .filter((line) => line.trim().length > 0)
+        .map((line) => JSON.parse(line) as Partial<JournalTrade>)
+    } catch {
+      throw arrayError instanceof Error
+        ? arrayError
+        : new Error('File is neither a JSON array nor JSONL')
+    }
+  }
 
   const imported = parsed.map((raw, index) => {
     if (

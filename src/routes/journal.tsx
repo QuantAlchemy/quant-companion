@@ -127,7 +127,7 @@ function JournalPage() {
             ref={importInputRef}
             type="file"
             hidden
-            accept=".json"
+            accept=".json,.jsonl"
             onChange={handleImport}
           />
           <Button variant="ghost" size="sm" onClick={() => importInputRef.current?.click()}>
