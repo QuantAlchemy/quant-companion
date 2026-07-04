@@ -1,111 +1,95 @@
-<p align="center">
-  <img src="./public/icon-128.png" alt="TradingView Companion Logo" width="80" height="80">
-</p>
+# Quant Companion
 
-# TradingView Companion
+The unified **Quant Alchemy** workbench — strategy performance analytics, a
+trading journal, and position sizing with liquidation analysis, in one app.
 
-A powerful tool for analyzing and optimizing TradingView strategy results. This application allows you to export strategy data from TradingView and perform in-depth analysis of your trading performance.
+This app merges three previously separate projects:
 
-## Features
+| Tool | Route | Formerly |
+| --- | --- | --- |
+| Performance Analytics | `/analytics` | quant-companion (SolidJS) |
+| Trading Journal | `/journal` | trading-journal (React + Convex) |
+| Position Size Calculator | `/calculator` | position-size-calculator (static HTML) |
 
-- Import multiple TradingView strategy export files for portfolio analysis
-- Comprehensive performance metrics and visualizations
-- Web extension support for seamless integration with TradingView
-- **Future support** for automatic strategy optimization and parameter analysis
+Plus a gamification layer (`/achievements`): XP, alchemy-themed ranks
+(Lead Seeker → Philosopher's Stone), daily streaks, and achievements tied to
+disciplined trading habits.
 
-## Getting Started
+## Stack
 
-### Prerequisites
+- [TanStack Start](https://tanstack.com/start) (React 19, Vite) with TanStack
+  Router, Query, Table, Form, and Store
+- [Clerk](https://clerk.com) authentication (`@clerk/tanstack-react-start`)
+- Tailwind CSS v4 + shadcn/ui components
+- Plotly for charts, Papa Parse + SheetJS for CSV/XLSX import
 
-- Node.js (v20 or higher)
-- pnpm package manager
-
-### Installation
-
-1. Clone the repository:
-
-```bash
-git clone https://github.com/yourusername/tradingview-companion.git
-cd tradingview-companion
-```
-
-2. Install dependencies:
+## Development
 
 ```bash
 pnpm install
+pnpm dev              # frontend — http://localhost:3000
+pnpm dev:convex       # Convex backend (first run configures the deployment)
+pnpm build            # production build (Nitro — deploys to Vercel as-is)
+pnpm lint             # eslint
+pnpm test             # vitest
+pnpm generate-routes  # regenerate the route tree after adding routes
 ```
 
-### Development
+## Environment
 
-Run the development server:
+Committed templates `.env.local.tpl` / `.env.production.tpl` follow the
+1Password `op://` convention — generate a real env file with:
 
 ```bash
-pnpm run dev
+pnpm run env:generate:local   # op inject -i .env.local.tpl -o .env.local
 ```
 
-Open [http://localhost:5173](http://localhost:5173) to view it in the browser.
+Keys: `VITE_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY` (Clerk),
+`CONVEX_DEPLOYMENT`, `VITE_CONVEX_URL` (Convex), and optional
+`COINMARKETCAP_API_KEY`, `ALPACA_API_KEY_ID`, `ALPACA_SECRET_KEY` for live
+prices and the Invalidation Lab's benchmark tests. Without the price keys the
+journal still works; it just skips live unrealized P&L. Never expose
+`CLERK_SECRET_KEY` or price API keys to the client.
 
-### Building for Production
+For Vercel, mirror the same variables into the project's Preview/Production
+environments (`vercel env add …`).
 
-Build the app for production:
+## Convex backend
 
-```bash
-pnpm run build
-```
+`convex/` holds the trades schema and functions (Clerk-authenticated via
+`identity.subject`). To bring it up:
 
-The build is suitable for both web deployment and web extension use.
+1. `pnpm dev:convex` — first run creates/links the Convex deployment and
+   generates `convex/_generated`.
+2. In the Clerk dashboard, create a JWT template named `convex`, then set
+   `CLERK_JWT_ISSUER_DOMAIN` on the Convex deployment
+   (see https://docs.convex.dev/auth/clerk).
 
-## Usage
+The journal UI currently persists to localStorage; switching its data plane to
+these Convex functions is the intended next step (see `src/lib/journal.ts`).
 
-You can use TradingView Companion through the web application:
+## Data & privacy
 
-1. **Web Application**: Visit [https://www.quant-companion.quantalchemy.io/](https://www.quant-companion.quantalchemy.io/) to use the application directly in your browser.
+Local-first: analytics uploads are processed entirely in the browser, and the
+journal + gamification progress persist in `localStorage`, namespaced per
+Clerk user id (`qc:<userId>:journal`, `qc:<userId>:progress`). The journal
+supports lossless JSON export/import for backup and migration. The only
+server-side calls are Clerk auth and the price-lookup server function
+(`src/lib/prices.ts`), which keeps API keys off the client.
 
-### How to Use
+To move the journal to a hosted database later, replace the `load`/`persist`
+pair in `src/lib/journal.ts` and make the operations async — the operation
+semantics intentionally mirror the original Convex backend.
 
-1. Export your strategy data from TradingView using the built-in export functionality
-2. Upload the exported files to the TradingView Companion web application
-3. Analyze your strategy performance across multiple metrics
+## Architecture notes
 
-## Resources
+- `src/lib/stats.ts`, `monteCarlo.ts`, `invalidation.ts`, `headerMappings.ts` —
+  analytics math ported from the original app (Solid signals → TanStack Store)
+- `src/lib/journal.ts` — journal store with close/split P&L math
+- `src/lib/gamification.ts` — XP, ranks, streaks, achievements
+- `src/lib/positionSize.ts` — position sizing + liquidation math
+- `src/components/Plot.tsx` — client-only, code-split Plotly wrapper
+- `src/routes/journal.tsx` — Clerk-protected via `beforeLoad` server function
 
-- [TradingView Data Export Guide](https://www.tradingview.com/support/solutions/43000663814-how-can-i-export-trading-data/)
-- [Project Demo Video 1](https://www.youtube.com/watch?v=V8oQ67uV93M)
-- [Project Demo Video 2](https://www.youtube.com/watch?v=H-QyMtLjcoE)
-
-## Contributing
-
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-```bash
-$ pnpm install
-```
-
-### Learn more on the [Solid Website](https://solidjs.com) and come chat with us on our [Discord](https://discord.com/invite/solidjs)
-
-## Available Scripts
-
-In the project directory, you can run:
-
-### `pnpm run dev`
-
-Runs the app in the development mode.<br>
-Open [http://localhost:5173](http://localhost:5173) to view it in the browser.
-
-### `pnpm run build`
-
-Builds the app for production to the `dist` folder.<br>
-It correctly bundles Solid in production mode and optimizes the build for the best performance.
-
-This build is also sutitable for a deployment as a web-extension.
-
-The build is minified and the filenames include the hashes.<br>
-Your app is ready to be deployed!
-
-## Deployment
-
-Learn more about deploying your application with the [documentations](https://vitejs.dev/guide/static-deploy.html)
+The legacy Chrome-extension build (TradingView page scraping) was retired with
+the SolidJS app; the git history (`main` prior to this replacement) retains it.

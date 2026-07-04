@@ -1,101 +1,114 @@
-import { cn } from '@/libs/utils'
-import { type ComponentProps, splitProps } from 'solid-js'
+import * as React from "react"
 
-export const Table = (props: ComponentProps<'table'>) => {
-  const [local, rest] = splitProps(props, ['class'])
+import { cn } from "#/lib/utils.ts"
 
+function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
-    <div class="w-full overflow-auto">
+    <div
+      data-slot="table-container"
+      className="relative w-full overflow-x-auto"
+    >
       <table
-        class={cn('w-full caption-bottom text-sm', local.class)}
-        {...rest}
+        data-slot="table"
+        className={cn("w-full caption-bottom text-sm", className)}
+        {...props}
       />
     </div>
   )
 }
 
-export const TableHeader = (props: ComponentProps<'thead'>) => {
-  const [local, rest] = splitProps(props, ['class'])
-
+function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
   return (
     <thead
-      class={cn('[&_tr]:border-b', local.class)}
-      {...rest}
+      data-slot="table-header"
+      className={cn("[&_tr]:border-b", className)}
+      {...props}
     />
   )
 }
 
-export const TableBody = (props: ComponentProps<'tbody'>) => {
-  const [local, rest] = splitProps(props, ['class'])
-
+function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
   return (
     <tbody
-      class={cn('[&_tr:last-child]:border-0', local.class)}
-      {...rest}
+      data-slot="table-body"
+      className={cn("[&_tr:last-child]:border-0", className)}
+      {...props}
     />
   )
 }
 
-export const TableFooter = (props: ComponentProps<'tfoot'>) => {
-  const [local, rest] = splitProps(props, ['class'])
-
+function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
   return (
-    <tbody
-      class={cn('bg-primary font-medium text-primary-foreground', local.class)}
-      {...rest}
+    <tfoot
+      data-slot="table-footer"
+      className={cn(
+        "border-t bg-muted/50 font-medium [&>tr]:last:border-b-0",
+        className
+      )}
+      {...props}
     />
   )
 }
 
-export const TableRow = (props: ComponentProps<'tr'>) => {
-  const [local, rest] = splitProps(props, ['class'])
-
+function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
   return (
     <tr
-      class={cn(
-        'border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted',
-        local.class
+      data-slot="table-row"
+      className={cn(
+        "border-b transition-colors hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted",
+        className
       )}
-      {...rest}
+      {...props}
     />
   )
 }
 
-export const TableHead = (props: ComponentProps<'th'>) => {
-  const [local, rest] = splitProps(props, ['class'])
-
+function TableHead({ className, ...props }: React.ComponentProps<"th">) {
   return (
     <th
-      class={cn(
-        'h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]',
-        local.class
+      data-slot="table-head"
+      className={cn(
+        "h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0",
+        className
       )}
-      {...rest}
+      {...props}
     />
   )
 }
 
-export const TableCell = (props: ComponentProps<'td'>) => {
-  const [local, rest] = splitProps(props, ['class'])
-
+function TableCell({ className, ...props }: React.ComponentProps<"td">) {
   return (
     <td
-      class={cn(
-        'p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]',
-        local.class
+      data-slot="table-cell"
+      className={cn(
+        "p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0",
+        className
       )}
-      {...rest}
+      {...props}
     />
   )
 }
 
-export const TableCaption = (props: ComponentProps<'caption'>) => {
-  const [local, rest] = splitProps(props, ['class'])
-
+function TableCaption({
+  className,
+  ...props
+}: React.ComponentProps<"caption">) {
   return (
     <caption
-      class={cn('mt-4 text-sm text-muted-foreground', local.class)}
-      {...rest}
+      data-slot="table-caption"
+      className={cn("mt-4 text-sm text-muted-foreground", className)}
+      {...props}
     />
   )
+}
+
+export {
+  Table,
+  TableHeader,
+  TableBody,
+  TableFooter,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableCaption,
 }

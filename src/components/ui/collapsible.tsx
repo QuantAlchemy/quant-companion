@@ -1,39 +1,21 @@
-import { cn } from '@/libs/utils'
-import type { PolymorphicProps } from '@kobalte/core/polymorphic'
-import type { CollapsibleContentProps, CollapsibleRootProps } from '@kobalte/core/collapsible'
-import { Collapsible as CollapsiblePrimitive } from '@kobalte/core/collapsible'
-import type { ValidComponent } from 'solid-js'
-import { splitProps } from 'solid-js'
+"use client"
 
-export const Collapsible = (props: CollapsibleRootProps) => {
-  const [local, rest] = splitProps(props, ['class'])
+import { Collapsible as CollapsiblePrimitive } from "@base-ui/react/collapsible"
 
+function Collapsible({ ...props }: CollapsiblePrimitive.Root.Props) {
+  return <CollapsiblePrimitive.Root data-slot="collapsible" {...props} />
+}
+
+function CollapsibleTrigger({ ...props }: CollapsiblePrimitive.Trigger.Props) {
   return (
-    <CollapsiblePrimitive
-      class={cn('group/collapsible', local.class)}
-      {...rest}
-    />
+    <CollapsiblePrimitive.Trigger data-slot="collapsible-trigger" {...props} />
   )
 }
 
-export const CollapsibleTrigger = CollapsiblePrimitive.Trigger
-
-type collapsibleContentProps<T extends ValidComponent = 'div'> = CollapsibleContentProps<T> & {
-  class?: string
-}
-
-export const CollapsibleContent = <T extends ValidComponent = 'div'>(
-  props: PolymorphicProps<T, collapsibleContentProps<T>>
-) => {
-  const [local, rest] = splitProps(props as collapsibleContentProps, ['class'])
-
+function CollapsibleContent({ ...props }: CollapsiblePrimitive.Panel.Props) {
   return (
-    <CollapsiblePrimitive.Content
-      class={cn(
-        'overflow-hidden data-[closed]:animate-collapsible-up data-[expanded]:animate-collapsible-down',
-        local.class
-      )}
-      {...rest}
-    />
+    <CollapsiblePrimitive.Panel data-slot="collapsible-content" {...props} />
   )
 }
+
+export { Collapsible, CollapsibleTrigger, CollapsibleContent }

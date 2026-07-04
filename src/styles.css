@@ -1,0 +1,383 @@
+@import '@fontsource-variable/fraunces';
+@import '@fontsource-variable/instrument-sans';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+@import '@fontsource/ibm-plex-mono/600.css';
+@import '@clerk/ui/themes/shadcn.css';
+@import 'tailwindcss';
+@plugin '@tailwindcss/typography';
+
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+  Quant Companion — "The Alchemist's Terminal"
+  Deep ink-indigo ground, electric indigo interface, alchemy gold
+  reserved for rewards. Emerald & rose carry P&L semantics.
+*/
+:root {
+  color-scheme: dark;
+
+  --background: oklch(0.155 0.028 275);
+  --foreground: oklch(0.94 0.012 280);
+  --card: oklch(0.198 0.032 274);
+  --card-foreground: oklch(0.94 0.012 280);
+  --popover: oklch(0.21 0.033 274);
+  --popover-foreground: oklch(0.94 0.012 280);
+  --primary: oklch(0.585 0.23 285);
+  --primary-foreground: oklch(0.985 0.005 280);
+  --secondary: oklch(0.26 0.038 276);
+  --secondary-foreground: oklch(0.9 0.02 282);
+  --muted: oklch(0.245 0.03 275);
+  --muted-foreground: oklch(0.68 0.025 278);
+  --accent: oklch(0.28 0.05 283);
+  --accent-foreground: oklch(0.95 0.01 280);
+  --destructive: oklch(0.62 0.19 13);
+  --destructive-foreground: oklch(0.97 0.01 13);
+  --border: oklch(0.31 0.035 276);
+  --input: oklch(0.31 0.035 276);
+  --ring: oklch(0.585 0.23 285);
+  --radius: 0.75rem;
+
+  /* Brand */
+  --gold: oklch(0.8 0.13 80);
+  --gold-deep: oklch(0.7 0.13 72);
+  --violet: oklch(0.72 0.15 295);
+  --sky: oklch(0.72 0.12 250);
+  --profit: #00d084;
+  --loss: #ff3366;
+
+  /* Charts */
+  --chart-1: oklch(0.62 0.21 288);
+  --chart-2: oklch(0.72 0.12 250);
+  --chart-3: oklch(0.72 0.15 295);
+  --chart-4: oklch(0.8 0.13 80);
+  --chart-5: oklch(0.75 0.15 162);
+
+  /* Plotly surface tokens */
+  --plot-paper: transparent;
+  --plot-fg: #a7aecb;
+  --plot-title: #e9ecf8;
+  --plot-grid: rgba(146, 155, 205, 0.13);
+  --plot-zeroline: rgba(146, 155, 205, 0.3);
+
+  --sidebar: var(--card);
+  --sidebar-foreground: var(--card-foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+}
+
+@theme inline {
+  --font-sans: 'Instrument Sans Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Fraunces Variable', Georgia, serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-gold: var(--gold);
+  --color-gold-deep: var(--gold-deep);
+  --color-violet: var(--violet);
+  --color-sky: var(--sky);
+  --color-profit: var(--profit);
+  --color-loss: var(--loss);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+html,
+body,
+#app {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  background-color: #0a0d16;
+  background:
+    radial-gradient(1200px 700px at 12% -12%, rgba(109, 79, 255, 0.16), transparent 60%),
+    radial-gradient(1000px 600px at 95% -8%, rgba(180, 140, 255, 0.1), transparent 58%),
+    radial-gradient(900px 480px at 50% 118%, rgba(232, 180, 90, 0.07), transparent 65%),
+    linear-gradient(180deg, #0d1120 0%, #0a0d16 55%, #090b12 100%);
+  background-attachment: fixed;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+input,
+textarea,
+select,
+button {
+  color-scheme: dark;
+}
+
+input[type='date'],
+input[type='number'] {
+  accent-color: var(--primary);
+}
+
+input[type='date']::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.72;
+  filter: invert(1) brightness(1.1) saturate(0.75);
+}
+
+input[type='date']::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  opacity: 0.72;
+  filter: invert(1) brightness(1.08) saturate(0.75);
+}
+
+input[type='number']:hover::-webkit-inner-spin-button,
+input[type='number']:hover::-webkit-outer-spin-button,
+input[type='number']:focus::-webkit-inner-spin-button,
+input[type='number']:focus::-webkit-outer-spin-button {
+  opacity: 1;
+}
+
+/* fine chart-paper grid, fading toward the edges */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0.5;
+  background-image:
+    linear-gradient(rgba(146, 155, 205, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(146, 155, 205, 0.05) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: radial-gradient(ellipse at 50% 24%, black 30%, transparent 78%);
+}
+
+/* film grain */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 60;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+::selection {
+  background: color-mix(in oklab, var(--primary) 60%, transparent);
+  color: white;
+}
+
+.font-display {
+  font-family: var(--font-display);
+  font-variation-settings: 'opsz' 72;
+}
+
+.font-mono,
+.tabular {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.kicker {
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 600;
+  font-size: 0.68rem;
+  color: color-mix(in oklab, var(--violet) 80%, white 10%);
+}
+
+/* Glassy elevated card */
+.panel {
+  border: 1px solid rgba(146, 155, 205, 0.14);
+  border-radius: var(--radius-xl);
+  background:
+    linear-gradient(172deg, rgba(146, 155, 205, 0.07), rgba(146, 155, 205, 0.02) 38%),
+    color-mix(in oklab, var(--card) 92%, transparent);
+  box-shadow:
+    0 1px 0 rgba(233, 236, 248, 0.05) inset,
+    0 24px 48px rgba(4, 6, 12, 0.45),
+    0 6px 16px rgba(4, 6, 12, 0.35);
+  backdrop-filter: blur(6px);
+}
+
+.panel-hover {
+  transition:
+    transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 200ms ease,
+    box-shadow 200ms ease;
+}
+
+.panel-hover:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklab, var(--primary) 45%, rgba(146, 155, 205, 0.14));
+  box-shadow:
+    0 1px 0 rgba(233, 236, 248, 0.07) inset,
+    0 28px 56px rgba(4, 6, 12, 0.55),
+    0 0 0 1px color-mix(in oklab, var(--primary) 22%, transparent),
+    0 0 42px rgba(109, 79, 255, 0.12);
+}
+
+/* Gold treatment — gamification only */
+.gilded {
+  border: 1px solid color-mix(in oklab, var(--gold) 38%, transparent);
+  background:
+    linear-gradient(170deg, color-mix(in oklab, var(--gold) 12%, transparent), transparent 45%),
+    color-mix(in oklab, var(--card) 92%, transparent);
+}
+
+.gold-text {
+  background: linear-gradient(100deg, #f4cf87 10%, #e8b45a 45%, #c98f3d 70%, #f4cf87 95%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.gold-shimmer {
+  animation: gold-shimmer 3.2s linear infinite;
+}
+
+@keyframes gold-shimmer {
+  to {
+    background-position: 200% center;
+  }
+}
+
+.nav-link {
+  position: relative;
+  text-decoration: none;
+  color: var(--muted-foreground);
+  font-weight: 500;
+  transition: color 170ms ease;
+}
+
+.nav-link::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -7px;
+  width: 100%;
+  height: 2px;
+  border-radius: 2px;
+  transform: scaleX(0);
+  transform-origin: left;
+  background: linear-gradient(90deg, var(--primary), var(--violet));
+  transition: transform 190ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.nav-link:hover,
+.nav-link.is-active {
+  color: var(--foreground);
+}
+
+.nav-link:hover::after,
+.nav-link.is-active::after {
+  transform: scaleX(1);
+}
+
+.rise-in {
+  animation: rise-in 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes glow-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* orbiting spark for the logo */
+@keyframes orbit {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+a {
+  color: color-mix(in oklab, var(--violet) 85%, white 8%);
+  text-decoration: none;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: color-mix(in oklab, var(--muted) 80%, white 6%);
+    border-radius: 8px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise-in,
+  .gold-shimmer {
+    animation: none;
+  }
+}
