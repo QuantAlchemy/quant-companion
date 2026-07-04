@@ -39,6 +39,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { currencyFormatter } from '@/lib/format'
+import { calculateJournalUnrealizedPnl } from '@/lib/performance'
 import { cn } from '@/lib/utils'
 
 import type {
@@ -105,13 +106,7 @@ export function unrealizedPnl(
   trade: JournalTrade,
   prices: Record<string, number>
 ): number | null {
-  if (trade.status !== 'open') return null
-  const marketPrice = prices[trade.assetName]
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- index access may be undefined
-  if (marketPrice == null) return null
-  const entryValue = trade.price * trade.quantity
-  const currentValue = marketPrice * trade.quantity
-  return trade.tradeType === 'buy' ? currentValue - entryValue : entryValue - currentValue
+  return calculateJournalUnrealizedPnl(trade, prices)
 }
 
 const compareNullableNumbers = (

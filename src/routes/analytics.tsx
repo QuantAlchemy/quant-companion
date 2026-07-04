@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useStore } from '@tanstack/react-store'
+import { useMemo } from 'react'
 
 import EquityChart from '@/components/analytics/charts/Equity'
 import CumNetProfitChart from '@/components/analytics/charts/CumNetProfit'
@@ -18,8 +19,10 @@ import ProbabilityConesCard from '@/components/analytics/ProbabilityConesCard'
 import Properties from '@/components/analytics/Properties'
 import StrategyInvalidationLab from '@/components/analytics/StrategyInvalidationLab'
 import TradeDataStats from '@/components/analytics/TradeDataStats'
+import PerformanceOverview from '@/components/performance/PerformanceOverview'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { tradeMetricsStore } from '@/lib/stats'
+import { tradingViewRecordsToPerformanceTrades } from '@/lib/performance'
+import { startingEquityStore, tradeDataStore, tradeMetricsStore } from '@/lib/stats'
 import { seo } from '@/lib/seo'
 
 export const Route = createFileRoute('/analytics')({
@@ -37,6 +40,12 @@ export const Route = createFileRoute('/analytics')({
 
 function AnalyticsPage() {
   const tradeMetrics = useStore(tradeMetricsStore)
+  const tradeData = useStore(tradeDataStore)
+  const startingEquity = useStore(startingEquityStore)
+  const performanceTrades = useMemo(
+    () => tradingViewRecordsToPerformanceTrades(tradeData ?? []),
+    [tradeData]
+  )
 
   return (
     <div className="mx-auto w-full max-w-[1400px] px-4 py-8 md:px-8">
@@ -49,6 +58,13 @@ function AnalyticsPage() {
           processed locally in your browser.
         </p>
       </div>
+
+      <PerformanceOverview
+        className="mb-6"
+        trades={performanceTrades}
+        startingEquity={startingEquity}
+        sourceLabel="TradingView Upload"
+      />
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         <Card className="panel panel-hover">

@@ -15,6 +15,7 @@ import {
   TradeFormDialog,
 } from '@/components/journal/TradeDialogs'
 import TradeTable from '@/components/journal/TradeTable'
+import PerformanceOverview from '@/components/performance/PerformanceOverview'
 import { Button } from '@/components/ui/button'
 import { isLocalhostHostname } from '@/lib/environment'
 import {
@@ -25,7 +26,9 @@ import {
   loadDemoTrades,
   setJournalUser,
 } from '@/lib/journal'
+import { journalTradesToPerformanceTrades } from '@/lib/performance'
 import { getMarketPrices } from '@/lib/prices'
+import { startingEquityStore } from '@/lib/stats'
 
 import type { RowSelectionState } from '@tanstack/react-table'
 import type { JournalTrade } from '@/lib/journal'
@@ -54,6 +57,7 @@ export const Route = createFileRoute('/journal')({
 function JournalPage() {
   const { user } = useUser()
   const trades = useStore(journalStore)
+  const startingEquity = useStore(startingEquityStore)
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
   const [formOpen, setFormOpen] = useState(false)
   const [editingTrade, setEditingTrade] = useState<JournalTrade | null>(null)
@@ -89,6 +93,10 @@ function JournalPage() {
     staleTime: 30_000,
   })
   const prices = pricesQuery.data ?? {}
+  const performanceTrades = useMemo(
+    () => journalTradesToPerformanceTrades(trades, prices),
+    [prices, trades]
+  )
 
   const selectedIds = Object.keys(rowSelection).filter((id) => rowSelection[id])
 
@@ -175,6 +183,13 @@ function JournalPage() {
           </Button>
         </div>
       </div>
+
+      <PerformanceOverview
+        className="mb-6"
+        trades={performanceTrades}
+        startingEquity={startingEquity}
+        sourceLabel="Journal"
+      />
 
       <JournalStats trades={trades} prices={prices} />
 

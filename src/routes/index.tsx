@@ -191,11 +191,11 @@ function HeroActions() {
       </Show>
       <Show when="signed-in">
         <Button render={<Link to="/journal" />} size="lg">
-          Open your journal
+          Begin your transmutation
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
         <Button render={<Link to="/analytics" />} size="lg" variant="outline">
-          Analyze a strategy
+          Explore without an account
         </Button>
       </Show>
     </>
