@@ -9,6 +9,7 @@ import {
   builtInHeaderConfigs,
   currentHeaderConfigStore,
   deleteConfig,
+  savedConfigsStore,
   saveConfig,
 } from '@/lib/headerMappings'
 
@@ -16,6 +17,17 @@ import type { HeaderConfig } from '@/lib/headerMappings'
 
 const isBuiltInConfig = (configName: string) =>
   builtInHeaderConfigs.some((config) => config.name === configName)
+
+const nextConfigName = () => {
+  const names = new Set(savedConfigsStore.state.map((config) => config.name))
+  let index = 1
+  let name = 'New Config'
+  while (names.has(name)) {
+    index += 1
+    name = `New Config ${index}`
+  }
+  return name
+}
 
 export function HeaderConfigManager({ className }: { className?: string }) {
   const currentHeaderConfig = useStore(currentHeaderConfigStore)
@@ -28,7 +40,7 @@ export function HeaderConfigManager({ className }: { className?: string }) {
     !hasMounted || isBuiltInConfig(currentHeaderConfig.name)
 
   const createConfigFromCurrentSelection = (): HeaderConfig => ({
-    name: 'New Config',
+    name: nextConfigName(),
     mappings: currentHeaderConfigStore.state.mappings.map((m) => ({ ...m })),
   })
 
@@ -48,17 +60,20 @@ export function HeaderConfigManager({ className }: { className?: string }) {
 
   const handleSaveConfig = () => {
     if (!editingConfig) return
-    const config = { ...editingConfig }
-    if (newConfigName) {
-      config.name = newConfigName
-    }
+    const trimmedName = newConfigName.trim()
+    if (!trimmedName) return
+    const config = { ...editingConfig, name: trimmedName }
     saveConfig(config)
     stopEditing()
   }
 
   const handleEditConfig = (config: HeaderConfig) => {
     if (isBuiltInConfig(config.name)) return
-    setEditingConfig({ ...config, mappings: config.mappings.map((m) => ({ ...m })) })
+    setEditingConfig({
+      ...config,
+      mappings: config.mappings.map((m) => ({ ...m })),
+    })
+    setNewConfigName(config.name)
     setIsEditing(true)
   }
 
@@ -74,8 +89,9 @@ export function HeaderConfigManager({ className }: { className?: string }) {
         <Button
           variant="ghost"
           onClick={() => {
-            setEditingConfig(createConfigFromCurrentSelection())
-            setNewConfigName('')
+            const config = createConfigFromCurrentSelection()
+            setEditingConfig(config)
+            setNewConfigName(config.name)
             setIsEditing(true)
           }}
         >
@@ -111,14 +127,17 @@ export function HeaderConfigManager({ className }: { className?: string }) {
         >
           <Input
             ref={configNameInputRef}
-            value={newConfigName || editingConfig.name}
+            value={newConfigName}
             onChange={(e) => setNewConfigName(e.target.value)}
             placeholder="Configuration Name"
           />
 
           <div className="space-y-2">
             {editingConfig.mappings.map((mapping, index) => (
-              <div key={mapping.targetHeader} className="flex items-center space-x-4">
+              <div
+                key={mapping.targetHeader}
+                className="flex items-center space-x-4"
+              >
                 <div className="w-full space-y-1">
                   {index === 0 && (
                     <Label htmlFor={`source-header-${mapping.targetHeader}`}>
@@ -130,9 +149,14 @@ export function HeaderConfigManager({ className }: { className?: string }) {
                     value={mapping.sourceHeader}
                     onChange={(e) => {
                       const newMappings = editingConfig.mappings.map((m) =>
-                        m === mapping ? { ...m, sourceHeader: e.target.value } : m
+                        m === mapping
+                          ? { ...m, sourceHeader: e.target.value }
+                          : m,
                       )
-                      setEditingConfig({ ...editingConfig, mappings: newMappings })
+                      setEditingConfig({
+                        ...editingConfig,
+                        mappings: newMappings,
+                      })
                     }}
                     placeholder="Source Header Pattern"
                   />
@@ -158,7 +182,9 @@ export function HeaderConfigManager({ className }: { className?: string }) {
             <Button type="button" variant="outline" onClick={stopEditing}>
               Cancel
             </Button>
-            <Button type="submit">Save</Button>
+            <Button type="submit" disabled={!newConfigName.trim()}>
+              Save
+            </Button>
           </div>
         </form>
       )}

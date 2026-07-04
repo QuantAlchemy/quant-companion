@@ -52,9 +52,12 @@ const asDate = (value: Date | string | undefined): Date | null => {
   return Number.isNaN(date.getTime()) ? null : date
 }
 
-const sideFromValue = (value: string | undefined): PerformanceSide | undefined => {
+const sideFromValue = (
+  value: string | undefined,
+): PerformanceSide | undefined => {
   const normalized = value?.toLowerCase() ?? ''
-  if (normalized.includes('short') || normalized.includes('sell')) return 'short'
+  if (normalized.includes('short') || normalized.includes('sell'))
+    return 'short'
   if (normalized.includes('long') || normalized.includes('buy')) return 'long'
   return undefined
 }
@@ -64,7 +67,7 @@ const numberOrZero = (value: number | undefined | null) =>
 
 export const calculateJournalUnrealizedPnl = (
   trade: JournalTrade,
-  prices: Record<string, number>
+  prices: Record<string, number>,
 ): number | null => {
   if (trade.status !== 'open') return null
   const marketPrice = prices[trade.assetName]
@@ -72,12 +75,16 @@ export const calculateJournalUnrealizedPnl = (
   if (marketPrice == null) return null
   const entryValue = trade.price * trade.quantity
   const currentValue = marketPrice * trade.quantity
-  return trade.tradeType === 'buy' ? currentValue - entryValue : entryValue - currentValue
+  return trade.tradeType === 'buy'
+    ? currentValue - entryValue
+    : entryValue - currentValue
 }
+
+export const unrealizedPnl = calculateJournalUnrealizedPnl
 
 export const journalTradesToPerformanceTrades = (
   trades: JournalTrade[],
-  prices: Record<string, number> = {}
+  prices: Record<string, number> = {},
 ): PerformanceTrade[] =>
   trades.map((trade) => {
     const livePnl = calculateJournalUnrealizedPnl(trade, prices) ?? undefined
@@ -101,7 +108,7 @@ export const journalTradesToPerformanceTrades = (
   })
 
 export const tradingViewRecordsToPerformanceTrades = (
-  records: TradeRecord[]
+  records: TradeRecord[],
 ): PerformanceTrade[] =>
   records.map((record) => ({
     id: `${record.filename}:${record.tradeNo ?? record.tradeNoOrig}`,
@@ -125,25 +132,32 @@ export const combinePerformanceTrades = (
     .flatMap((group) => group ?? [])
     .sort(
       (a, b) =>
-        (a.exitDate ?? a.entryDate).getTime() - (b.exitDate ?? b.entryDate).getTime()
+        (a.exitDate ?? a.entryDate).getTime() -
+        (b.exitDate ?? b.entryDate).getTime(),
     )
 
 const safeZScores = (values: number[]) => {
   if (values.length < 2 || values.every((value) => value === values[0])) {
     return values.map(() => 0)
   }
-  return calculateZScores(values).map((value) => (Number.isFinite(value) ? value : 0))
+  return calculateZScores(values).map((value) =>
+    Number.isFinite(value) ? value : 0,
+  )
 }
 
 export const performanceTradesToTradeMetrics = (
   trades: PerformanceTrade[],
-  startingEquity: number
+  startingEquity: number,
 ): TradeMetrics | null => {
   const closedTrades = trades
-    .filter((trade) => trade.status === 'closed' && Number.isFinite(trade.realizedPnl))
+    .filter(
+      (trade) =>
+        trade.status === 'closed' && Number.isFinite(trade.realizedPnl),
+    )
     .sort(
       (a, b) =>
-        (a.exitDate ?? a.entryDate).getTime() - (b.exitDate ?? b.entryDate).getTime()
+        (a.exitDate ?? a.entryDate).getTime() -
+        (b.exitDate ?? b.entryDate).getTime(),
     )
 
   if (closedTrades.length === 0) return null
@@ -153,11 +167,13 @@ export const performanceTradesToTradeMetrics = (
   const firstDate = dates[0]
   const startingDate =
     dates.length > 1
-      ? new Date(firstDate.getTime() - (dates[1].getTime() - firstDate.getTime()))
+      ? new Date(
+          firstDate.getTime() - (dates[1].getTime() - firstDate.getTime()),
+        )
       : new Date(firstDate.getTime() - 86_400_000)
   const equity = netProfit.reduce<number[]>(
     (acc, profit) => [...acc, acc[acc.length - 1] + profit],
-    [startingEquity]
+    [startingEquity],
   )
   const cumNetProfit = netProfit.reduce<number[]>((acc, profit, index) => {
     if (index === 0) return [profit]
@@ -175,20 +191,20 @@ export const performanceTradesToTradeMetrics = (
 }
 
 export const summarizePerformance = (
-  trades: PerformanceTrade[]
+  trades: PerformanceTrade[],
 ): PerformanceSummary => {
   const closed = trades.filter((trade) => trade.status === 'closed')
   const open = trades.filter((trade) => trade.status === 'open')
   const wins = closed.filter((trade) => trade.realizedPnl > 0)
   const losses = closed.filter((trade) => trade.realizedPnl < 0)
   const realizedPnl = closed.reduce((sum, trade) => sum + trade.realizedPnl, 0)
-  const unrealizedPnl = open.reduce(
+  const unrealizedPnlTotal = open.reduce(
     (sum, trade) => sum + numberOrZero(trade.unrealizedPnl),
-    0
+    0,
   )
   const grossProfit = wins.reduce((sum, trade) => sum + trade.realizedPnl, 0)
   const grossLoss = Math.abs(
-    losses.reduce((sum, trade) => sum + trade.realizedPnl, 0)
+    losses.reduce((sum, trade) => sum + trade.realizedPnl, 0),
   )
   const averageWin = wins.length > 0 ? grossProfit / wins.length : 0
   const averageLoss = losses.length > 0 ? grossLoss / losses.length : 0
@@ -202,11 +218,12 @@ export const summarizePerformance = (
     losingTrades: losses.length,
     winRate: closed.length > 0 ? wins.length / closed.length : 0,
     realizedPnl,
-    unrealizedPnl,
-    totalPnl: realizedPnl + unrealizedPnl,
+    unrealizedPnl: unrealizedPnlTotal,
+    totalPnl: realizedPnl + unrealizedPnlTotal,
     grossProfit,
     grossLoss,
-    profitFactor: grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0,
+    profitFactor:
+      grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0,
     averageWin,
     averageLoss,
     expectancy:

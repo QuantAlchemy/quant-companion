@@ -101,7 +101,7 @@ export interface ProbabilityConeData {
 
 // Type guard for string fields
 function isStringField(
-  key: keyof TradeRecord
+  key: keyof TradeRecord,
 ): key is 'entryType' | 'exitType' | 'entrySignal' | 'exitSignal' {
   return ['entryType', 'exitType', 'entrySignal', 'exitSignal'].includes(key)
 }
@@ -113,7 +113,7 @@ function isDateField(key: keyof TradeRecord): key is 'entryDate' | 'exitDate' {
 
 // Type guard for number fields
 function isNumberField(
-  key: keyof TradeRecord
+  key: keyof TradeRecord,
 ): key is
   | 'tradeNoOrig'
   | 'entryContracts'
@@ -201,6 +201,62 @@ export const startingEquityStore = new Store(10000)
 export const originalTradeDataStore = new Store<TradeRecord[] | null>(null)
 export const tradeDataStore = new Store<TradeRecord[] | null>(null)
 export const tradeMetricsStore = new Store<TradeMetrics | null>(null)
+export const ALL_TRADE_FILES = 'All Files'
+export const selectedTradeFileStore = new Store<string>(ALL_TRADE_FILES)
+export const tradeTrimStore = new Store({ topCount: 0, bottomCount: 0 })
+
+const tradeIdentity = (trade: TradeRecord) =>
+  `${trade.filename}:${trade.tradeNo ?? trade.tradeNoOrig}`
+
+export const applyTradeDataView = (): void => {
+  const originalData = originalTradeDataStore.state
+  if (!originalData) {
+    tradeDataStore.setState(() => null)
+    return
+  }
+
+  const selectedFile = selectedTradeFileStore.state
+  const filteredData =
+    selectedFile === ALL_TRADE_FILES
+      ? originalData
+      : originalData.filter((trade) => trade.filename === selectedFile)
+  const { topCount, bottomCount } = tradeTrimStore.state
+
+  const topTrades = [...filteredData]
+    .sort((a, b) => b.exitProfit - a.exitProfit)
+    .slice(0, topCount)
+  const bottomTrades = [...filteredData]
+    .sort((a, b) => a.exitProfit - b.exitProfit)
+    .slice(0, bottomCount)
+  const tradesToRemove = new Set([
+    ...topTrades.map(tradeIdentity),
+    ...bottomTrades.map(tradeIdentity),
+  ])
+
+  tradeDataStore.setState(() =>
+    filteredData.filter((trade) => !tradesToRemove.has(tradeIdentity(trade))),
+  )
+}
+
+export const setOriginalTradeData = (data: TradeRecord[] | null): void => {
+  originalTradeDataStore.setState(() => data)
+  selectedTradeFileStore.setState(() => ALL_TRADE_FILES)
+  tradeTrimStore.setState(() => ({ topCount: 0, bottomCount: 0 }))
+  applyTradeDataView()
+}
+
+export const setSelectedTradeFile = (file: string): void => {
+  selectedTradeFileStore.setState(() => file)
+  applyTradeDataView()
+}
+
+export const setTradeTrim = (topCount: number, bottomCount: number): void => {
+  tradeTrimStore.setState(() => ({
+    topCount: Math.max(0, topCount),
+    bottomCount: Math.max(0, bottomCount),
+  }))
+  applyTradeDataView()
+}
 
 export const mean = (arr: number[]): number => {
   return arr.reduce((acc, val) => acc + val, 0) / arr.length
@@ -256,7 +312,7 @@ export const averageOfArrays = (arrays: number[][]): number[] => {
 }
 
 export const calculateDrawdowns = (
-  equity: number[]
+  equity: number[],
 ): { drawdownValue: number; drawdownPercent: number }[] => {
   let peak = equity[0]
   return equity.map((value) => {
@@ -282,13 +338,19 @@ export const calculateZScores = (data: number[]): number[] => {
 
 // Calculate next date `i` points in the future from the date provided based on the average time delta
 // previous dates can be identified by using negative values for `i`
-const calculateNextDate = (date: Date, i: number, avgTimeDelta: number): Date => {
+const calculateNextDate = (
+  date: Date,
+  i: number,
+  avgTimeDelta: number,
+): Date => {
   return new Date(date.getTime() + i * avgTimeDelta)
 }
 
 // Calculate average time delta between dates so that the future dates can be generated with similar intervals
 export const averageTimeDelta = (dates: Date[]): number => {
-  const timeDeltas = dates.slice(1).map((date, i) => date.getTime() - dates[i].getTime())
+  const timeDeltas = dates
+    .slice(1)
+    .map((date, i) => date.getTime() - dates[i].getTime())
   return timeDeltas.reduce((sum, delta) => sum + delta, 0) / timeDeltas.length
 }
 
@@ -336,7 +398,7 @@ function normalizePropertyName(key: string, prefix: string): string {
 
 export function processTradingViewData(
   filename: string,
-  trades: TradingViewRecord[]
+  trades: TradingViewRecord[],
 ): TradeRecord[] {
   return Object.values(
     trades.reduce(
@@ -349,11 +411,13 @@ export function processTradingViewData(
         acc[tradeNum].push(trade)
         return acc
       },
-      {} as Record<number, TradingViewRecord[]>
-    )
+      {} as Record<number, TradingViewRecord[]>,
+    ),
   )
     .map((tradePair) => {
-      const [entry, exit] = tradePair.sort((a, _) => (a.Type.includes('Entry') ? -1 : 1))
+      const [entry, exit] = tradePair.sort((a, _) =>
+        a.Type.includes('Entry') ? -1 : 1,
+      )
 
       const mergedTrade: Partial<TradeRecord> = {
         filename,
@@ -398,7 +462,9 @@ export const simulateTradeData = (): TradeRecord[] => {
 
   for (let i = 0; i < 100; i++) {
     const tradeNoOrig = i + 1
-    const entryDate = new Date(startDate.getTime() + i * 2 * 24 * 60 * 60 * 1000) // Every 2 days
+    const entryDate = new Date(
+      startDate.getTime() + i * 2 * 24 * 60 * 60 * 1000,
+    ) // Every 2 days
     const exitDate = new Date(entryDate.getTime() + 24 * 60 * 60 * 1000) // 1 day after entry
     const entryPrice = Math.random() * 500 + 100 // Random entry price between 100 and 600
     const exitPrice = entryPrice + Math.random() * 20 - 10 // Exit price slightly higher/lower
@@ -449,7 +515,7 @@ export const simulateTradeData = (): TradeRecord[] => {
 // Process raw data into format needed for charts
 export const processTradeMetrics = (
   rawData: TradeRecord[],
-  startingEquity: number = 100000
+  startingEquity: number = 100000,
 ): TradeMetrics => {
   // we add one data point for the starting date and equity so the dates and equity values are the same length
   // as an estimate, we use the average time delta between dates to estimate the date for the extra equity value
@@ -463,7 +529,7 @@ export const processTradeMetrics = (
       acc.push(acc[i] + trade.exitProfit)
       return acc
     },
-    [startingEquity]
+    [startingEquity],
   )
   const netProfit = rawData.map((trade) => trade.exitProfit)
   const cumNetProfit = netProfit.reduce<number[]>((acc, profit, index) => {
@@ -483,7 +549,7 @@ export const processTradeMetrics = (
 }
 
 export const calculateLinearAverageEquity = (
-  data: Pick<TradeMetrics, 'equity'> | null
+  data: Pick<TradeMetrics, 'equity'> | null,
 ): number[] => {
   if (!data?.equity || data.equity.length === 0) {
     return []
@@ -495,7 +561,7 @@ export const calculateLinearAverageEquity = (
 
   // Calculate the linear average for each data point starting from the initial equity value
   const linearAverageEquity = data.equity.map(
-    (_, index) => data.equity[0] + index * averageDailyChange
+    (_, index) => data.equity[0] + index * averageDailyChange,
   )
 
   return linearAverageEquity
@@ -513,7 +579,7 @@ export const generateProbabilityCones = (
   data: TradeMetrics,
   stdDevMultiplier: number = 2,
   futurePoints: number = 30,
-  coneStartPercentage: number = 0.9 // 0.9 means cone starts from 90% of equity length
+  coneStartPercentage: number = 0.9, // 0.9 means cone starts from 90% of equity length
 ): ProbabilityConeData => {
   // Determine the number of historical points to use for statistics calculation
   const historicalLength = Math.floor(data.equity.length * coneStartPercentage)
@@ -521,7 +587,7 @@ export const generateProbabilityCones = (
   // Check if we have enough data points for meaningful calculation
   if (historicalLength < 2) {
     console.error(
-      'Insufficient historical data points for calculating probability cones. Need at least 2 points.'
+      'Insufficient historical data points for calculating probability cones. Need at least 2 points.',
     )
   }
 
@@ -548,9 +614,13 @@ export const generateProbabilityCones = (
           (_, i) =>
             new Date(
               retainedDates.length > 0
-                ? calculateNextDate(retainedDates[retainedDates.length - 1], i + 1, avgTimeDelta) // Use the last retained date to calculate the next date
-                : calculateNextDate(lastHistoricalDate, i + 1, avgTimeDelta)
-            )
+                ? calculateNextDate(
+                    retainedDates[retainedDates.length - 1],
+                    i + 1,
+                    avgTimeDelta,
+                  ) // Use the last retained date to calculate the next date
+                : calculateNextDate(lastHistoricalDate, i + 1, avgTimeDelta),
+            ),
         )
 
   const futureDates =
@@ -562,12 +632,18 @@ export const generateProbabilityCones = (
   const lastEquity = data.equity[historicalLength - 1]
   const upperCone = futureDates.map(
     (_, i) =>
-      lastEquity * Math.exp((historicalReturnsMean + stdDevMultiplier * stdDev) * Math.sqrt(i + 1))
+      lastEquity *
+      Math.exp(
+        (historicalReturnsMean + stdDevMultiplier * stdDev) * Math.sqrt(i + 1),
+      ),
   )
 
   const lowerCone = futureDates.map(
     (_, i) =>
-      lastEquity * Math.exp((historicalReturnsMean - stdDevMultiplier * stdDev) * Math.sqrt(i + 1))
+      lastEquity *
+      Math.exp(
+        (historicalReturnsMean - stdDevMultiplier * stdDev) * Math.sqrt(i + 1),
+      ),
   )
 
   return { futureDates, upperCone, lowerCone }
@@ -594,15 +670,18 @@ export const generateLinearProbabilityCones = (
   data: TradeMetrics,
   stdDevMultiplier: number = 2,
   futurePoints: number = 30,
-  coneStartPercentage: number = 0.9 // 0.9 means cone starts from 90% of equity length
+  coneStartPercentage: number = 0.9, // 0.9 means cone starts from 90% of equity length
 ): ProbabilityConeData => {
   // Determine the start index of the historical data used for the cone
-  const historicalLength = Math.max(1, Math.floor(data.equity.length * coneStartPercentage))
+  const historicalLength = Math.max(
+    1,
+    Math.floor(data.equity.length * coneStartPercentage),
+  )
 
   // Check if we have enough data points for meaningful calculation
   if (historicalLength < 2) {
     console.error(
-      'Insufficient historical data points for calculating probability cones. Need at least 2 points.'
+      'Insufficient historical data points for calculating probability cones. Need at least 2 points.',
     )
   }
 
@@ -612,10 +691,13 @@ export const generateLinearProbabilityCones = (
     .map((eq, i, arr) => (i > 0 ? eq - arr[i - 1] : 0))
 
   const avgDailyReturn =
-    historicalReturns.reduce((sum, ret) => sum + ret, 0) / historicalReturns.length
+    historicalReturns.reduce((sum, ret) => sum + ret, 0) /
+    historicalReturns.length
   const stdEquity = Math.sqrt(
-    historicalReturns.reduce((sum, ret) => sum + Math.pow(ret - avgDailyReturn, 2), 0) /
-      historicalReturns.length
+    historicalReturns.reduce(
+      (sum, ret) => sum + Math.pow(ret - avgDailyReturn, 2),
+      0,
+    ) / historicalReturns.length,
   )
 
   // Calculate the average time delta from the historical dates so that the future dates can be generated with similar intervals
@@ -633,9 +715,13 @@ export const generateLinearProbabilityCones = (
           (_, i) =>
             new Date(
               retainedDates.length > 0
-                ? calculateNextDate(retainedDates[retainedDates.length - 1], i + 1, avgTimeDelta) // Use the last retained date to calculate the next date
-                : calculateNextDate(lastHistoricalDate, i + 1, avgTimeDelta)
-            )
+                ? calculateNextDate(
+                    retainedDates[retainedDates.length - 1],
+                    i + 1,
+                    avgTimeDelta,
+                  ) // Use the last retained date to calculate the next date
+                : calculateNextDate(lastHistoricalDate, i + 1, avgTimeDelta),
+            ),
         )
 
   const futureDates =
@@ -649,12 +735,16 @@ export const generateLinearProbabilityCones = (
   // Calculate upper and lower probability cones using the linear model
   const upperCone = futureDates.map(
     (_, i) =>
-      lastEquity + avgDailyReturn * (i + 1) + Math.sqrt(i + 1) * (stdDevMultiplier * stdEquity)
+      lastEquity +
+      avgDailyReturn * (i + 1) +
+      Math.sqrt(i + 1) * (stdDevMultiplier * stdEquity),
   )
 
   const lowerCone = futureDates.map(
     (_, i) =>
-      lastEquity + avgDailyReturn * (i + 1) - Math.sqrt(i + 1) * (stdDevMultiplier * stdEquity)
+      lastEquity +
+      avgDailyReturn * (i + 1) -
+      Math.sqrt(i + 1) * (stdDevMultiplier * stdEquity),
   )
 
   return { futureDates, upperCone, lowerCone }
@@ -683,8 +773,11 @@ export const calculateSummaryStats = (data: TradeMetrics): SummaryStats => {
   const minProfit = Math.min(...data.netProfit)
   const drawdowns = calculateDrawdowns(data.equity)
   const maxDrawdown = Math.max(...drawdowns.map((dd) => dd.drawdownValue))
-  const maxDrawdownPercent = Math.max(...drawdowns.map((dd) => dd.drawdownPercent))
-  const netProfitByAvgDrawdown = totalProfit / mean(drawdowns.map((dd) => dd.drawdownValue))
+  const maxDrawdownPercent = Math.max(
+    ...drawdowns.map((dd) => dd.drawdownPercent),
+  )
+  const netProfitByAvgDrawdown =
+    totalProfit / mean(drawdowns.map((dd) => dd.drawdownValue))
   const mar = marRatio(data)
   const sharpeRatio = calculateSharpeRatio(data.equity, data.dates)
 
@@ -729,11 +822,15 @@ const marRatio = (data: TradeMetrics): number => {
   const totalReturn = finalEquity - startingEquity
   const startDate = data.dates[0]
   const endDate = data.dates[data.dates.length - 1]
-  const periodInYears = (endDate.getTime() - startDate.getTime()) / (365 * 24 * 60 * 60 * 1000)
+  const periodInYears =
+    (endDate.getTime() - startDate.getTime()) / (365 * 24 * 60 * 60 * 1000)
   const totalReturnPercent = (totalReturn / startingEquity) * 100
-  const annualizedReturnPercent = ((1 + totalReturnPercent / 100) ** (1 / periodInYears) - 1) * 100
+  const annualizedReturnPercent =
+    ((1 + totalReturnPercent / 100) ** (1 / periodInYears) - 1) * 100
   const drawdowns = calculateDrawdowns(data.equity)
-  const maxDrawdownPercent = Math.max(...drawdowns.map((dd) => dd.drawdownPercent))
+  const maxDrawdownPercent = Math.max(
+    ...drawdowns.map((dd) => dd.drawdownPercent),
+  )
   return annualizedReturnPercent / (maxDrawdownPercent * 100)
 }
 
@@ -750,7 +847,7 @@ const marRatio = (data: TradeMetrics): number => {
 export const calculateSharpeRatio = (
   equityValues: number[],
   dates: Date[],
-  riskFreeRate: number = 0.02
+  riskFreeRate: number = 0.02,
 ) => {
   if (equityValues.length !== dates.length) {
     throw new Error('Equity values and dates arrays must have the same length.')
@@ -765,7 +862,8 @@ export const calculateSharpeRatio = (
     const dateCurr = new Date(dates[i])
 
     // Time difference in years
-    const timeDiff = (dateCurr.getTime() - datePrev.getTime()) / (365.25 * 24 * 60 * 60 * 1000)
+    const timeDiff =
+      (dateCurr.getTime() - datePrev.getTime()) / (365.25 * 24 * 60 * 60 * 1000)
 
     // Handle cases where time difference is zero or negative
     if (timeDiff <= 0) {
@@ -789,11 +887,15 @@ export const calculateSharpeRatio = (
   }
 
   // Calculate mean and standard deviation of excess returns
-  const meanExcessReturn = excessReturns.reduce((sum, r) => sum + r, 0) / excessReturns.length
+  const meanExcessReturn =
+    excessReturns.reduce((sum, r) => sum + r, 0) / excessReturns.length
 
   const stdDevExcessReturn = Math.sqrt(
-    excessReturns.reduce((sum, r) => sum + Math.pow(r - meanExcessReturn, 2), 0) /
-      (excessReturns.length - 1)
+    excessReturns.reduce(
+      (sum, r) => sum + Math.pow(r - meanExcessReturn, 2),
+      0,
+    ) /
+      (excessReturns.length - 1),
   )
 
   const sharpeRatio = meanExcessReturn / stdDevExcessReturn

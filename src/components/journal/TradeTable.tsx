@@ -39,7 +39,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { currencyFormatter } from '@/lib/format'
-import { calculateJournalUnrealizedPnl } from '@/lib/performance'
+import { unrealizedPnl } from '@/lib/performance'
 import { cn } from '@/lib/utils'
 
 import type {
@@ -63,7 +63,8 @@ interface TradeTableProps extends TradeRowActions {
   prices: Record<string, number>
   rowSelection: RowSelectionState
   onRowSelectionChange: (
-    updater: RowSelectionState | ((old: RowSelectionState) => RowSelectionState)
+    updater:
+      RowSelectionState | ((old: RowSelectionState) => RowSelectionState),
   ) => void
 }
 
@@ -82,7 +83,7 @@ function SortHeader({
     <button
       className={cn(
         'inline-flex items-center gap-1 transition-colors hover:text-foreground',
-        sorted ? 'text-foreground' : 'text-muted-foreground'
+        sorted ? 'text-foreground' : 'text-muted-foreground',
       )}
       onClick={column.getToggleSortingHandler()}
     >
@@ -102,16 +103,9 @@ const rowToneClass = (trade: JournalTrade) => {
     : '[&>td:first-child]:border-l-2 [&>td:first-child]:border-l-loss/70'
 }
 
-export function unrealizedPnl(
-  trade: JournalTrade,
-  prices: Record<string, number>
-): number | null {
-  return calculateJournalUnrealizedPnl(trade, prices)
-}
-
 const compareNullableNumbers = (
   a: number | null | undefined,
-  b: number | null | undefined
+  b: number | null | undefined,
 ) => {
   if (a == null && b == null) return 0
   if (a == null) return -1
@@ -145,9 +139,12 @@ export function TradeTable({
           <Checkbox
             checked={table.getIsAllPageRowsSelected()}
             indeterminate={
-              table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected()
+              table.getIsSomePageRowsSelected() &&
+              !table.getIsAllPageRowsSelected()
             }
-            onCheckedChange={(checked) => table.toggleAllPageRowsSelected(checked === true)}
+            onCheckedChange={(checked) =>
+              table.toggleAllPageRowsSelected(checked === true)
+            }
             aria-label="Select all trades"
           />
         ),
@@ -165,7 +162,9 @@ export function TradeTable({
         header: ({ column }) => <SortHeader column={column}>Asset</SortHeader>,
         cell: ({ row }) => (
           <div className="flex items-center gap-1.5">
-            <span className="font-mono font-semibold">{row.original.assetName}</span>
+            <span className="font-mono font-semibold">
+              {row.original.assetName}
+            </span>
             <Badge variant="outline" className="text-[10px] uppercase">
               {row.original.assetType === 'crypto' ? 'crypto' : 'trad'}
             </Badge>
@@ -193,7 +192,7 @@ export function TradeTable({
             <span
               className={cn(
                 'font-mono text-xs uppercase',
-                side === 'buy' ? 'text-profit' : 'text-loss'
+                side === 'buy' ? 'text-profit' : 'text-loss',
               )}
             >
               {side === 'buy' ? 'long' : 'short'}
@@ -212,14 +211,14 @@ export function TradeTable({
         accessorKey: 'price',
         header: ({ column }) => <SortHeader column={column}>Entry</SortHeader>,
         cell: ({ getValue }) => (
-          <span className="tabular">{currencyFormatter.format(getValue<number>())}</span>
+          <span className="tabular">
+            {currencyFormatter.format(getValue<number>())}
+          </span>
         ),
       },
       {
         accessorKey: 'tradeDate',
-        header: ({ column }) => (
-          <SortHeader column={column}>Date</SortHeader>
-        ),
+        header: ({ column }) => <SortHeader column={column}>Date</SortHeader>,
         cell: ({ row }) => (
           <span className="tabular text-xs">
             {row.original.tradeDate.slice(0, 10)}
@@ -244,7 +243,7 @@ export function TradeTable({
                 'uppercase',
                 status === 'open'
                   ? 'border-sky/50 bg-sky/10 text-sky'
-                  : 'border-border bg-muted/30 text-muted-foreground'
+                  : 'border-border bg-muted/30 text-muted-foreground',
               )}
             >
               {status}
@@ -257,10 +256,12 @@ export function TradeTable({
         header: ({ column }) => <SortHeader column={column}>Market</SortHeader>,
         sortingFn: (rowA, rowB) => {
           const marketValue = (trade: JournalTrade) =>
-            trade.status === 'closed' ? trade.closingPrice : prices[trade.assetName]
+            trade.status === 'closed'
+              ? trade.closingPrice
+              : prices[trade.assetName]
           return compareNullableNumbers(
             marketValue(rowA.original),
-            marketValue(rowB.original)
+            marketValue(rowB.original),
           )
         },
         cell: ({ row }) => {
@@ -288,17 +289,24 @@ export function TradeTable({
         header: ({ column }) => <SortHeader column={column}>P&L</SortHeader>,
         sortingFn: (rowA, rowB) => {
           const pnlValue = (trade: JournalTrade) =>
-            trade.status === 'closed' ? trade.realizedPnl : unrealizedPnl(trade, prices)
+            trade.status === 'closed'
+              ? trade.realizedPnl
+              : unrealizedPnl(trade, prices)
           return compareNullableNumbers(
             pnlValue(rowA.original),
-            pnlValue(rowB.original)
+            pnlValue(rowB.original),
           )
         },
         cell: ({ row }) => {
           const trade = row.original
           if (trade.status === 'closed') {
             return (
-              <span className={cn('tabular font-semibold', pnlClass(trade.realizedPnl))}>
+              <span
+                className={cn(
+                  'tabular font-semibold',
+                  pnlClass(trade.realizedPnl),
+                )}
+              >
                 {trade.realizedPnl != null
                   ? currencyFormatter.format(trade.realizedPnl)
                   : '—'}
@@ -306,13 +314,16 @@ export function TradeTable({
             )
           }
           const uPnl = unrealizedPnl(trade, prices)
-          if (uPnl == null) return <span className="text-muted-foreground">—</span>
+          if (uPnl == null)
+            return <span className="text-muted-foreground">—</span>
           const entryValue = trade.price * trade.quantity
           const pct = entryValue !== 0 ? (uPnl / entryValue) * 100 : 0
           return (
             <span className={cn('tabular font-semibold', pnlClass(uPnl))}>
               {currencyFormatter.format(uPnl)}
-              <span className="ml-1 text-xs opacity-70">({pct.toFixed(1)}%)</span>
+              <span className="ml-1 text-xs opacity-70">
+                ({pct.toFixed(1)}%)
+              </span>
             </span>
           )
         },
@@ -326,10 +337,18 @@ export function TradeTable({
             <div className="flex justify-end gap-1">
               {trade.status === 'open' && (
                 <>
-                  <Button size="sm" variant="secondary" onClick={() => onClose(trade)}>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => onClose(trade)}
+                  >
                     Close
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => onSplit(trade)}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => onSplit(trade)}
+                  >
                     Split
                   </Button>
                 </>
@@ -343,7 +362,7 @@ export function TradeTable({
         enableSorting: false,
       },
     ],
-    [prices, onClose, onSplit, onEdit]
+    [prices, onClose, onSplit, onEdit],
   )
 
   const table = useReactTable({
@@ -362,7 +381,10 @@ export function TradeTable({
   const totalRows = table.getFilteredRowModel().rows.length
   const firstRow =
     totalRows === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1
-  const lastRow = Math.min(totalRows, (pagination.pageIndex + 1) * pagination.pageSize)
+  const lastRow = Math.min(
+    totalRows,
+    (pagination.pageIndex + 1) * pagination.pageSize,
+  )
 
   return (
     <div className="space-y-3">
@@ -375,7 +397,10 @@ export function TradeTable({
                   <TableHead key={header.id}>
                     {header.isPlaceholder
                       ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext(),
+                        )}
                   </TableHead>
                 ))}
               </TableRow>
@@ -400,7 +425,10 @@ export function TradeTable({
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext(),
+                      )}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -434,7 +462,8 @@ export function TradeTable({
             </Select>
           </label>
           <span className="tabular">
-            Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
+            Page {table.getState().pagination.pageIndex + 1} of{' '}
+            {table.getPageCount() || 1}
           </span>
           <div className="flex items-center gap-1">
             <Button

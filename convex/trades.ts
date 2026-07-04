@@ -7,7 +7,7 @@ import type { MutationCtx, QueryCtx } from './_generated/server'
 /**
  * Trades API — semantics mirror src/lib/journal.ts (which mirrors the
  * original trading-journal Convex backend). Auth comes from Clerk via the
- * "convex" JWT template; identity.subject is the Clerk user id.
+ * "convex" JWT template.
  */
 
 const requireUserId = async (ctx: QueryCtx | MutationCtx): Promise<string> => {
@@ -15,7 +15,18 @@ const requireUserId = async (ctx: QueryCtx | MutationCtx): Promise<string> => {
   if (!identity) {
     throw new Error('User not authenticated')
   }
-  return identity.subject
+  return identity.tokenIdentifier
+}
+
+const assertPositiveNumber = (value: number, label: string) => {
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new Error(`${label} must be a finite number greater than 0`)
+  }
+}
+
+const validateTradeInput = (trade: { quantity: number; price: number }) => {
+  assertPositiveNumber(trade.quantity, 'Quantity')
+  assertPositiveNumber(trade.price, 'Price')
 }
 
 const tradeInput = {
@@ -34,12 +45,14 @@ const realizedPnlFor = (
   tradeType: 'buy' | 'sell',
   entryPrice: number,
   closingPrice: number,
-  quantity: number
+  quantity: number,
 ) => {
   const entryValue = entryPrice * quantity
   const closingValue = closingPrice * quantity
   // sell = short position being bought back
-  return tradeType === 'buy' ? closingValue - entryValue : entryValue - closingValue
+  return tradeType === 'buy'
+    ? closingValue - entryValue
+    : entryValue - closingValue
 }
 
 export const list = query({
@@ -49,7 +62,7 @@ export const list = query({
     if (!identity) return []
     return await ctx.db
       .query('trades')
-      .withIndex('by_userId', (q) => q.eq('userId', identity.subject))
+      .withIndex('by_userId', (q) => q.eq('userId', identity.tokenIdentifier))
       .order('desc')
       .collect()
   },
@@ -59,6 +72,7 @@ export const add = mutation({
   args: tradeInput,
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx)
+    validateTradeInput(args)
     return await ctx.db.insert('trades', {
       ...args,
       userId,
@@ -72,6 +86,7 @@ export const edit = mutation({
   args: { tradeId: v.id('trades'), ...tradeInput },
   handler: async (ctx, { tradeId, ...args }) => {
     const userId = await requireUserId(ctx)
+    validateTradeInput(args)
     const trade = await ctx.db.get(tradeId)
     if (!trade) throw new Error('Trade not found')
     if (trade.userId !== userId) throw new Error('Not authorized')
@@ -95,12 +110,13 @@ export const close = mutation({
     if (!trade) throw new Error('Trade not found')
     if (trade.userId !== userId) throw new Error('Not authorized')
     if (trade.status === 'closed') throw new Error('Trade is already closed')
+    assertPositiveNumber(args.closingPrice, 'Closing price')
 
     const realizedPnl = realizedPnlFor(
       trade.tradeType,
       trade.price,
       args.closingPrice,
-      trade.quantity
+      trade.quantity,
     )
     await ctx.db.patch(args.tradeId, {
       status: 'closed',
@@ -125,9 +141,10 @@ export const split = mutation({
     if (!trade) throw new Error('Trade not found')
     if (trade.userId !== userId) throw new Error('Not authorized')
     if (trade.status === 'closed') throw new Error('Trade is already closed')
+    assertPositiveNumber(args.closingPrice, 'Closing price')
     if (args.closingQuantity <= 0 || args.closingQuantity >= trade.quantity) {
       throw new Error(
-        'Closing quantity must be greater than 0 and less than the total quantity'
+        'Closing quantity must be greater than 0 and less than the total quantity',
       )
     }
 
@@ -135,7 +152,7 @@ export const split = mutation({
       trade.tradeType,
       trade.price,
       args.closingPrice,
-      args.closingQuantity
+      args.closingQuantity,
     )
     const remainingQuantity = trade.quantity - args.closingQuantity
 
@@ -151,9 +168,10 @@ export const split = mutation({
       closingPrice: args.closingPrice,
       closingDate: args.closingDate,
       realizedPnl,
-      commission: trade.commission
-        ? (trade.commission * args.closingQuantity) / trade.quantity
-        : undefined,
+      commission:
+        trade.commission != null
+          ? (trade.commission * args.closingQuantity) / trade.quantity
+          : undefined,
       exchange: trade.exchange,
       comments: trade.comments
         ? `${trade.comments} (Split from original trade)`
@@ -162,9 +180,10 @@ export const split = mutation({
 
     await ctx.db.patch(args.tradeId, {
       quantity: remainingQuantity,
-      commission: trade.commission
-        ? (trade.commission * remainingQuantity) / trade.quantity
-        : undefined,
+      commission:
+        trade.commission != null
+          ? (trade.commission * remainingQuantity) / trade.quantity
+          : undefined,
     })
 
     return { closedTradeId, realizedPnl }
@@ -193,12 +212,16 @@ export const importMany = mutation({
         closingPrice: v.optional(v.number()),
         closingDate: v.optional(v.string()),
         realizedPnl: v.optional(v.number()),
-      })
+      }),
     ),
   },
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx)
     for (const trade of args.trades) {
+      validateTradeInput(trade)
+      if (trade.closingPrice != null) {
+        assertPositiveNumber(trade.closingPrice, 'Closing price')
+      }
       await ctx.db.insert('trades', {
         ...trade,
         userId,
