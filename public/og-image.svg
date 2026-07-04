@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="mark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#B48CFF"/>
+      <stop offset="55%" stop-color="#7C5CFF"/>
+      <stop offset="100%" stop-color="#552EF0"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.28" cy="0.32" r="0.75">
+      <stop offset="0%" stop-color="#6D4FFF" stop-opacity="0.32"/>
+      <stop offset="55%" stop-color="#6D4FFF" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="#6D4FFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="goldglow" cx="0.85" cy="0.9" r="0.6">
+      <stop offset="0%" stop-color="#E8B45A" stop-opacity="0.20"/>
+      <stop offset="100%" stop-color="#E8B45A" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="spark" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#F4CF87"/>
+      <stop offset="60%" stop-color="#E8B45A"/>
+      <stop offset="100%" stop-color="#E8B45A" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="goldline" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#C98F3D"/>
+      <stop offset="50%" stop-color="#F4CF87"/>
+      <stop offset="100%" stop-color="#C98F3D"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="#0A0D16"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+  <rect width="1200" height="630" fill="url(#goldglow)"/>
+
+  <!-- chart-paper grid -->
+  <g stroke="rgba(146,155,205,0.08)" stroke-width="1">
+    <path d="M0 105H1200M0 210H1200M0 315H1200M0 420H1200M0 525H1200"/>
+    <path d="M100 0V630M200 0V630M300 0V630M400 0V630M500 0V630M600 0V630M700 0V630M800 0V630M900 0V630M1000 0V630M1100 0V630"/>
+  </g>
+
+  <!-- rising equity curve accent -->
+  <path d="M60 560 L220 500 L340 525 L480 440 L620 465 L780 360 L920 385 L1140 240"
+        fill="none" stroke="rgba(124,92,255,0.30)" stroke-width="3"/>
+
+  <!-- QA ring-A mark with gold spark -->
+  <g transform="translate(120, 150) scale(2.6)">
+    <path fill="url(#mark)" d="M17.49,63.75c-4.32-5.58-6.9-12.57-6.9-20.16,0-18.19,14.8-33,33-33s33,14.8,33,33c0,2.39-.26,4.72-.74,6.96l6.96,12.05c2.8-5.75,4.37-12.2,4.37-19.02C87.18,19.55,67.62,0,43.59,0S0,19.55,0,43.59s19.55,43.59,43.59,43.59c4.24,0,8.33-.61,12.21-1.74l-5.51-9.54c-2.17.45-4.41.68-6.7.68-6.69,0-12.93-2.01-18.13-5.45l18.04-31.25,27.3,47.29h12.23L43.5,18.7l-26.01,45.04Z"/>
+  </g>
+  <circle cx="233" cy="145" r="15" fill="url(#spark)"/>
+
+  <!-- wordmark -->
+  <text x="390" y="266" font-family="DejaVu Serif" font-weight="bold" font-size="70" fill="#E9ECF8">Quant <tspan fill="#B48CFF">Companion</tspan></text>
+
+  <rect x="394" y="302" width="180" height="4" rx="2" fill="url(#goldline)"/>
+
+  <text x="392" y="372" font-family="DejaVu Sans" font-size="31" fill="#A7AECB">Strategy analytics · Trading journal · Risk sizing</text>
+
+  <text x="392" y="434" font-family="DejaVu Sans Mono" font-size="23" fill="#8A93B2">quant-companion.quantalchemy.io</text>
+
+  <text x="120" y="565" font-family="DejaVu Sans" font-size="25" fill="#6B7394">Forged by Quant Alchemy</text>
+  <text x="935" y="565" font-family="DejaVu Sans Mono" font-size="25" fill="#E8B45A">lead → gold</text>
+</svg>

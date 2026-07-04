@@ -80,13 +80,8 @@ export function TradeTable({
         id: 'select',
         header: ({ table }) => (
           <Checkbox
-            checked={
-              table.getIsAllRowsSelected()
-                ? true
-                : table.getIsSomeRowsSelected()
-                  ? 'indeterminate'
-                  : false
-            }
+            checked={table.getIsAllRowsSelected()}
+            indeterminate={table.getIsSomeRowsSelected() && !table.getIsAllRowsSelected()}
             onCheckedChange={(checked) => table.toggleAllRowsSelected(checked === true)}
             aria-label="Select all trades"
           />
@@ -111,9 +106,11 @@ export function TradeTable({
             </Badge>
             {row.original.comments && (
               <Tooltip>
-                <TooltipTrigger asChild>
-                  <MessageSquareText className="h-3.5 w-3.5 text-muted-foreground" />
-                </TooltipTrigger>
+                <TooltipTrigger
+                  render={
+                    <MessageSquareText className="h-3.5 w-3.5 text-muted-foreground" />
+                  }
+                />
                 <TooltipContent className="max-w-72">
                   {row.original.comments}
                 </TooltipContent>

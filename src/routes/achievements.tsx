@@ -9,11 +9,16 @@ import {
   rankForXp,
 } from '@/lib/gamification'
 import { cn } from '@/lib/utils'
+import { seo } from '@/lib/seo'
 
 export const Route = createFileRoute('/achievements')({
-  head: () => ({
-    meta: [{ title: 'Achievements · Quant Companion' }],
-  }),
+  head: () =>
+    seo({
+      title: 'Achievements · Quant Companion',
+      description:
+        'Your transmutation ladder — XP, ranks, streaks, and achievements earned through disciplined trading.',
+      path: '/achievements',
+    }),
   component: AchievementsPage,
 })
 

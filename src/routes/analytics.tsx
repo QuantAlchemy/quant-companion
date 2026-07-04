@@ -20,11 +20,18 @@ import StrategyInvalidationLab from '@/components/analytics/StrategyInvalidation
 import TradeDataStats from '@/components/analytics/TradeDataStats'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { tradeMetricsStore } from '@/lib/stats'
+import { seo } from '@/lib/seo'
 
 export const Route = createFileRoute('/analytics')({
-  head: () => ({
-    meta: [{ title: 'Analytics · Quant Companion' }],
-  }),
+  head: () =>
+    seo({
+      title: 'Strategy Analytics · Quant Companion',
+      description:
+        'Stress-test TradingView exports: Monte Carlo, probability cones, z-scores, and the Strategy Invalidation Lab.',
+      path: '/analytics',
+      keywords:
+        'trading strategy analytics, monte carlo simulation, probability cones, strategy invalidation, tradingview backtest',
+    }),
   component: AnalyticsPage,
 })
 

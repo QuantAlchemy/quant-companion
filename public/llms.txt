@@ -1,0 +1,39 @@
+# Quant Companion
+
+> Quant Companion is the Quant Alchemy trading workbench: strategy performance
+> analytics, a trading journal, and a position size calculator with liquidation
+> analysis, unified in one free web app. Uploads and journal data are processed
+> locally in the browser — no trade data is stored on servers.
+
+Site: https://www.quant-companion.quantalchemy.io
+Publisher: Quant Alchemy (https://quantalchemy.io)
+
+## Tools
+
+- [Strategy Analytics](https://www.quant-companion.quantalchemy.io/analytics):
+  Upload a TradingView strategy export (CSV or XLSX) and stress-test it with
+  Monte Carlo simulation, probability cones (linear and exponential), z-score
+  distributions, drawdown analysis, Sharpe/MAR ratios, and the Strategy
+  Invalidation Lab — a battery of tests that try to prove a backtest is fake,
+  fragile, overfit, or outlier-driven.
+- [Trading Journal](https://www.quant-companion.quantalchemy.io/journal):
+  Log crypto and traditional-asset trades with entry reasoning, close or
+  partially close positions with automatic realized P&L, and track live
+  unrealized P&L. Data stays in the browser, scoped per account, with JSON
+  export/import.
+- [Position Size Calculator](https://www.quant-companion.quantalchemy.io/calculator):
+  Compute position size from account risk, with leverage, initial/maintenance
+  margin, liquidation price, and margin-buffer safety analysis.
+
+## Documentation
+
+- [Strategy Invalidation Playbook](https://www.quant-companion.quantalchemy.io/strategy-invalidation-playbook.html):
+  The methodology behind the Invalidation Lab — what each test checks, its
+  pass/invalidate conditions, and how to run it.
+
+## Key facts
+
+- Free to use; authentication (Clerk) is only required for the trading journal.
+- Local-first: analytics and journal data never leave the browser except for
+  optional live price lookups.
+- Supports TradingView "List of trades" exports in CSV and XLSX formats.

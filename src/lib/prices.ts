@@ -140,3 +140,94 @@ export const getMarketPrices = createServerFn({ method: 'POST' })
 
     return prices
   })
+
+// ---------------------------------------------------------------------------
+// Historical daily bars (for the Invalidation Lab's benchmark tests)
+
+export interface DailyBar {
+  date: string // YYYY-MM-DD
+  close: number
+}
+
+const barsInput = z.object({
+  symbol: z.string(),
+  start: z.string(), // YYYY-MM-DD
+  end: z.string(),
+})
+
+interface AlpacaBar {
+  t: string
+  c: number
+}
+
+/**
+ * Daily closing bars from Alpaca. Symbols containing '/' (e.g. BTC/USD) use
+ * the crypto endpoint, everything else the stocks endpoint (IEX feed, so it
+ * works on free market-data plans). Returns [] when keys are missing.
+ */
+export const getDailyBars = createServerFn({ method: 'POST' })
+  .inputValidator(barsInput)
+  .handler(async ({ data }): Promise<DailyBar[]> => {
+    const keyId = process.env.ALPACA_API_KEY_ID
+    const secret = process.env.ALPACA_SECRET_KEY
+    if (!keyId || !secret) {
+      console.warn('Alpaca API keys not set. Skipping historical bars fetch.')
+      return []
+    }
+
+    const headers = {
+      'APCA-API-KEY-ID': keyId,
+      'APCA-API-SECRET-KEY': secret,
+      Accept: 'application/json',
+    }
+    const isCrypto = data.symbol.includes('/')
+    const symbol = data.symbol.toUpperCase()
+
+    const bars: DailyBar[] = []
+    let pageToken: string | null = null
+    try {
+      do {
+        const params = new URLSearchParams({
+          timeframe: '1Day',
+          start: data.start,
+          end: data.end,
+          limit: '10000',
+        })
+        if (pageToken) params.set('page_token', pageToken)
+
+        let url: string
+        if (isCrypto) {
+          params.set('symbols', symbol)
+          url = `https://data.alpaca.markets/v1beta3/crypto/us/bars?${params}`
+        } else {
+          params.set('feed', 'iex')
+          params.set('adjustment', 'split')
+          url = `https://data.alpaca.markets/v2/stocks/${symbol}/bars?${params}`
+        }
+
+        const response = await fetch(url, { headers })
+        if (!response.ok) {
+          console.error(
+            `Alpaca bars API error: ${response.status} ${response.statusText}`,
+            await response.text()
+          )
+          return bars
+        }
+        const json = (await response.json()) as {
+          bars?: AlpacaBar[] | Record<string, AlpacaBar[]>
+          next_page_token?: string | null
+        }
+        const rawBars: AlpacaBar[] = Array.isArray(json.bars)
+          ? json.bars
+          : (json.bars?.[symbol] ?? [])
+        for (const bar of rawBars) {
+          bars.push({ date: bar.t.slice(0, 10), close: bar.c })
+        }
+        pageToken = json.next_page_token ?? null
+      } while (pageToken)
+      return bars
+    } catch (error) {
+      console.error('Error fetching historical bars:', error)
+      return bars
+    }
+  })

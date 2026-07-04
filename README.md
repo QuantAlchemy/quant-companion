@@ -27,28 +27,46 @@ disciplined trading habits.
 
 ```bash
 pnpm install
-pnpm dev        # http://localhost:3000
-pnpm build      # production build
-pnpm lint       # eslint
+pnpm dev              # frontend — http://localhost:3000
+pnpm dev:convex       # Convex backend (first run configures the deployment)
+pnpm build            # production build (Nitro — deploys to Vercel as-is)
+pnpm lint             # eslint
+pnpm test             # vitest
 pnpm generate-routes  # regenerate the route tree after adding routes
 ```
 
 ## Environment
 
-`.env.local` (created by `clerk init`, not committed):
+Committed templates `.env.local.tpl` / `.env.production.tpl` follow the
+1Password `op://` convention — generate a real env file with:
 
-```
-VITE_CLERK_PUBLISHABLE_KEY=pk_...
-CLERK_SECRET_KEY=sk_...
-
-# optional — live prices for open journal positions
-COINMARKETCAP_API_KEY=...   # crypto
-ALPACA_API_KEY_ID=...       # stocks/ETFs
-ALPACA_SECRET_KEY=...
+```bash
+pnpm run env:generate:local   # op inject -i .env.local.tpl -o .env.local
 ```
 
-Without the price keys the journal still works; it just skips live unrealized
-P&L. Never expose `CLERK_SECRET_KEY` or price API keys to the client.
+Keys: `VITE_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY` (Clerk),
+`CONVEX_DEPLOYMENT`, `VITE_CONVEX_URL` (Convex), and optional
+`COINMARKETCAP_API_KEY`, `ALPACA_API_KEY_ID`, `ALPACA_SECRET_KEY` for live
+prices and the Invalidation Lab's benchmark tests. Without the price keys the
+journal still works; it just skips live unrealized P&L. Never expose
+`CLERK_SECRET_KEY` or price API keys to the client.
+
+For Vercel, mirror the same variables into the project's Preview/Production
+environments (`vercel env add …`).
+
+## Convex backend
+
+`convex/` holds the trades schema and functions (Clerk-authenticated via
+`identity.subject`). To bring it up:
+
+1. `pnpm dev:convex` — first run creates/links the Convex deployment and
+   generates `convex/_generated`.
+2. In the Clerk dashboard, create a JWT template named `convex`, then set
+   `CLERK_JWT_ISSUER_DOMAIN` on the Convex deployment
+   (see https://docs.convex.dev/auth/clerk).
+
+The journal UI currently persists to localStorage; switching its data plane to
+these Convex functions is the intended next step (see `src/lib/journal.ts`).
 
 ## Data & privacy
 

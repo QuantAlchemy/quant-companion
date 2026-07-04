@@ -33,6 +33,7 @@ export function FileFilter() {
       <Select
         value={file}
         onValueChange={(value) => {
+          if (value == null) return
           setFile(value)
           filterData(value)
         }}

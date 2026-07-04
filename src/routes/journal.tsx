@@ -28,6 +28,7 @@ import { getMarketPrices } from '@/lib/prices'
 
 import type { RowSelectionState } from '@tanstack/react-table'
 import type { JournalTrade } from '@/lib/journal'
+import { seo } from '@/lib/seo'
 
 const authStateFn = createServerFn().handler(async () => {
   const { isAuthenticated, userId } = await auth()
@@ -39,9 +40,13 @@ const authStateFn = createServerFn().handler(async () => {
 
 export const Route = createFileRoute('/journal')({
   beforeLoad: async () => await authStateFn(),
-  head: () => ({
-    meta: [{ title: 'Journal · Quant Companion' }],
-  }),
+  head: () =>
+    seo({
+      title: 'Trading Journal · Quant Companion',
+      description:
+        'Log trades with your reasoning, track live unrealized P&L, and build discipline with streaks and achievements.',
+      path: '/journal',
+    }),
   component: JournalPage,
 })
 

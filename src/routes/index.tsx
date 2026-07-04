@@ -94,19 +94,17 @@ function HomePage() {
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </SignUpButton>
-            <Button asChild size="lg" variant="outline">
-              <Link to="/analytics">Explore without an account</Link>
+            <Button render={<Link to="/analytics" />} size="lg" variant="outline">
+              Explore without an account
             </Button>
           </Show>
           <Show when="signed-in">
-            <Button asChild size="lg">
-              <Link to="/journal">
-                Open your journal
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
+            <Button render={<Link to="/journal" />} size="lg">
+              Open your journal
+              <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
-            <Button asChild size="lg" variant="outline">
-              <Link to="/analytics">Analyze a strategy</Link>
+            <Button render={<Link to="/analytics" />} size="lg" variant="outline">
+              Analyze a strategy
             </Button>
           </Show>
         </div>

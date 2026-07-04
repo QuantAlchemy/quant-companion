@@ -3,6 +3,9 @@ import { useMemo, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 
 import NumberField from '@/components/NumberField'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Card,
   CardContent,
@@ -23,11 +26,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { alphaBetaRegression, benchmarkComparison } from '@/lib/benchmark'
 import { calculateInvalidationReport } from '@/lib/invalidation'
+import { getDailyBars } from '@/lib/prices'
 import { tradeDataStore, tradeMetricsStore } from '@/lib/stats'
 import { cn } from '@/lib/utils'
 
-import type { InvalidationStatus } from '@/lib/invalidation'
+import type { InvalidationResult, InvalidationStatus } from '@/lib/invalidation'
 
 const statusLabel: Record<InvalidationStatus, string> = {
   pass: 'Pass',
@@ -73,6 +78,9 @@ export function StrategyInvalidationLab() {
   const tradeMetrics = useStore(tradeMetricsStore)
   const [isExpanded, setIsExpanded] = useState(false)
   const [trials, setTrials] = useState(500)
+  const [benchmarkSymbol, setBenchmarkSymbol] = useState('SPY')
+  const [benchmarkResults, setBenchmarkResults] = useState<InvalidationResult[] | null>(null)
+  const [benchmarkRunning, setBenchmarkRunning] = useState(false)
   const [feePerTrade, setFeePerTrade] = useState(2.5)
   const [rollingWindow, setRollingWindow] = useState(20)
 
@@ -85,6 +93,26 @@ export function StrategyInvalidationLab() {
       }),
     [tradeData, tradeMetrics, feePerTrade, rollingWindow, trials]
   )
+
+  const runBenchmarkTests = async () => {
+    if (!tradeMetrics || tradeMetrics.dates.length < 2) return
+    setBenchmarkRunning(true)
+    try {
+      const start = tradeMetrics.dates[0].toISOString().slice(0, 10)
+      const end = tradeMetrics.dates[tradeMetrics.dates.length - 1]
+        .toISOString()
+        .slice(0, 10)
+      const bars = await getDailyBars({
+        data: { symbol: benchmarkSymbol.trim(), start, end },
+      })
+      setBenchmarkResults([
+        benchmarkComparison(tradeMetrics, bars, benchmarkSymbol.trim().toUpperCase()),
+        alphaBetaRegression(tradeMetrics, bars, benchmarkSymbol.trim().toUpperCase()),
+      ])
+    } finally {
+      setBenchmarkRunning(false)
+    }
+  }
 
   return (
     <Card
@@ -243,6 +271,89 @@ export function StrategyInvalidationLab() {
                     </div>
                   </article>
                 ))}
+              </div>
+
+
+              <div className="rounded-xl border border-border/80 bg-background/35 p-4">
+                <h3 className="text-lg font-semibold">Benchmark tests (live market data)</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Buy-and-hold comparison and alpha/beta regression against a benchmark,
+                  using Alpaca daily bars over your trade date range. Use a stock/ETF
+                  symbol like SPY or QQQ, or a crypto pair like BTC/USD.
+                </p>
+                <div className="mt-3 flex flex-wrap items-end gap-3">
+                  <div className="flex w-40 flex-col gap-1.5">
+                    <Label htmlFor="benchmark-symbol" className="text-xs text-muted-foreground">
+                      Benchmark symbol
+                    </Label>
+                    <Input
+                      id="benchmark-symbol"
+                      value={benchmarkSymbol}
+                      onChange={(e) => setBenchmarkSymbol(e.target.value)}
+                      placeholder="SPY"
+                    />
+                  </div>
+                  <Button
+                    onClick={() => void runBenchmarkTests()}
+                    disabled={!tradeMetrics || benchmarkRunning}
+                  >
+                    {benchmarkRunning ? 'Fetching bars…' : 'Run benchmark tests'}
+                  </Button>
+                  {!tradeMetrics && (
+                    <span className="text-sm text-muted-foreground">
+                      Upload trade data first.
+                    </span>
+                  )}
+                </div>
+
+                {benchmarkResults && (
+                  <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
+                    {benchmarkResults.map((result) => (
+                      <article
+                        key={result.id}
+                        className="rounded-xl border border-border/80 bg-background/40 p-4"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <h3 className="text-lg font-semibold leading-tight">
+                              {result.name}
+                            </h3>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              {result.whatItChecks}
+                            </p>
+                          </div>
+                          <StatusBadge status={result.status} />
+                        </div>
+                        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                          {result.metrics.map((metric) => (
+                            <div
+                              key={metric.label}
+                              className="rounded-lg border border-border/70 bg-card/60 p-3"
+                            >
+                              <div className="text-xs text-muted-foreground">
+                                {metric.label}
+                              </div>
+                              <div
+                                className={cn(
+                                  'tabular mt-1 text-sm font-semibold',
+                                  metric.tone
+                                    ? statusClasses[metric.tone].split(' ').at(-1)
+                                    : ''
+                                )}
+                              >
+                                {metric.value}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mt-4 rounded-lg border border-border/70 bg-card/50 p-3 text-sm">
+                          <div className="font-semibold">Conclusion</div>
+                          <p className="mt-1 text-muted-foreground">{result.conclusion}</p>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="rounded-xl border border-border/80 bg-background/35 p-4">

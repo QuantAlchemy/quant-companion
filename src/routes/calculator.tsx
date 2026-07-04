@@ -11,11 +11,18 @@ import { calculatePosition } from '@/lib/positionSize'
 import { cn } from '@/lib/utils'
 
 import type { PositionSizeInput, PositionSizeResult } from '@/lib/positionSize'
+import { seo } from '@/lib/seo'
 
 export const Route = createFileRoute('/calculator')({
-  head: () => ({
-    meta: [{ title: 'Position Size Calculator · Quant Companion' }],
-  }),
+  head: () =>
+    seo({
+      title: 'Position Size Calculator · Quant Companion',
+      description:
+        'Size positions from the risk you accept — margin, leverage, and liquidation-buffer analysis for any asset.',
+      path: '/calculator',
+      keywords:
+        'position size calculator, liquidation price calculator, risk management, leverage margin calculator',
+    }),
   component: CalculatorPage,
 })
 

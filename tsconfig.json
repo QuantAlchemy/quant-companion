@@ -1,5 +1,6 @@
 {
   "include": ["**/*.ts", "**/*.tsx", "eslint.config.js", "prettier.config.js", "vite.config.js"],
+  "exclude": ["node_modules", "dist", ".output", "convex"],
   
   "compilerOptions": {
     "target": "ES2022",

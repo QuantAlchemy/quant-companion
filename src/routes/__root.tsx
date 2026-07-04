@@ -14,6 +14,7 @@ import AppHeader from '@/components/AppHeader'
 import GamificationBridge from '@/components/gamification/GamificationBridge'
 
 import appCss from '../styles.css?url'
+import { seo, siteStructuredData } from '@/lib/seo'
 
 import type { QueryClient } from '@tanstack/react-query'
 
@@ -22,23 +23,31 @@ interface MyRouterContext {
 }
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
-  head: () => ({
-    meta: [
-      { charSet: 'utf-8' },
-      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'Quant Companion · Quant Alchemy' },
-      {
-        name: 'description',
-        content:
-          'The unified Quant Alchemy toolkit — strategy performance analytics, trading journal, and position sizing with liquidation analysis.',
-      },
-      { name: 'theme-color', content: '#0a0d16' },
-    ],
-    links: [
-      { rel: 'stylesheet', href: appCss },
-      { rel: 'icon', type: 'image/svg+xml', href: '/qc-icon.svg' },
-    ],
-  }),
+  head: () => {
+    const { meta, links } = seo({
+      title: 'Quant Companion · Quant Alchemy',
+      path: '/',
+    })
+    return {
+      meta: [
+        { charSet: 'utf-8' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+        { name: 'theme-color', content: '#0a0d16' },
+        ...meta,
+      ],
+      links: [
+        { rel: 'stylesheet', href: appCss },
+        { rel: 'icon', type: 'image/svg+xml', href: '/qc-icon.svg' },
+        ...links,
+      ],
+      scripts: [
+        {
+          type: 'application/ld+json',
+          children: siteStructuredData(),
+        },
+      ],
+    }
+  },
   shellComponent: RootDocument,
 })
 
