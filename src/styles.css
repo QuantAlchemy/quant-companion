@@ -17,6 +17,8 @@
   reserved for rewards. Emerald & rose carry P&L semantics.
 */
 :root {
+  color-scheme: dark;
+
   --background: oklch(0.155 0.028 275);
   --foreground: oklch(0.94 0.012 280);
   --card: oklch(0.198 0.032 274);
@@ -138,6 +140,41 @@ body {
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+input,
+textarea,
+select,
+button {
+  color-scheme: dark;
+}
+
+input[type='date'],
+input[type='number'] {
+  accent-color: var(--primary);
+}
+
+input[type='date']::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.72;
+  filter: invert(1) brightness(1.1) saturate(0.75);
+}
+
+input[type='date']::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  opacity: 0.72;
+  filter: invert(1) brightness(1.08) saturate(0.75);
+}
+
+input[type='number']:hover::-webkit-inner-spin-button,
+input[type='number']:hover::-webkit-outer-spin-button,
+input[type='number']:focus::-webkit-inner-spin-button,
+input[type='number']:focus::-webkit-outer-spin-button {
+  opacity: 1;
 }
 
 /* fine chart-paper grid, fading toward the edges */

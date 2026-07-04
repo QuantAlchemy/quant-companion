@@ -22,12 +22,19 @@ export function HeaderConfigManager({ className }: { className?: string }) {
   const [isEditing, setIsEditing] = useState(false)
   const [editingConfig, setEditingConfig] = useState<HeaderConfig | null>(null)
   const [newConfigName, setNewConfigName] = useState('')
+  const [hasMounted, setHasMounted] = useState(false)
   const configNameInputRef = useRef<HTMLInputElement>(null)
+  const currentConfigIsBuiltIn =
+    !hasMounted || isBuiltInConfig(currentHeaderConfig.name)
 
   const createConfigFromCurrentSelection = (): HeaderConfig => ({
     name: 'New Config',
     mappings: currentHeaderConfigStore.state.mappings.map((m) => ({ ...m })),
   })
+
+  useEffect(() => {
+    setHasMounted(true)
+  }, [])
 
   useEffect(() => {
     if (isEditing) configNameInputRef.current?.focus()
@@ -77,18 +84,18 @@ export function HeaderConfigManager({ className }: { className?: string }) {
         <Button
           variant="ghost"
           onClick={() => handleEditConfig(currentHeaderConfig)}
-          disabled={isBuiltInConfig(currentHeaderConfig.name)}
+          disabled={currentConfigIsBuiltIn}
         >
           Edit
         </Button>
         <Button
           variant="ghost"
           onClick={() => {
-            if (!isBuiltInConfig(currentHeaderConfig.name)) {
+            if (!currentConfigIsBuiltIn) {
               deleteConfig(currentHeaderConfig.name)
             }
           }}
-          disabled={isBuiltInConfig(currentHeaderConfig.name)}
+          disabled={currentConfigIsBuiltIn}
         >
           Delete
         </Button>

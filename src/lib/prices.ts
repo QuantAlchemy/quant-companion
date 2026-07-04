@@ -117,7 +117,7 @@ const pricesInput = z.object({
  * Returns a symbol -> price map; symbols without a price are omitted.
  */
 export const getMarketPrices = createServerFn({ method: 'POST' })
-  .inputValidator(pricesInput)
+  .validator(pricesInput)
   .handler(async ({ data }) => {
     const prices: Record<string, number> = {}
 
@@ -166,7 +166,7 @@ interface AlpacaBar {
  * works on free market-data plans). Returns [] when keys are missing.
  */
 export const getDailyBars = createServerFn({ method: 'POST' })
-  .inputValidator(barsInput)
+  .validator(barsInput)
   .handler(async ({ data }): Promise<DailyBar[]> => {
     const keyId = process.env.ALPACA_API_KEY_ID
     const secret = process.env.ALPACA_SECRET_KEY
