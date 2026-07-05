@@ -13,7 +13,12 @@ import {
 import { LogoMark } from '@/components/Logo'
 import { Button } from '@/components/ui/button'
 import { isClerkClientConfigured } from '@/lib/clerk'
-import { gamificationStore, rankForXp } from '@/lib/gamification'
+import {
+  gamificationStore,
+  nextProofStep,
+  proofLadderProgress,
+  rankForXp,
+} from '@/lib/gamification'
 import { seo } from '@/lib/seo'
 
 export const Route = createFileRoute('/')({
@@ -56,9 +61,11 @@ const TOOLS = [
 ] as const
 
 function HomePage() {
-  const xp = useStore(gamificationStore, (s) => s.xp)
-  const streak = useStore(gamificationStore, (s) => s.streak)
-  const { rank, next } = rankForXp(xp)
+  const state = useStore(gamificationStore)
+  const { xp, streak } = state
+  const { next } = rankForXp(xp)
+  const proofProgress = proofLadderProgress(state)
+  const nextProof = nextProofStep(state)
 
   return (
     <div className="mx-auto w-full max-w-[1200px] px-4 md:px-8">
@@ -87,8 +94,8 @@ function HomePage() {
           className="rise-in mt-6 max-w-xl text-pretty text-lg text-muted-foreground"
           style={{ animationDelay: '160ms' }}
         >
-          Quant Companion is the Quant Alchemy workbench — strategy analytics,
-          a trading journal, and position sizing, unified in one place.
+          Quant Companion is the Quant Alchemy workbench — strategy analytics, a
+          trading journal, and position sizing, unified in one place.
         </p>
         <div
           className="rise-in mt-8 flex flex-wrap items-center justify-center gap-3"
@@ -97,22 +104,29 @@ function HomePage() {
           <HeroActions />
         </div>
 
-        {/* progress strip */}
+        {/* proof strip */}
         <Link
           to="/achievements"
-          className="gilded rise-in mt-10 flex items-center gap-4 rounded-full px-5 py-2.5 text-sm transition-transform hover:scale-[1.02]"
+          className="gilded rise-in mt-10 flex max-w-2xl items-center gap-4 rounded-full px-5 py-2.5 text-sm transition-transform hover:scale-[1.02]"
           style={{ animationDelay: '320ms' }}
         >
           <Sparkles className="h-4 w-4 text-gold" />
           <span>
-            <span className="gold-text font-semibold">{rank.name}</span>
+            <span className="gold-text font-semibold">
+              Proof Ladder {proofProgress.completed}/{proofProgress.total}
+            </span>
             <span className="font-mono text-muted-foreground"> · {xp} XP</span>
-            {next && (
+            {nextProof ? (
+              <span className="font-mono text-muted-foreground">
+                {' '}
+                · next: {nextProof.achievement.proofLabel}
+              </span>
+            ) : next ? (
               <span className="font-mono text-muted-foreground">
                 {' '}
                 · {next.minXp - xp} to {next.symbol}
               </span>
-            )}
+            ) : null}
           </span>
           {streak > 1 && (
             <span className="flex items-center gap-1 font-mono text-gold">
@@ -152,9 +166,9 @@ function HomePage() {
       {/* Privacy note */}
       <section className="pb-20 text-center">
         <p className="mx-auto max-w-lg text-sm text-muted-foreground">
-          Local-first by design: your uploads and journal are processed and stored
-          in your browser, scoped to your account. Nothing is sent to our servers
-          except live price lookups.
+          Local-first by design: your uploads and journal are processed and
+          stored in your browser, scoped to your account. Nothing is sent to our
+          servers except live price lookups.
         </p>
       </section>
     </div>

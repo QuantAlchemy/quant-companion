@@ -15,6 +15,7 @@ const NAV = [
   { to: '/analytics', label: 'Analytics' },
   { to: '/journal', label: 'Journal' },
   { to: '/calculator', label: 'Calculator' },
+  { to: '/achievements', label: 'Proof Ladder' },
 ] as const
 
 export default function AppHeader() {

@@ -86,12 +86,14 @@ const realizedPnlFor = (
   tradeType: TradeType,
   entryPrice: number,
   closingPrice: number,
-  quantity: number
+  quantity: number,
 ) => {
   const entryValue = entryPrice * quantity
   const closingValue = closingPrice * quantity
   // sell = short position being bought back
-  return tradeType === 'buy' ? closingValue - entryValue : entryValue - closingValue
+  return tradeType === 'buy'
+    ? closingValue - entryValue
+    : entryValue - closingValue
 }
 
 const tradeSignature = (trade: Omit<JournalTrade, 'id' | 'createdAt'>) =>
@@ -143,22 +145,38 @@ export function editTrade(id: string, input: NewTrade) {
     trades.map((t) =>
       t.id === id
         ? { ...t, ...input, assetName: input.assetName.toUpperCase() }
-        : t
-    )
+        : t,
+    ),
   )
 }
 
-export function closeTrade(id: string, closingPrice: number, closingDate: string) {
+export function closeTrade(
+  id: string,
+  closingPrice: number,
+  closingDate: string,
+) {
   let realizedPnl = 0
   update((trades) =>
     trades.map((t) => {
       if (t.id !== id || t.status === 'closed') return t
-      realizedPnl = realizedPnlFor(t.tradeType, t.price, closingPrice, t.quantity)
-      return { ...t, status: 'closed' as const, closingPrice, closingDate, realizedPnl }
-    })
+      realizedPnl = realizedPnlFor(
+        t.tradeType,
+        t.price,
+        closingPrice,
+        t.quantity,
+      )
+      return {
+        ...t,
+        status: 'closed' as const,
+        closingPrice,
+        closingDate,
+        realizedPnl,
+      }
+    }),
   )
   award('trade-closed')
   if (realizedPnl > 0) award('trade-won')
+  if (realizedPnl < 0) award('trade-lost')
   return realizedPnl
 }
 
@@ -167,13 +185,13 @@ export function splitTrade(
   id: string,
   closingPrice: number,
   closingDate: string,
-  closingQuantity: number
+  closingQuantity: number,
 ) {
   const trade = journalStore.state.find((t) => t.id === id)
   if (!trade || trade.status === 'closed') return
   if (closingQuantity <= 0 || closingQuantity >= trade.quantity) {
     throw new Error(
-      'Closing quantity must be greater than 0 and less than the total quantity'
+      'Closing quantity must be greater than 0 and less than the total quantity',
     )
   }
 
@@ -181,7 +199,7 @@ export function splitTrade(
     trade.tradeType,
     trade.price,
     closingPrice,
-    closingQuantity
+    closingQuantity,
   )
   const remainingQuantity = trade.quantity - closingQuantity
 
@@ -213,11 +231,12 @@ export function splitTrade(
               ? (t.commission * remainingQuantity) / trade.quantity
               : undefined,
           }
-        : t
+        : t,
     ),
   ])
   award('trade-closed')
   if (realizedPnl > 0) award('trade-won')
+  if (realizedPnl < 0) award('trade-lost')
   return realizedPnl
 }
 
@@ -228,7 +247,9 @@ export function deleteTrades(ids: string[]) {
 
 /** Export the journal as a JSON download (lossless, re-importable). */
 export function exportTrades(): string {
-  const exportData = journalStore.state.map(({ id, createdAt, ...rest }) => rest)
+  const exportData = journalStore.state.map(
+    ({ id, createdAt, ...rest }) => rest,
+  )
   return JSON.stringify(exportData, null, 2)
 }
 
@@ -303,16 +324,17 @@ export function importTrades(input: string): number {
     const dedupedExisting = dedupeTrades(trades)
     const existingSignatures = new Set(
       dedupedExisting.map(({ id: _id, createdAt: _createdAt, ...trade }) =>
-        tradeSignature(trade)
-      )
+        tradeSignature(trade),
+      ),
     )
     const newTrades = imported.filter(
       ({ id: _id, createdAt: _createdAt, ...trade }) =>
-        !existingSignatures.has(tradeSignature(trade))
+        !existingSignatures.has(tradeSignature(trade)),
     )
     addedCount = newTrades.length
     return [...newTrades, ...dedupedExisting]
   })
+  if (addedCount > 0) award('journal-imported')
   return addedCount
 }
 
@@ -325,11 +347,54 @@ export function loadDemoTrades() {
     return d.toISOString().slice(0, 10)
   }
   const demo: NewTrade[] = [
-    { assetName: 'BTC', assetType: 'crypto', quantity: 0.5, price: 61250, tradeType: 'buy', tradeDate: daysAgo(45), exchange: 'Coinbase', comments: 'Breakout above range high on strong volume.' },
-    { assetName: 'ETH', assetType: 'crypto', quantity: 4, price: 2980, tradeType: 'buy', tradeDate: daysAgo(38), exchange: 'Kraken', comments: 'ETH/BTC ratio basing; swing entry.' },
-    { assetName: 'SOL', assetType: 'crypto', quantity: 60, price: 138, tradeType: 'buy', tradeDate: daysAgo(30), exchange: 'Binance' },
-    { assetName: 'NVDA', assetType: 'traditional', quantity: 15, price: 118.4, tradeType: 'buy', tradeDate: daysAgo(24), exchange: 'Alpaca', comments: 'Earnings momentum continuation.' },
-    { assetName: 'SPY', assetType: 'traditional', quantity: 10, price: 545.2, tradeType: 'sell', tradeDate: daysAgo(18), comments: 'Hedge against crypto exposure.' },
+    {
+      assetName: 'BTC',
+      assetType: 'crypto',
+      quantity: 0.5,
+      price: 61250,
+      tradeType: 'buy',
+      tradeDate: daysAgo(45),
+      exchange: 'Coinbase',
+      comments: 'Breakout above range high on strong volume.',
+    },
+    {
+      assetName: 'ETH',
+      assetType: 'crypto',
+      quantity: 4,
+      price: 2980,
+      tradeType: 'buy',
+      tradeDate: daysAgo(38),
+      exchange: 'Kraken',
+      comments: 'ETH/BTC ratio basing; swing entry.',
+    },
+    {
+      assetName: 'SOL',
+      assetType: 'crypto',
+      quantity: 60,
+      price: 138,
+      tradeType: 'buy',
+      tradeDate: daysAgo(30),
+      exchange: 'Binance',
+    },
+    {
+      assetName: 'NVDA',
+      assetType: 'traditional',
+      quantity: 15,
+      price: 118.4,
+      tradeType: 'buy',
+      tradeDate: daysAgo(24),
+      exchange: 'Alpaca',
+      comments: 'Earnings momentum continuation.',
+    },
+    {
+      assetName: 'SPY',
+      assetType: 'traditional',
+      quantity: 10,
+      price: 545.2,
+      tradeType: 'sell',
+      tradeDate: daysAgo(18),
+      comments: 'Hedge against crypto exposure.',
+    },
   ]
   const closes: [number, number, number][] = [
     // [demo index, closingPrice, daysAgo]
@@ -352,7 +417,12 @@ export function loadDemoTrades() {
     t.status = 'closed'
     t.closingPrice = closingPrice
     t.closingDate = daysAgo(closedDaysAgo)
-    t.realizedPnl = realizedPnlFor(t.tradeType, t.price, closingPrice, t.quantity)
+    t.realizedPnl = realizedPnlFor(
+      t.tradeType,
+      t.price,
+      closingPrice,
+      t.quantity,
+    )
   }
   update((trades) => [...created, ...trades])
 }
