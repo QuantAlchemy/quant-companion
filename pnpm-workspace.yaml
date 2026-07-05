@@ -3,5 +3,6 @@ allowBuilds:
   core-js: true
   es5-ext: true
   esbuild: true
+  lightningcss: true
   unrs-resolver: true
   utf-8-validate: true

@@ -59,7 +59,7 @@ export interface AchievementDef {
   /** User-facing proof receipt copy. This must describe evidence, not vanity XP. */
   evidence: string
   /** Destination where the user can earn the proof. */
-  route: '/analytics' | '/journal' | '/calculator' | '/achievements'
+  route: '/' | '/analytics' | '/journal' | '/calculator' | '/achievements'
   /** CTA copy for the next-best proof step. */
   actionLabel: string
   xp: number
@@ -232,7 +232,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     proofLabel: '7-day operating cadence',
     evidence:
       'You returned to the system for a full week; the companion is becoming process, not novelty.',
-    route: '/achievements',
+    route: '/',
     actionLabel: 'Keep the streak alive',
     xp: 100,
     check: (s) => s.streak >= 7 || s.bestStreak >= 7,

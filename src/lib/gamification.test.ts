@@ -71,6 +71,26 @@ describe('proof ladder achievements', () => {
     expect(progress.percent).toBe(50)
   })
 
+  it('routes streak upkeep away from the proof ladder page itself', () => {
+    const next = nextProofStep(
+      state({
+        'csv-uploaded': 1,
+        'invalidation-reviewed': 1,
+        'monte-carlo-run': 1,
+        'position-sized': 1,
+        'trade-logged': 10,
+        'note-added': 1,
+        'trade-closed': 1,
+        'trade-lost': 1,
+        'trade-won': 1,
+        'journal-imported': 1,
+      }),
+    )
+
+    expect(next?.achievement.id).toBe('iron-discipline')
+    expect(next?.achievement.route).toBe('/')
+  })
+
   it('returns null once every proof has evidence', () => {
     const complete = state({
       'csv-uploaded': 1,

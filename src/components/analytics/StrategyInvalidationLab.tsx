@@ -27,7 +27,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { alphaBetaRegression, benchmarkComparison } from '@/lib/benchmark'
-import { award } from '@/lib/gamification'
+import { award, gamificationStore } from '@/lib/gamification'
 import { calculateInvalidationReport } from '@/lib/invalidation'
 import { getDailyBars } from '@/lib/prices'
 import { tradeDataStore, tradeMetricsStore } from '@/lib/stats'
@@ -136,8 +136,6 @@ export function StrategyInvalidationLab() {
   >(null)
   const [benchmarkError, setBenchmarkError] = useState<string | null>(null)
   const [benchmarkRunning, setBenchmarkRunning] = useState(false)
-  const [hasAwardedInvalidationReview, setHasAwardedInvalidationReview] =
-    useState(false)
   const [feePerTrade, setFeePerTrade] = useState(2.5)
   const [rollingWindow, setRollingWindow] = useState(20)
 
@@ -158,9 +156,10 @@ export function StrategyInvalidationLab() {
 
   const setLabOpen = (open: boolean) => {
     setIsExpanded(open)
-    if (open && tradeMetrics && !hasAwardedInvalidationReview) {
+    const hasReviewedInvalidation =
+      (gamificationStore.state.counters['invalidation-reviewed'] ?? 0) > 0
+    if (open && tradeMetrics && !hasReviewedInvalidation) {
       award('invalidation-reviewed')
-      setHasAwardedInvalidationReview(true)
     }
   }
 
