@@ -27,6 +27,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { alphaBetaRegression, benchmarkComparison } from '@/lib/benchmark'
+import { award, gamificationStore } from '@/lib/gamification'
 import { calculateInvalidationReport } from '@/lib/invalidation'
 import { getDailyBars } from '@/lib/prices'
 import { tradeDataStore, tradeMetricsStore } from '@/lib/stats'
@@ -153,6 +154,15 @@ export function StrategyInvalidationLab() {
     tradeMetrics.dates.length >= 2 &&
     benchmarkSymbol.trim().length > 0
 
+  const setLabOpen = (open: boolean) => {
+    setIsExpanded(open)
+    const hasReviewedInvalidation =
+      (gamificationStore.state.counters['invalidation-reviewed'] ?? 0) > 0
+    if (open && tradeMetrics && !hasReviewedInvalidation) {
+      award('invalidation-reviewed')
+    }
+  }
+
   const runBenchmarkTests = async () => {
     if (!canRunBenchmark) return
     setBenchmarkRunning(true)
@@ -192,7 +202,7 @@ export function StrategyInvalidationLab() {
       id="strategy-invalidation-lab"
       className="overflow-hidden border-primary/35 bg-card/95 2xl:col-span-2"
     >
-      <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+      <Collapsible open={isExpanded} onOpenChange={setLabOpen}>
         <CardHeader className="space-y-4">
           <div className="max-w-3xl space-y-2">
             <div className="kicker inline-flex rounded-full border border-primary/40 bg-primary/10 px-3 py-1">
