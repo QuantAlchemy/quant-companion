@@ -1,5 +1,8 @@
 # https://www.robotstxt.org/robotstxt.html
 User-agent: *
-Disallow:
+Allow: /
+Disallow: /journal
+Disallow: /sign-in
+Disallow: /sign-up
 
 Sitemap: https://www.quant-companion.quantalchemy.io/sitemap.xml
