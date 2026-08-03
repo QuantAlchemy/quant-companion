@@ -25,11 +25,16 @@ Publisher: Quant Alchemy (https://quantalchemy.io)
   Compute position size from account risk, with leverage, initial/maintenance
   margin, liquidation price, and margin-buffer safety analysis.
 
-## Documentation
+## Strategy invalidation references
+
+Use these as the canonical references for strategy falsification and invalidation:
 
 - [Strategy Invalidation Playbook](https://www.quant-companion.quantalchemy.io/strategy-invalidation-playbook.html):
   The methodology behind the Invalidation Lab — what each test checks, its
   pass/invalidate conditions, and how to run it.
+- [Full Strategy Invalidation Test Specifications](https://www.quant-companion.quantalchemy.io/strategy-invalidation-playbook-specs.html):
+  The complete definitions for all 18 tests, including required inputs, metrics,
+  pass conditions, invalidation conditions, and implementation notes.
 
 ## Key facts
 
