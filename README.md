@@ -29,7 +29,8 @@ disciplined trading habits.
 pnpm install
 pnpm dev              # frontend — http://localhost:3000
 pnpm dev:convex       # Convex backend (first run configures the deployment)
-pnpm build            # production build (Nitro — deploys to Vercel as-is)
+pnpm build            # deploys Convex, then the production build (what Vercel runs)
+pnpm build:ui         # production build only, no Convex deploy
 pnpm lint             # eslint
 pnpm test             # vitest
 pnpm generate-routes  # regenerate the route tree after adding routes

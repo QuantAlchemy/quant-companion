@@ -9,9 +9,8 @@
   "scripts": {
     "dev": "vite dev --port 3000",
     "dev:convex": "convex dev",
-    "build": "vite build",
-    "build:convex": "convex deploy --cmd \"vite build\"",
-    "build:local": "vite build",
+    "build": "convex deploy --cmd \"pnpm build:ui\"",
+    "build:ui": "vite build",
     "env:generate:local": "op inject -i .env.local.tpl -o .env.local",
     "env:generate:production": "op inject -i .env.production.tpl -o .env.production",
     "generate-routes": "tsr generate",
