@@ -33,7 +33,7 @@ registry package stops at the vulnerable 0.18.5 release. See the
 pnpm install
 pnpm dev              # frontend at http://localhost:3000
 pnpm dev:convex       # Convex backend (first run configures the deployment)
-pnpm build            # deploys Convex, then the production build (what Vercel runs)
+pnpm build            # deploys Convex only in Vercel production; UI-only elsewhere
 pnpm build:ui         # production build only, no Convex deploy
 pnpm brand:assets     # regenerate favicons, app icons, and the social card
 pnpm lint             # eslint

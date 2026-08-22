@@ -10,7 +10,7 @@
     "brand:assets": "node scripts/brand-assets.ts",
     "dev": "vite dev --port 3000",
     "dev:convex": "convex dev",
-    "build": "convex deploy --cmd \"pnpm build:ui\"",
+    "build": "node scripts/build.ts",
     "build:ui": "vite build",
     "env:generate:local": "op inject -i .env.local.tpl -o .env.local",
     "env:generate:production": "op inject -i .env.production.tpl -o .env.production",
