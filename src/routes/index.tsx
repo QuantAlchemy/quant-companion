@@ -1,4 +1,4 @@
-import { Show, SignUpButton } from '@clerk/tanstack-react-start'
+import { Show } from '@clerk/tanstack-react-start'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useStore } from '@tanstack/react-store'
 import {
@@ -37,7 +37,7 @@ const TOOLS = [
     title: 'Performance Analytics',
     kicker: 'Attack your backtest',
     description:
-      'Upload TradingView exports and stress-test them — Monte Carlo simulation, probability cones, z-scores, and the Strategy Invalidation Lab.',
+      'Upload TradingView exports and stress-test them with Monte Carlo simulation, probability cones, z-scores, and the Strategy Invalidation Lab.',
     delay: '0ms',
   },
   {
@@ -55,7 +55,7 @@ const TOOLS = [
     title: 'Position Sizing',
     kicker: 'Risk before reward',
     description:
-      'Size every position from the risk you accept — with leverage, margin, and liquidation-buffer analysis built in.',
+      'Size every position from the risk you accept, with leverage, margin, and liquidation-buffer analysis built in.',
     delay: '180ms',
   },
 ] as const
@@ -82,8 +82,11 @@ function HomePage() {
         <div className="rise-in">
           <LogoMark size={84} />
         </div>
+        <p className="kicker rise-in mt-7">
+          A trading workbench for disciplined decisions
+        </p>
         <h1
-          className="font-display rise-in mt-8 max-w-3xl text-balance text-4xl leading-tight md:text-6xl"
+          className="font-display rise-in mt-4 max-w-3xl text-balance text-4xl leading-tight md:text-6xl"
           style={{ animationDelay: '80ms' }}
         >
           Turn market lead into{' '}
@@ -94,7 +97,7 @@ function HomePage() {
           className="rise-in mt-6 max-w-xl text-pretty text-lg text-muted-foreground"
           style={{ animationDelay: '160ms' }}
         >
-          Quant Companion is the Quant Alchemy workbench — strategy analytics, a
+          Quant Companion is the Quant Alchemy workbench: strategy analytics, a
           trading journal, and position sizing, unified in one place.
         </p>
         <div
@@ -137,6 +140,39 @@ function HomePage() {
         </Link>
       </section>
 
+      <section className="mb-20 grid gap-4 md:grid-cols-2">
+        <div className="panel p-6">
+          <p className="kicker">Open tools</p>
+          <h2 className="font-display mt-2 text-2xl">
+            Analyze before you commit.
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            Upload a TradingView export or calculate position risk without an
+            account. Your files stay in your browser.
+          </p>
+          <Button
+            render={<Link to="/analytics" />}
+            className="mt-5"
+            variant="outline"
+          >
+            Explore analytics <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
+        <div className="panel gilded p-6">
+          <p className="kicker">Private beta</p>
+          <h2 className="font-display mt-2 text-2xl">
+            Keep the record that compounds.
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            The account-scoped journal and live market-data tools are available
+            to approved users while the beta stays focused.
+          </p>
+          <Button render={<Link to="/waitlist" />} className="mt-5">
+            Request access <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
+      </section>
+
       {/* Tools */}
       <section className="grid grid-cols-1 gap-6 pb-24 md:grid-cols-3">
         {TOOLS.map((tool) => (
@@ -163,13 +199,33 @@ function HomePage() {
         ))}
       </section>
 
-      {/* Privacy note */}
-      <section className="pb-20 text-center">
-        <p className="mx-auto max-w-lg text-sm text-muted-foreground">
-          Local-first by design: your uploads and journal are processed and
-          stored in your browser, scoped to your account. Nothing is sent to our
-          servers except live price lookups.
-        </p>
+      <section className="mx-auto max-w-3xl pb-20">
+        <p className="kicker text-center">Common questions</p>
+        <h2 className="font-display mt-2 text-center text-3xl">
+          Know what crosses the wire.
+        </h2>
+        <div className="mt-8 grid gap-4">
+          <article className="panel p-5">
+            <h3 className="font-semibold">Do you upload my strategy files?</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              No. CSV and XLSX strategy files are processed in your browser.
+            </p>
+          </article>
+          <article className="panel p-5">
+            <h3 className="font-semibold">Where does my journal live?</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Journal entries are stored in a private cloud record scoped to
+              your approved account. You can export them at any time.
+            </p>
+          </article>
+          <article className="panel p-5">
+            <h3 className="font-semibold">Is this trading advice?</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              No. Quant Companion provides analysis and recordkeeping tools. You
+              remain responsible for every trading decision.
+            </p>
+          </article>
+        </div>
       </section>
     </div>
   )
@@ -193,19 +249,17 @@ function HeroActions() {
   return (
     <>
       <Show when="signed-out">
-        <SignUpButton mode="modal">
-          <Button size="lg">
-            Begin your transmutation
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </SignUpButton>
+        <Button render={<Link to="/waitlist" />} size="lg">
+          Request journal access
+          <ArrowRight className="ml-2 h-4 w-4" />
+        </Button>
         <Button render={<Link to="/analytics" />} size="lg" variant="outline">
           Explore without an account
         </Button>
       </Show>
       <Show when="signed-in">
         <Button render={<Link to="/journal" />} size="lg">
-          Begin your transmutation
+          Open your journal
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
         <Button render={<Link to="/analytics" />} size="lg" variant="outline">

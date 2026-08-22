@@ -1,19 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
-import { importTrades, journalStore, setJournalUser } from './journal'
-
-// journal.ts only touches window.localStorage — a memory stub keeps this in node
-const memoryStorage = () => {
-  const store = new Map<string, string>()
-  return {
-    getItem: (k: string) => store.get(k) ?? null,
-    setItem: (k: string, v: string) => void store.set(k, v),
-    removeItem: (k: string) => void store.delete(k),
-    clear: () => store.clear(),
-  }
-}
-
-vi.stubGlobal('window', { localStorage: memoryStorage() })
+import {
+  parseTradeFile,
+  prepareTradeImport,
+  serializeTrades,
+  tradeImportSourceId,
+} from './journal'
 
 const legacyExport = JSON.stringify([
   {
@@ -30,7 +22,6 @@ const legacyExport = JSON.stringify([
     exchange: 'Coinbase',
     comments: 'Breakout trade',
     realizedPnl: 3075,
-    // legacy-only fields that must be ignored
     unrealizedPnl: null,
     marketPrice: null,
   },
@@ -45,7 +36,6 @@ const legacyExport = JSON.stringify([
   },
 ])
 
-// Convex dashboard snapshot export shape: one document per line
 const convexJsonl = [
   JSON.stringify({
     _id: 'j5721abc',
@@ -76,102 +66,146 @@ const convexJsonl = [
   }),
 ].join('\n')
 
-describe('importTrades', () => {
-  beforeEach(() => {
-    window.localStorage.clear()
-    setJournalUser('test-user')
-  })
-
-  it('imports the legacy trading-journal JSON export', () => {
-    expect(importTrades(legacyExport)).toBe(2)
-    const trades = journalStore.state
+describe('parseTradeFile', () => {
+  it('parses a legacy JSON export and ignores unknown fields', () => {
+    const trades = parseTradeFile(legacyExport)
     expect(trades).toHaveLength(2)
-    const btc = trades.find((t) => t.assetName === 'BTC')
-    expect(btc).toMatchObject({
+    expect(trades[0]).toMatchObject({
+      assetName: 'BTC',
       status: 'closed',
       realizedPnl: 3075,
       closingPrice: 67400,
       commission: 12.5,
     })
-    expect(btc).not.toHaveProperty('marketPrice')
-    expect(trades.find((t) => t.assetName === 'NVDA')?.status).toBe('open')
+    expect(trades[0]).not.toHaveProperty('marketPrice')
   })
 
-  it('does not duplicate trades when the same legacy export is imported again', () => {
-    expect(importTrades(legacyExport)).toBe(2)
-    expect(importTrades(legacyExport)).toBe(0)
-    expect(journalStore.state).toHaveLength(2)
-  })
-
-  it('imports a Convex snapshot JSONL export, dropping system fields', () => {
-    expect(importTrades(convexJsonl)).toBe(2)
-    const trades = journalStore.state
+  it('parses Convex snapshot JSONL and drops ownership fields', () => {
+    const trades = parseTradeFile(convexJsonl)
     expect(trades).toHaveLength(2)
-    const spy = trades.find((t) => t.assetName === 'SPY')
-    expect(spy).toMatchObject({
+    expect(trades[1]).toMatchObject({
+      assetName: 'SPY',
       tradeType: 'sell',
       status: 'closed',
       realizedPnl: -76,
     })
-    expect(spy).not.toHaveProperty('userId')
-    expect(spy?.id).toMatch(/^t_/)
+    expect(trades[1]).not.toHaveProperty('userId')
+    expect(trades[1]).not.toHaveProperty('_id')
   })
 
-  it('backfills realized P&L for closed imports without a stored realizedPnl', () => {
-    expect(
-      importTrades(
-        JSON.stringify([
-          {
-            assetName: 'AAPL',
-            assetType: 'traditional',
-            quantity: 10,
-            price: 100,
-            tradeType: 'buy',
-            tradeDate: '2026-01-01',
-            status: 'closed',
-            closingPrice: 115,
-            closingDate: '2026-02-01',
-          },
-          {
-            assetName: 'TSLA',
-            assetType: 'traditional',
-            quantity: 5,
-            price: 200,
-            tradeType: 'sell',
-            tradeDate: '2026-01-01',
-            status: 'closed',
-            closingPrice: 180,
-            closingDate: '2026-02-01',
-          },
-        ])
-      )
-    ).toBe(2)
+  it('accepts a single JSONL trade document', () => {
+    expect(parseTradeFile(convexJsonl.split('\n')[0])).toHaveLength(1)
+  })
 
-    expect(journalStore.state.find((t) => t.assetName === 'AAPL')?.realizedPnl).toBe(
-      150
+  it('backfills realized P&L when a closed trade omits it', () => {
+    const [trade] = parseTradeFile(
+      JSON.stringify([
+        {
+          assetName: 'AAPL',
+          assetType: 'traditional',
+          quantity: 10,
+          price: 100,
+          tradeType: 'buy',
+          tradeDate: '2026-01-01',
+          status: 'closed',
+          closingPrice: 115,
+          closingDate: '2026-02-01',
+        },
+      ]),
     )
-    expect(journalStore.state.find((t) => t.assetName === 'TSLA')?.realizedPnl).toBe(
-      100
+
+    expect(trade.realizedPnl).toBe(150)
+  })
+
+  it('round-trips the public export shape', () => {
+    const parsed = parseTradeFile(legacyExport)
+    const exported = serializeTrades(
+      parsed.map((trade, index) => ({
+        ...trade,
+        id: `trade-${index}`,
+        createdAt: index,
+      })),
+    )
+    expect(parseTradeFile(exported)).toEqual(parsed)
+  })
+
+  it.each([
+    ['missing fields', JSON.stringify([{ assetName: 'BTC' }])],
+    ['invalid JSON', 'not json at all'],
+    [
+      'negative quantity',
+      JSON.stringify([
+        {
+          assetName: 'BTC',
+          assetType: 'crypto',
+          quantity: -1,
+          price: 100,
+          tradeType: 'buy',
+          tradeDate: '2026-01-01',
+        },
+      ]),
+    ],
+    [
+      'invalid enum',
+      JSON.stringify([
+        {
+          assetName: 'BTC',
+          assetType: 'forex',
+          quantity: 1,
+          price: 100,
+          tradeType: 'buy',
+          tradeDate: '2026-01-01',
+        },
+      ]),
+    ],
+    [
+      'impossible date',
+      JSON.stringify([
+        {
+          assetName: 'BTC',
+          assetType: 'crypto',
+          quantity: 1,
+          price: 100,
+          tradeType: 'buy',
+          tradeDate: '2026-02-30',
+        },
+      ]),
+    ],
+    [
+      'closing before entry',
+      JSON.stringify([
+        {
+          assetName: 'BTC',
+          assetType: 'crypto',
+          quantity: 1,
+          price: 100,
+          tradeType: 'buy',
+          tradeDate: '2026-02-01',
+          status: 'closed',
+          closingPrice: 110,
+          closingDate: '2026-01-31',
+        },
+      ]),
+    ],
+  ])('rejects %s', (_label, input) => {
+    expect(() => parseTradeFile(input)).toThrow()
+  })
+})
+
+describe('tradeImportSourceId', () => {
+  it('builds a stable key from normalized trade content', () => {
+    const [trade] = parseTradeFile(legacyExport)
+    expect(tradeImportSourceId(trade)).toMatch(/^import:[a-f0-9]{16}$/)
+    expect(tradeImportSourceId(trade)).toBe(
+      tradeImportSourceId(parseTradeFile(legacyExport)[0]),
     )
   })
 
-  it('round-trips: importing our own export shape', () => {
-    importTrades(legacyExport)
-    const reExported = JSON.stringify(
-      journalStore.state.map(({ id, createdAt, ...rest }) => rest)
-    )
-    setJournalUser('other-user')
-    expect(journalStore.state).toHaveLength(0)
-    expect(importTrades(reExported)).toBe(2)
-  })
-
-  it('rejects files missing required fields', () => {
-    expect(() =>
-      importTrades(JSON.stringify([{ assetName: 'BTC' }]))
-    ).toThrow(/missing required fields/)
-  })
-
-  it('rejects non-JSON input', () => {
-    expect(() => importTrades('not json at all')).toThrow()
+  it('preserves identical trades with deterministic distinct source IDs', () => {
+    const [trade] = parseTradeFile(legacyExport)
+    const prepared = prepareTradeImport([trade, trade])
+    expect(prepared[0].sourceId).toBe(tradeImportSourceId(trade))
+    expect(prepared[1].sourceId).toBe(`${tradeImportSourceId(trade)}:1`)
+    expect(prepareTradeImport([trade, trade])).toEqual(prepared)
   })
 })

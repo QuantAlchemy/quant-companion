@@ -13,6 +13,17 @@ const llms = readFileSync(
   new URL('../../public/llms.txt', import.meta.url),
   'utf8',
 )
+const llmsFull = readFileSync(
+  new URL('../../public/llms-full.txt', import.meta.url),
+  'utf8',
+)
+const ai = readFileSync(new URL('../../public/ai.txt', import.meta.url), 'utf8')
+const claimReceipts = JSON.parse(
+  readFileSync(
+    new URL('../../public/claim-receipts.json', import.meta.url),
+    'utf8',
+  ),
+) as { claims: Array<{ claim: string; evidence: string }> }
 const sitemapUrls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(
   ([, href]) => new URL(href),
 )
@@ -67,6 +78,19 @@ describe('public search-discovery files', () => {
     )
   })
 
+  test('AI discovery files describe access and provide evidence links', () => {
+    expect(llms).toContain('/llms-full.txt')
+    expect(llmsFull).toContain('/waitlist')
+    expect(ai).toContain('/claim-receipts.json')
+    expect(claimReceipts.claims.length).toBeGreaterThan(0)
+    for (const receipt of claimReceipts.claims) {
+      expect(receipt.claim.length).toBeGreaterThan(20)
+      expect(new URL(receipt.evidence).hostname).toBe(
+        'www.quant-companion.quantalchemy.io',
+      )
+    }
+  })
+
   test('robots points to the sitemap and excludes authenticated entry points', () => {
     expect(robots).toContain(
       'Sitemap: https://www.quant-companion.quantalchemy.io/sitemap.xml',
@@ -74,5 +98,12 @@ describe('public search-discovery files', () => {
     expect(robots).toContain('Disallow: /journal')
     expect(robots).toContain('Disallow: /sign-in')
     expect(robots).toContain('Disallow: /sign-up')
+    expect(robots).toContain('User-agent: GPTBot')
+    expect(robots).toContain('User-agent: OAI-SearchBot')
+    const policy = robots.slice(0, robots.indexOf('Sitemap:'))
+    expect(policy.match(/Disallow: \/journal/g)).toHaveLength(1)
+    expect(policy.indexOf('User-agent: Google-Extended')).toBeLessThan(
+      policy.indexOf('Disallow: /journal'),
+    )
   })
 })

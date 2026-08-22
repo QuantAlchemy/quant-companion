@@ -1,9 +1,4 @@
-import {
-  Show,
-  SignInButton,
-  SignUpButton,
-  UserButton,
-} from '@clerk/tanstack-react-start'
+import { Show, SignInButton, UserButton } from '@clerk/tanstack-react-start'
 import { Link } from '@tanstack/react-router'
 
 import Logo from '@/components/Logo'
@@ -74,9 +69,9 @@ function AuthControls() {
             Sign in
           </Button>
         </SignInButton>
-        <SignUpButton mode="modal">
-          <Button size="sm">Get started</Button>
-        </SignUpButton>
+        <Button render={<Link to="/waitlist" />} size="sm">
+          Request access
+        </Button>
       </Show>
       <Show when="signed-in">
         <UserButton />

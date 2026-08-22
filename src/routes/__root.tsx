@@ -1,4 +1,4 @@
-import { ClerkProvider } from '@clerk/tanstack-react-start'
+import { ClerkProvider, useAuth } from '@clerk/tanstack-react-start'
 import { shadcn } from '@clerk/ui/themes'
 import {
   HeadContent,
@@ -7,6 +7,8 @@ import {
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
+import { Analytics } from '@vercel/analytics/react'
+import { ConvexProviderWithClerk } from 'convex/react-clerk'
 import { Toaster } from 'sonner'
 
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
@@ -20,8 +22,10 @@ import { isClerkClientConfigured } from '@/lib/clerk'
 import { siteStructuredData } from '@/lib/seo'
 
 import type { QueryClient } from '@tanstack/react-query'
+import type { ConvexReactClient } from 'convex/react'
 
 interface MyRouterContext {
+  convexClient: ConvexReactClient | null
   queryClient: QueryClient
 }
 
@@ -34,7 +38,10 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
     ],
     links: [
       { rel: 'stylesheet', href: appCss },
-      { rel: 'icon', type: 'image/svg+xml', href: '/qc-icon.svg' },
+      { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+      { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
+      { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
+      { rel: 'manifest', href: '/site.webmanifest' },
     ],
     scripts: [
       {
@@ -47,7 +54,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { queryClient } = Route.useRouteContext()
+  const { convexClient, queryClient } = Route.useRouteContext()
   const content = (
     <TanstackQueryProvider queryClient={queryClient}>
       <TooltipProvider>
@@ -68,8 +75,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                 </a>
               </span>
               <span>
-                Your data stays yours — uploads are processed locally in your
-                browser.
+                Analytics uploads stay in your browser. Journal data is stored
+                securely in your account.
+              </span>
+              <span className="flex gap-3">
+                <a href="/privacy">Privacy</a>
+                <a href="/terms">Terms</a>
               </span>
             </div>
           </footer>
@@ -85,6 +96,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             },
           }}
         />
+        <Analytics />
         <TanStackDevtools
           config={{ position: 'bottom-right' }}
           plugins={[
@@ -106,8 +118,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         {isClerkClientConfigured() ? (
-          <ClerkProvider appearance={{ theme: shadcn }}>
-            {content}
+          <ClerkProvider
+            appearance={{ theme: shadcn }}
+            signInUrl="/sign-in"
+            signUpUrl="/waitlist"
+          >
+            <ConvexProvider client={convexClient}>{content}</ConvexProvider>
           </ClerkProvider>
         ) : (
           content
@@ -115,5 +131,20 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <Scripts />
       </body>
     </html>
+  )
+}
+
+function ConvexProvider({
+  children,
+  client,
+}: {
+  children: React.ReactNode
+  client: ConvexReactClient | null
+}) {
+  if (!client) return children
+  return (
+    <ConvexProviderWithClerk client={client} useAuth={useAuth}>
+      {children}
+    </ConvexProviderWithClerk>
   )
 }

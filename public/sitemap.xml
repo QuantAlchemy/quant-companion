@@ -21,6 +21,21 @@
     <priority>0.5</priority>
   </url>
   <url>
+    <loc>https://www.quant-companion.quantalchemy.io/waitlist</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.quant-companion.quantalchemy.io/privacy</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://www.quant-companion.quantalchemy.io/terms</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
     <loc>https://www.quant-companion.quantalchemy.io/strategy-invalidation-playbook.html</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>

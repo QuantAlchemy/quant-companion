@@ -1,14 +1,8 @@
-import { SignUp } from '@clerk/tanstack-react-start'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/sign-up/$')({
-  component: Page,
+  beforeLoad: () => {
+    throw redirect({ to: '/waitlist' })
+  },
+  component: () => null,
 })
-
-function Page() {
-  return (
-    <div className="flex min-h-screen items-center justify-center">
-      <SignUp />
-    </div>
-  )
-}
