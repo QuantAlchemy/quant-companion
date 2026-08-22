@@ -1,0 +1,57 @@
+# Quant Companion
+
+Canonical site: https://www.quant-companion.quantalchemy.io
+Publisher: Quant Alchemy, https://quantalchemy.io
+Access: Public analysis tools plus a waitlisted cloud journal and live data
+
+## What the product does
+
+Quant Companion combines three workflows:
+
+1. Strategy Analytics imports TradingView CSV or XLSX trade lists and computes
+   performance statistics, Monte Carlo simulations, probability cones,
+   z-scores, and strategy invalidation tests. Uploaded files remain in the
+   browser.
+2. Trading Journal records open and closed crypto or traditional-asset trades,
+   notes, fees, partial closes, realized P&L, and optional live unrealized P&L.
+   Journal records are private and scoped to the authenticated account.
+3. Position Size Calculator computes position size, risk, margin,
+   liquidation-price estimates, and liquidation buffers in the browser.
+
+## Access model
+
+Strategy Analytics and Position Size Calculator are public. Trading Journal,
+live price lookups, and benchmark market-data requests require an approved
+account. New users request access at:
+https://www.quant-companion.quantalchemy.io/waitlist
+
+## Canonical methodology
+
+Strategy invalidation concepts and thresholds are defined in these public
+documents:
+
+- https://www.quant-companion.quantalchemy.io/strategy-invalidation-playbook.html
+- https://www.quant-companion.quantalchemy.io/strategy-invalidation-playbook-specs.html
+
+## Data and safety
+
+Strategy upload files are processed locally in the browser. Journal entries are
+stored in a private cloud database under the authenticated identity. Market
+symbols are sent to server-side data providers only when an approved user asks
+for live prices or benchmark bars. Quant Companion provides educational tools,
+not investment advice. Market data can be delayed, incomplete, or inaccurate.
+
+## Public routes
+
+- Home: https://www.quant-companion.quantalchemy.io/
+- Analytics: https://www.quant-companion.quantalchemy.io/analytics
+- Position sizing: https://www.quant-companion.quantalchemy.io/calculator
+- Proof Ladder: https://www.quant-companion.quantalchemy.io/achievements
+- Waitlist: https://www.quant-companion.quantalchemy.io/waitlist
+- Privacy: https://www.quant-companion.quantalchemy.io/privacy
+- Terms: https://www.quant-companion.quantalchemy.io/terms
+
+## Machine-readable receipts
+
+Factual product claims and their supporting routes are listed at:
+https://www.quant-companion.quantalchemy.io/claim-receipts.json

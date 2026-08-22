@@ -21,9 +21,13 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { currencyFormatter } from '@/lib/format'
-import { addTrade, closeTrade, editTrade, splitTrade } from '@/lib/journal'
 
-import type { AssetType, JournalTrade, NewTrade, TradeType } from '@/lib/journal'
+import type {
+  AssetType,
+  JournalTrade,
+  NewTrade,
+  TradeType,
+} from '@/lib/journal'
 
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -46,10 +50,17 @@ interface TradeFormDialogProps {
   onOpenChange: (open: boolean) => void
   /** When provided the dialog edits this trade, otherwise it creates one. */
   trade?: JournalTrade | null
+  onSave: (input: NewTrade) => Promise<void>
 }
 
-export function TradeFormDialog({ open, onOpenChange, trade }: TradeFormDialogProps) {
+export function TradeFormDialog({
+  open,
+  onOpenChange,
+  onSave,
+  trade,
+}: TradeFormDialogProps) {
   const [form, setForm] = useState<NewTrade>(emptyForm())
+  const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
     if (!open) return
@@ -66,30 +77,40 @@ export function TradeFormDialog({ open, onOpenChange, trade }: TradeFormDialogPr
             exchange: trade.exchange ?? '',
             comments: trade.comments ?? '',
           }
-        : emptyForm()
+        : emptyForm(),
     )
   }, [open, trade])
 
   const set = <TKey extends keyof NewTrade>(key: TKey, value: NewTrade[TKey]) =>
     setForm((f) => ({ ...f, [key]: value }))
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.assetName.trim()) return toast.error('Asset symbol is required')
     if (!isIsoDate(form.tradeDate)) {
       return toast.error('Entry date must use YYYY-MM-DD')
     }
-    if (form.quantity <= 0) return toast.error('Quantity must be greater than 0')
-    if (form.price <= 0) return toast.error('Entry price must be greater than 0')
+    if (form.quantity <= 0)
+      return toast.error('Quantity must be greater than 0')
+    if (form.price <= 0)
+      return toast.error('Entry price must be greater than 0')
 
-    if (trade) {
-      editTrade(trade.id, form)
-      toast.success(`Updated ${form.assetName.toUpperCase()}`)
-    } else {
-      addTrade(form)
-      toast.success(`Logged ${form.assetName.toUpperCase()} trade`)
+    setIsSaving(true)
+    try {
+      await onSave(form)
+      toast.success(
+        trade
+          ? `Updated ${form.assetName.toUpperCase()}`
+          : `Logged ${form.assetName.toUpperCase()} trade`,
+      )
+      onOpenChange(false)
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to save trade',
+      )
+    } finally {
+      setIsSaving(false)
     }
-    onOpenChange(false)
   }
 
   return (
@@ -190,7 +211,7 @@ export function TradeFormDialog({ open, onOpenChange, trade }: TradeFormDialogPr
                   'commission',
                   Number.isNaN(e.target.valueAsNumber)
                     ? undefined
-                    : e.target.valueAsNumber
+                    : e.target.valueAsNumber,
                 )
               }
             />
@@ -205,7 +226,7 @@ export function TradeFormDialog({ open, onOpenChange, trade }: TradeFormDialogPr
             />
           </div>
           <div className="col-span-2 space-y-1.5">
-            <Label htmlFor="comments">Notes — why this trade?</Label>
+            <Label htmlFor="comments">Notes: why this trade?</Label>
             <Textarea
               id="comments"
               placeholder="Setup, thesis, invalidation level… (earns Scribe XP)"
@@ -214,10 +235,16 @@ export function TradeFormDialog({ open, onOpenChange, trade }: TradeFormDialogPr
             />
           </div>
           <DialogFooter className="col-span-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
               Cancel
             </Button>
-            <Button type="submit">{trade ? 'Save changes' : 'Log trade'}</Button>
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? 'Saving…' : trade ? 'Save changes' : 'Log trade'}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -229,11 +256,18 @@ interface CloseTradeDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   trade: JournalTrade | null
+  onCloseTrade: (closingPrice: number, closingDate: string) => Promise<number>
 }
 
-export function CloseTradeDialog({ open, onOpenChange, trade }: CloseTradeDialogProps) {
+export function CloseTradeDialog({
+  open,
+  onCloseTrade,
+  onOpenChange,
+  trade,
+}: CloseTradeDialogProps) {
   const [closingPrice, setClosingPrice] = useState(0)
   const [closingDate, setClosingDate] = useState(today())
+  const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
     if (open) {
@@ -251,17 +285,27 @@ export function CloseTradeDialog({ open, onOpenChange, trade }: CloseTradeDialog
           : trade.price - closingPrice) * trade.quantity
       : null
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (closingPrice <= 0) return toast.error('Closing price must be greater than 0')
+    if (closingPrice <= 0)
+      return toast.error('Closing price must be greater than 0')
     if (!isIsoDate(closingDate)) {
       return toast.error('Closing date must use YYYY-MM-DD')
     }
-    const pnl = closeTrade(trade.id, closingPrice, closingDate)
-    toast.success(
-      `Closed ${trade.assetName} for ${currencyFormatter.format(pnl)} ${pnl >= 0 ? 'profit' : 'loss'}`
-    )
-    onOpenChange(false)
+    setIsSaving(true)
+    try {
+      const pnl = await onCloseTrade(closingPrice, closingDate)
+      toast.success(
+        `Closed ${trade.assetName} for ${currencyFormatter.format(pnl)} ${pnl >= 0 ? 'profit' : 'loss'}`,
+      )
+      onOpenChange(false)
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to close trade',
+      )
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -272,7 +316,7 @@ export function CloseTradeDialog({ open, onOpenChange, trade }: CloseTradeDialog
             Close {trade.assetName}
           </DialogTitle>
           <DialogDescription>
-            {trade.quantity} @ {currencyFormatter.format(trade.price)} —{' '}
+            {trade.quantity} @ {currencyFormatter.format(trade.price)} ·{' '}
             {trade.tradeType === 'buy' ? 'long' : 'short'}
           </DialogDescription>
         </DialogHeader>
@@ -306,10 +350,16 @@ export function CloseTradeDialog({ open, onOpenChange, trade }: CloseTradeDialog
             </p>
           )}
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
               Cancel
             </Button>
-            <Button type="submit">Close trade</Button>
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? 'Closing…' : 'Close trade'}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -321,12 +371,23 @@ interface SplitTradeDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   trade: JournalTrade | null
+  onSplitTrade: (
+    closingPrice: number,
+    closingDate: string,
+    closingQuantity: number,
+  ) => Promise<number>
 }
 
-export function SplitTradeDialog({ open, onOpenChange, trade }: SplitTradeDialogProps) {
+export function SplitTradeDialog({
+  open,
+  onOpenChange,
+  onSplitTrade,
+  trade,
+}: SplitTradeDialogProps) {
   const [closingQuantity, setClosingQuantity] = useState(0)
   const [closingPrice, setClosingPrice] = useState(0)
   const [closingDate, setClosingDate] = useState(today())
+  const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
     if (open) {
@@ -338,25 +399,31 @@ export function SplitTradeDialog({ open, onOpenChange, trade }: SplitTradeDialog
 
   if (!trade) return null
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (closingPrice <= 0) return toast.error('Closing price must be greater than 0')
+    if (closingPrice <= 0)
+      return toast.error('Closing price must be greater than 0')
     if (!isIsoDate(closingDate)) {
       return toast.error('Closing date must use YYYY-MM-DD')
     }
     if (closingQuantity <= 0 || closingQuantity >= trade.quantity) {
       return toast.error(
-        `Quantity must be between 0 and ${trade.quantity} (exclusive)`
+        `Quantity must be between 0 and ${trade.quantity} (exclusive)`,
       )
     }
+    setIsSaving(true)
     try {
-      const pnl = splitTrade(trade.id, closingPrice, closingDate, closingQuantity)
+      const pnl = await onSplitTrade(closingPrice, closingDate, closingQuantity)
       toast.success(
-        `Partially closed ${trade.assetName} for ${currencyFormatter.format(pnl ?? 0)}`
+        `Partially closed ${trade.assetName} for ${currencyFormatter.format(pnl)}`,
       )
       onOpenChange(false)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to split trade')
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to split trade',
+      )
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -407,10 +474,16 @@ export function SplitTradeDialog({ open, onOpenChange, trade }: SplitTradeDialog
             />
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
               Cancel
             </Button>
-            <Button type="submit">Partial close</Button>
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? 'Closing…' : 'Partial close'}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

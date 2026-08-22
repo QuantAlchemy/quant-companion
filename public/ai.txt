@@ -1,0 +1,17 @@
+# Quant Companion AI summary
+
+Canonical site: https://www.quant-companion.quantalchemy.io
+Publisher: Quant Alchemy, https://quantalchemy.io
+
+Quant Companion is a web application for strategy analysis, trade journaling,
+and position sizing. Public tools process TradingView strategy exports in the
+browser. The cloud journal and live market-data features require an approved
+account. The product is educational software and does not provide investment
+advice.
+
+Preferred sources:
+- https://www.quant-companion.quantalchemy.io/llms.txt
+- https://www.quant-companion.quantalchemy.io/llms-full.txt
+- https://www.quant-companion.quantalchemy.io/strategy-invalidation-playbook.html
+- https://www.quant-companion.quantalchemy.io/strategy-invalidation-playbook-specs.html
+- https://www.quant-companion.quantalchemy.io/claim-receipts.json

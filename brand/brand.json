@@ -1,0 +1,16 @@
+{
+  "name": "Quant Companion",
+  "tagline": "Turn market lead into gold, one disciplined trade at a time.",
+  "description": "Strategy analytics, a private trading journal, and position sizing in the Quant Alchemy trading workbench.",
+  "ogSubtitle": "Strategy analytics · Trading journal · Risk sizing",
+  "url": "www.quant-companion.quantalchemy.io",
+  "themeColor": "#0A0D16",
+  "background": "#0A0D16",
+  "ink": "#E9ECF8",
+  "ink2": "#A7AECB",
+  "ink3": "#707897",
+  "fonts": {
+    "display": "brand/fonts/Fraunces-Italic.ttf",
+    "body": "brand/fonts/InstrumentSans.ttf"
+  }
+}

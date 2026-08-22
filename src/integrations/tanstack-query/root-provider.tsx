@@ -1,11 +1,20 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
+import { createConvexClient } from '@/lib/convex'
+
+import type { ConvexReactClient } from 'convex/react'
 import type { ReactNode } from 'react'
 
-export function getContext() {
+export interface AppRouterContext {
+  convexClient: ConvexReactClient | null
+  queryClient: QueryClient
+}
+
+export function getContext(): AppRouterContext {
   const queryClient = new QueryClient()
 
   return {
+    convexClient: createConvexClient(),
     queryClient,
   }
 }

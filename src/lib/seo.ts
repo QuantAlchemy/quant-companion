@@ -9,8 +9,8 @@ export const SITE = {
   url: 'https://www.quant-companion.quantalchemy.io',
   // keep under ~120 chars: mobile previews truncate at ~3 lines
   description:
-    'Strategy analytics, trading journal, and position sizing — the Quant Alchemy trading workbench.',
-  image: 'https://www.quant-companion.quantalchemy.io/og-image.png',
+    'Strategy analytics, trading journal, and position sizing for disciplined traders.',
+  image: 'https://www.quant-companion.quantalchemy.io/og.png',
   twitterCard: 'summary_large_image',
   publisher: 'Quant Alchemy',
   publisherUrl: 'https://quantalchemy.io',
@@ -79,7 +79,7 @@ export function siteStructuredData() {
         '@id': `${SITE.publisherUrl}/#organization`,
         name: SITE.publisher,
         url: SITE.publisherUrl,
-        logo: `${SITE.url}/qc-icon.svg`,
+        logo: `${SITE.url}/favicon.svg`,
       },
       {
         '@type': 'WebSite',

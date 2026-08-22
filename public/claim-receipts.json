@@ -1,0 +1,26 @@
+{
+  "product": "Quant Companion",
+  "canonicalUrl": "https://www.quant-companion.quantalchemy.io",
+  "publisher": {
+    "name": "Quant Alchemy",
+    "url": "https://quantalchemy.io"
+  },
+  "claims": [
+    {
+      "claim": "Strategy Analytics accepts TradingView CSV and XLSX trade exports and processes them in the browser.",
+      "evidence": "https://www.quant-companion.quantalchemy.io/analytics"
+    },
+    {
+      "claim": "The Strategy Invalidation Lab documents its test definitions and invalidation conditions.",
+      "evidence": "https://www.quant-companion.quantalchemy.io/strategy-invalidation-playbook-specs.html"
+    },
+    {
+      "claim": "The Position Size Calculator computes risk, margin, leverage, and liquidation-buffer values in the browser.",
+      "evidence": "https://www.quant-companion.quantalchemy.io/calculator"
+    },
+    {
+      "claim": "The cloud journal and live market-data features require an approved account.",
+      "evidence": "https://www.quant-companion.quantalchemy.io/waitlist"
+    }
+  ]
+}

@@ -1,3 +1,5 @@
+import { Show } from '@clerk/tanstack-react-start'
+import { Link } from '@tanstack/react-router'
 import { useStore } from '@tanstack/react-store'
 import { useMemo, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
@@ -32,6 +34,7 @@ import { calculateInvalidationReport } from '@/lib/invalidation'
 import { getDailyBars } from '@/lib/prices'
 import { tradeDataStore, tradeMetricsStore } from '@/lib/stats'
 import { cn } from '@/lib/utils'
+import { isClerkClientConfigured } from '@/lib/clerk'
 
 import type { InvalidationResult, InvalidationStatus } from '@/lib/invalidation'
 
@@ -345,14 +348,11 @@ export function StrategyInvalidationLab() {
                       placeholder="SPY"
                     />
                   </div>
-                  <Button
-                    onClick={() => void runBenchmarkTests()}
-                    disabled={!canRunBenchmark || benchmarkRunning}
-                  >
-                    {benchmarkRunning
-                      ? 'Fetching bars…'
-                      : 'Run benchmark tests'}
-                  </Button>
+                  <BenchmarkButton
+                    canRun={canRunBenchmark}
+                    isRunning={benchmarkRunning}
+                    onRun={() => void runBenchmarkTests()}
+                  />
                   {!tradeMetrics && (
                     <span className="text-sm text-muted-foreground">
                       Upload trade data first.
@@ -447,6 +447,35 @@ export function StrategyInvalidationLab() {
         </CollapsibleContent>
       </Collapsible>
     </Card>
+  )
+}
+
+function BenchmarkButton({
+  canRun,
+  isRunning,
+  onRun,
+}: {
+  canRun: boolean
+  isRunning: boolean
+  onRun: () => void
+}) {
+  if (!isClerkClientConfigured()) {
+    return <Button disabled>Live data unavailable</Button>
+  }
+
+  return (
+    <>
+      <Show when="signed-in">
+        <Button onClick={onRun} disabled={!canRun || isRunning}>
+          {isRunning ? 'Fetching bars…' : 'Run benchmark tests'}
+        </Button>
+      </Show>
+      <Show when="signed-out">
+        <Button render={<Link to="/waitlist" />}>
+          Request live-data access
+        </Button>
+      </Show>
+    </>
   )
 }
 
