@@ -1,3 +1,4 @@
+import { useUser } from '@clerk/tanstack-react-start'
 import { auth } from '@clerk/tanstack-react-start/server'
 import { useQuery as useTanStackQuery } from '@tanstack/react-query'
 import { createFileRoute, redirect } from '@tanstack/react-router'
@@ -5,7 +6,7 @@ import { useStore } from '@tanstack/react-store'
 import { createServerFn } from '@tanstack/react-start'
 import { useConvexAuth, useMutation, useQuery } from 'convex/react'
 import { Download, Plus, RefreshCw, Trash2, Upload } from 'lucide-react'
-import { useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import JournalStats from '@/components/journal/JournalStats'
@@ -20,8 +21,11 @@ import { Button } from '@/components/ui/button'
 import { api } from '@/../convex/_generated/api'
 import { award } from '@/lib/gamification'
 import {
+  markLegacyBrowserJournalMigrated,
   parseTradeFile,
+  prepareMissingTradeImport,
   prepareTradeImport,
+  readLegacyBrowserJournal,
   serializeTrades,
 } from '@/lib/journal'
 import { journalTradesToPerformanceTrades } from '@/lib/performance'
@@ -34,7 +38,16 @@ import type { RowSelectionState } from '@tanstack/react-table'
 import type { JournalTrade, NewTrade } from '@/lib/journal'
 
 const MAX_IMPORT_BYTES = 10 * 1024 * 1024
+// Keep this aligned with MAX_IMPORT_BATCH in convex/trades.ts.
+const MAX_IMPORT_BATCH = 50
 const MAX_DELETE_BATCH = 100
+
+interface ImportProgress {
+  inserted: number
+  skipped: number
+}
+
+type PreparedTradeImport = ReturnType<typeof prepareTradeImport>
 
 const authStateFn = createServerFn().handler(async () => {
   const { isAuthenticated } = await auth()
@@ -84,6 +97,7 @@ const toJournalTrade = (trade: Doc<'trades'>): JournalTrade => {
 }
 
 function JournalPage() {
+  const { user } = useUser()
   const { isAuthenticated, isLoading: authIsLoading } = useConvexAuth()
   const tradeDocuments = useQuery(
     api.trades.list,
@@ -105,6 +119,7 @@ function JournalPage() {
   )
   const [isImporting, setIsImporting] = useState(false)
   const importInputRef = useRef<HTMLInputElement>(null)
+  const migrationAttemptedForUserRef = useRef<string | null>(null)
 
   const trades = useMemo(
     () => (tradeDocuments ?? []).map(toJournalTrade),
@@ -117,6 +132,78 @@ function JournalPage() {
       ),
     [tradeDocuments],
   )
+
+  const importPreparedTrades = useCallback(
+    async (
+      preparedTrades: PreparedTradeImport,
+      onProgress: (progress: ImportProgress) => void,
+    ) => {
+      let progress: ImportProgress = { inserted: 0, skipped: 0 }
+      for (
+        let index = 0;
+        index < preparedTrades.length;
+        index += MAX_IMPORT_BATCH
+      ) {
+        const result = await importTrades({
+          trades: preparedTrades.slice(index, index + MAX_IMPORT_BATCH),
+        })
+        progress = {
+          inserted: progress.inserted + result.inserted,
+          skipped: progress.skipped + result.skipped,
+        }
+        onProgress(progress)
+      }
+      return progress
+    },
+    [importTrades],
+  )
+
+  useEffect(() => {
+    const userId = user?.id
+    if (!isAuthenticated || !userId || tradeDocuments === undefined) return
+    if (migrationAttemptedForUserRef.current === userId) return
+    migrationAttemptedForUserRef.current = userId
+
+    void (async () => {
+      let progress: ImportProgress = { inserted: 0, skipped: 0 }
+      try {
+        const browserTrades = readLegacyBrowserJournal(userId)
+        if (!browserTrades) return
+        if (browserTrades.length > 5_000) {
+          throw new Error('Browser journals are limited to 5,000 trades')
+        }
+
+        const missingTrades = prepareMissingTradeImport(
+          browserTrades,
+          tradeDocuments,
+        )
+        if (missingTrades.length > 0) {
+          progress = await importPreparedTrades(
+            missingTrades,
+            (nextProgress) => {
+              progress = nextProgress
+            },
+          )
+          if (progress.inserted > 0) {
+            award('journal-imported')
+            toast.success(
+              `Recovered ${progress.inserted} browser trade${progress.inserted === 1 ? '' : 's'} to your private account`,
+            )
+          }
+        }
+        markLegacyBrowserJournalMigrated(userId)
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Migration failed'
+        const saved = progress.inserted + progress.skipped
+        toast.error(
+          saved > 0
+            ? `Browser journal migration stopped: ${message}. ${progress.inserted} trades were saved and ${progress.skipped} were already present. Your browser copy was kept; reload to continue safely.`
+            : `Browser journal migration stopped: ${message}. Your browser copy was kept.`,
+        )
+      }
+    })()
+  }, [importPreparedTrades, isAuthenticated, tradeDocuments, user?.id])
 
   const openSymbols = useMemo(() => {
     const open = trades.filter((trade) => trade.status === 'open')
@@ -180,6 +267,7 @@ function JournalPage() {
   const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
+    let progress: ImportProgress = { inserted: 0, skipped: 0 }
     setIsImporting(true)
     try {
       if (file.size > MAX_IMPORT_BYTES) {
@@ -190,23 +278,26 @@ function JournalPage() {
         throw new Error('Import files are limited to 5,000 trades')
       }
       const importableTrades = prepareTradeImport(parsed)
-      let inserted = 0
-      let skipped = 0
-      for (let index = 0; index < importableTrades.length; index += 40) {
-        const result = await importTrades({
-          trades: importableTrades.slice(index, index + 40),
-        })
-        inserted += result.inserted
-        skipped += result.skipped
-      }
-      if (inserted > 0) award('journal-imported')
+      progress = await importPreparedTrades(
+        importableTrades,
+        (nextProgress) => {
+          progress = nextProgress
+        },
+      )
+      if (progress.inserted > 0) award('journal-imported')
       toast.success(
-        skipped > 0
-          ? `Imported ${inserted} trades; skipped ${skipped} already present`
-          : `Imported ${inserted} trades`,
+        progress.skipped > 0
+          ? `Imported ${progress.inserted} trades; skipped ${progress.skipped} already present`
+          : `Imported ${progress.inserted} trades`,
       )
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Import failed')
+      const message = error instanceof Error ? error.message : 'Import failed'
+      const saved = progress.inserted + progress.skipped
+      toast.error(
+        saved > 0
+          ? `Import stopped: ${message}. ${progress.inserted} trades were saved and ${progress.skipped} were already present. Re-import the same file to continue safely.`
+          : message,
+      )
     } finally {
       setIsImporting(false)
       if (importInputRef.current) importInputRef.current.value = ''
@@ -246,6 +337,18 @@ function JournalPage() {
     await addTrade(input)
     award('trade-logged')
     if (input.comments?.trim()) award('note-added')
+  }
+
+  if (!authIsLoading && !isAuthenticated) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-20 text-center">
+        <h1 className="font-display text-3xl">Journal unavailable</h1>
+        <p className="mt-3 text-muted-foreground">
+          Your session is not connected to the journal database. Sign in again
+          to continue.
+        </p>
+      </div>
+    )
   }
 
   if (authIsLoading || tradeDocuments === undefined) {

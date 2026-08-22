@@ -1,8 +1,11 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  markLegacyBrowserJournalMigrated,
   parseTradeFile,
+  prepareMissingTradeImport,
   prepareTradeImport,
+  readLegacyBrowserJournal,
   serializeTrades,
   tradeImportSourceId,
 } from './journal'
@@ -190,6 +193,17 @@ describe('parseTradeFile', () => {
   ])('rejects %s', (_label, input) => {
     expect(() => parseTradeFile(input)).toThrow()
   })
+
+  it.each([
+    ['asset name', 'assetName', 'A'.repeat(33)],
+    ['exchange', 'exchange', 'E'.repeat(101)],
+    ['comments', 'comments', 'C'.repeat(10_001)],
+  ])('rejects an overlong %s before upload', (_label, field, value) => {
+    const [trade] = JSON.parse(legacyExport) as Array<Record<string, unknown>>
+    expect(() =>
+      parseTradeFile(JSON.stringify([{ ...trade, [field]: value }])),
+    ).toThrow()
+  })
 })
 
 describe('tradeImportSourceId', () => {
@@ -207,5 +221,54 @@ describe('tradeImportSourceId', () => {
     expect(prepared[0].sourceId).toBe(tradeImportSourceId(trade))
     expect(prepared[1].sourceId).toBe(`${tradeImportSourceId(trade)}:1`)
     expect(prepareTradeImport([trade, trade])).toEqual(prepared)
+  })
+
+  it('preserves duplicate occurrence IDs while skipping account copies', () => {
+    const [trade] = parseTradeFile(legacyExport)
+    const [first, second] = prepareTradeImport([trade, trade])
+
+    expect(prepareMissingTradeImport([trade, trade], [first])).toEqual([second])
+    expect(prepareMissingTradeImport([trade, trade], [second])).toEqual([first])
+    expect(
+      prepareMissingTradeImport([trade, trade], [{ ...trade }, { ...trade }]),
+    ).toEqual([])
+  })
+
+  it('matches an edited account trade by its stable source ID', () => {
+    const [trade] = parseTradeFile(legacyExport)
+    const [prepared] = prepareTradeImport([trade])
+
+    expect(
+      prepareMissingTradeImport(
+        [trade],
+        [{ ...prepared, comments: 'Edited after migration' }],
+      ),
+    ).toEqual([])
+  })
+})
+
+describe('legacy browser journal migration', () => {
+  const userId = 'user_legacy'
+  const journalKey = `qc:${userId}:journal`
+  const markerKey = `${journalKey}:convex-migrated-v1`
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('reads the account-scoped journal and retains it after migration', () => {
+    const entries = new Map([[journalKey, legacyExport]])
+    vi.stubGlobal('window', {
+      localStorage: {
+        getItem: (key: string) => entries.get(key) ?? null,
+        setItem: (key: string, value: string) => entries.set(key, value),
+      },
+    })
+
+    expect(readLegacyBrowserJournal(userId)).toHaveLength(2)
+    markLegacyBrowserJournalMigrated(userId)
+    expect(entries.get(journalKey)).toBe(legacyExport)
+    expect(entries.get(markerKey)).toBe('1')
+    expect(readLegacyBrowserJournal(userId)).toBeNull()
   })
 })

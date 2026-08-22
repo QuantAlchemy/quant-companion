@@ -286,6 +286,8 @@ export const importMany = mutation({
     }
     let inserted = 0
     let skipped = 0
+    // Each Convex mutation is transactional. A validation error rolls back
+    // this batch; the client reports progress from earlier committed batches.
     for (const trade of args.trades) {
       validateTradeInput(trade)
       if (trade.closingPrice != null) {

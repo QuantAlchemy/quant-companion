@@ -36,6 +36,10 @@ export interface NewTrade {
 
 export type JournalTradeData = Omit<JournalTrade, 'id' | 'createdAt'>
 
+export interface AccountTradeData extends JournalTradeData {
+  sourceId?: string
+}
+
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -53,20 +57,29 @@ const requiredString = (
   value: unknown,
   label: string,
   index: number,
+  maximumLength?: number,
 ): string => {
-  if (typeof value !== 'string' || value.trim().length === 0) {
+  const normalized = typeof value === 'string' ? value.trim() : ''
+  if (
+    normalized.length === 0 ||
+    (maximumLength != null && normalized.length > maximumLength)
+  ) {
     throw new Error(`Trade ${index + 1} has an invalid ${label}`)
   }
-  return value.trim()
+  return normalized
 }
 
 const optionalString = (
   value: unknown,
   label: string,
   index: number,
+  maximumLength?: number,
 ): string | undefined => {
   if (value == null) return undefined
-  if (typeof value !== 'string') {
+  if (
+    typeof value !== 'string' ||
+    (maximumLength != null && value.length > maximumLength)
+  ) {
     throw new Error(`Trade ${index + 1} has an invalid ${label}`)
   }
   return value
@@ -160,6 +173,68 @@ export function prepareTradeImport(trades: JournalTradeData[]) {
   })
 }
 
+/** Prepare only browser trades not already represented in the cloud account. */
+export function prepareMissingTradeImport(
+  browserTrades: JournalTradeData[],
+  accountTrades: AccountTradeData[],
+) {
+  const preparedBrowserTrades = prepareTradeImport(browserTrades)
+  const unusedAccountIndexes = new Set(accountTrades.keys())
+  const accountIndexBySourceId = new Map<string, number>()
+  for (const [accountIndex, accountTrade] of accountTrades.entries()) {
+    if (accountTrade.sourceId != null) {
+      accountIndexBySourceId.set(accountTrade.sourceId, accountIndex)
+    }
+  }
+  const matchedBrowserIndexes = new Set<number>()
+
+  for (const [browserIndex, browserTrade] of preparedBrowserTrades.entries()) {
+    const accountIndex = accountIndexBySourceId.get(browserTrade.sourceId)
+    if (accountIndex == null) continue
+    unusedAccountIndexes.delete(accountIndex)
+    matchedBrowserIndexes.add(browserIndex)
+  }
+
+  const accountOccurrences = new Map<string, number>()
+  for (const accountIndex of unusedAccountIndexes) {
+    const trade = accountTrades[accountIndex]
+    const signature = tradeSignature(trade)
+    accountOccurrences.set(
+      signature,
+      (accountOccurrences.get(signature) ?? 0) + 1,
+    )
+  }
+
+  return preparedBrowserTrades.filter((trade, browserIndex) => {
+    if (matchedBrowserIndexes.has(browserIndex)) return false
+    const signature = tradeSignature(trade)
+    const remaining = accountOccurrences.get(signature) ?? 0
+    if (remaining === 0) return true
+    accountOccurrences.set(signature, remaining - 1)
+    return false
+  })
+}
+
+const legacyJournalKey = (userId: string) => `qc:${userId}:journal`
+const legacyMigrationKey = (userId: string) =>
+  `qc:${userId}:journal:convex-migrated-v1`
+
+/** Read the previous account-scoped browser journal without altering it. */
+export function readLegacyBrowserJournal(userId: string) {
+  if (typeof window === 'undefined') return null
+  if (window.localStorage.getItem(legacyMigrationKey(userId)) === '1') {
+    return null
+  }
+  const storedJournal = window.localStorage.getItem(legacyJournalKey(userId))
+  return storedJournal ? parseTradeFile(storedJournal) : null
+}
+
+/** Mark a successful migration while retaining the browser journal as backup. */
+export function markLegacyBrowserJournalMigrated(userId: string) {
+  if (typeof window === 'undefined') return
+  window.localStorage.setItem(legacyMigrationKey(userId), '1')
+}
+
 /** Export the account journal without Convex or ownership fields. */
 export function serializeTrades(trades: JournalTrade[]): string {
   const exportData = trades.map(({ id, createdAt, ...rest }) => rest)
@@ -201,7 +276,7 @@ export function parseTradeFile(input: string): JournalTradeData[] {
       throw new Error(`Trade ${index + 1} must be a JSON object`)
     }
 
-    const assetName = requiredString(value.assetName, 'asset name', index)
+    const assetName = requiredString(value.assetName, 'asset name', index, 32)
     const assetType = value.assetType
     if (assetType !== 'crypto' && assetType !== 'traditional') {
       throw new Error(`Trade ${index + 1} has an invalid asset type`)
@@ -272,8 +347,8 @@ export function parseTradeFile(input: string): JournalTradeData[] {
         index,
         0,
       ),
-      exchange: optionalString(value.exchange, 'exchange', index),
-      comments: optionalString(value.comments, 'comments', index),
+      exchange: optionalString(value.exchange, 'exchange', index, 100),
+      comments: optionalString(value.comments, 'comments', index, 10_000),
     }
   })
 }

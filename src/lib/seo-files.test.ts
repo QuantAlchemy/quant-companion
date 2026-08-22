@@ -85,9 +85,9 @@ describe('public search-discovery files', () => {
     expect(claimReceipts.claims.length).toBeGreaterThan(0)
     for (const receipt of claimReceipts.claims) {
       expect(receipt.claim.length).toBeGreaterThan(20)
-      expect(new URL(receipt.evidence).hostname).toBe(
-        'www.quant-companion.quantalchemy.io',
-      )
+      const evidence = new URL(receipt.evidence)
+      expect(evidence.protocol).toBe('https:')
+      expect(evidence.hostname).toBe('www.quant-companion.quantalchemy.io')
     }
   })
 

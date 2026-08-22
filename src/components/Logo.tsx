@@ -3,10 +3,13 @@ import { useId } from 'react'
 export function LogoMark({
   size = 34,
   animated = true,
+  decorative = false,
 }: {
   size?: number
   /** The favicon uses the static source. In-app marks reveal the signal line. */
   animated?: boolean
+  /** Hide the mark when adjacent text already names the product. */
+  decorative?: boolean
 }) {
   const id = useId().replace(/:/g, '')
   const violetId = `qc-violet-${id}`
@@ -14,10 +17,11 @@ export function LogoMark({
 
   return (
     <svg
-      aria-label="Quant Companion"
+      aria-hidden={decorative || undefined}
+      aria-label={decorative ? undefined : 'Quant Companion'}
       className="inline-flex shrink-0"
       height={size}
-      role="img"
+      role={decorative ? undefined : 'img'}
       viewBox="0 0 64 64"
       width={size}
     >
@@ -75,7 +79,7 @@ export function Wordmark({ className = '' }: { className?: string }) {
 export default function Logo({ size = 34 }: { size?: number }) {
   return (
     <span className="flex items-center gap-2.5">
-      <LogoMark size={size} />
+      <LogoMark size={size} decorative />
       <Wordmark className="text-xl" />
     </span>
   )

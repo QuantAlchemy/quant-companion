@@ -2,6 +2,7 @@ import { Waitlist } from '@clerk/tanstack-react-start'
 import { createFileRoute } from '@tanstack/react-router'
 
 import { LogoMark } from '@/components/Logo'
+import { isClerkClientConfigured } from '@/lib/clerk'
 import { seo } from '@/lib/seo'
 
 export const Route = createFileRoute('/waitlist')({
@@ -35,7 +36,17 @@ function WaitlistPage() {
         </ul>
       </section>
       <div className="panel p-3">
-        <Waitlist />
+        {isClerkClientConfigured() ? (
+          <Waitlist />
+        ) : (
+          <div className="max-w-sm p-8 text-center">
+            <h2 className="font-display text-2xl">Waitlist unavailable</h2>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Access requests are not configured for this environment. Please
+              try the production site or contact Quant Alchemy.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   )
