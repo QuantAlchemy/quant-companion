@@ -47,6 +47,13 @@ interface ImportProgress {
   skipped: number
 }
 
+class ImportCancelledError extends Error {
+  constructor(readonly progress: ImportProgress) {
+    super('Import cancelled because the account changed')
+    this.name = 'ImportCancelledError'
+  }
+}
+
 type PreparedTradeImport = ReturnType<typeof prepareTradeImport>
 
 const authStateFn = createServerFn().handler(async () => {
@@ -119,7 +126,8 @@ function JournalPage() {
   )
   const [isImporting, setIsImporting] = useState(false)
   const importInputRef = useRef<HTMLInputElement>(null)
-  const migrationAttemptedForUserRef = useRef<string | null>(null)
+  const migrationRunningForUserRef = useRef<string | null>(null)
+  const accountSubjectRef = useRef<string | null>(null)
 
   const trades = useMemo(
     () => (tradeDocuments ?? []).map(toJournalTrade),
@@ -136,7 +144,9 @@ function JournalPage() {
   const importPreparedTrades = useCallback(
     async (
       preparedTrades: PreparedTradeImport,
+      expectedSubject: string,
       onProgress: (progress: ImportProgress) => void,
+      isActive: () => boolean,
     ) => {
       let progress: ImportProgress = { inserted: 0, skipped: 0 }
       for (
@@ -144,12 +154,19 @@ function JournalPage() {
         index < preparedTrades.length;
         index += MAX_IMPORT_BATCH
       ) {
+        if (!isActive()) {
+          throw new ImportCancelledError(progress)
+        }
         const result = await importTrades({
+          expectedSubject,
           trades: preparedTrades.slice(index, index + MAX_IMPORT_BATCH),
         })
         progress = {
           inserted: progress.inserted + result.inserted,
           skipped: progress.skipped + result.skipped,
+        }
+        if (!isActive()) {
+          throw new ImportCancelledError(progress)
         }
         onProgress(progress)
       }
@@ -159,10 +176,34 @@ function JournalPage() {
   )
 
   useEffect(() => {
+    if (!isAuthenticated || !user?.id) {
+      accountSubjectRef.current = null
+      return
+    }
+
+    const userId = user.id
+    accountSubjectRef.current = userId
+    return () => {
+      if (accountSubjectRef.current === userId) {
+        accountSubjectRef.current = null
+      }
+    }
+  }, [isAuthenticated, user?.id])
+
+  useEffect(() => {
     const userId = user?.id
-    if (!isAuthenticated || !userId || tradeDocuments === undefined) return
-    if (migrationAttemptedForUserRef.current === userId) return
-    migrationAttemptedForUserRef.current = userId
+    if (
+      !isAuthenticated ||
+      !userId ||
+      accountSubjectRef.current !== userId ||
+      tradeDocuments === undefined
+    ) {
+      return
+    }
+    if (migrationRunningForUserRef.current === userId) return
+    migrationRunningForUserRef.current = userId
+
+    const isCurrentSession = () => accountSubjectRef.current === userId
 
     void (async () => {
       let progress: ImportProgress = { inserted: 0, skipped: 0 }
@@ -180,9 +221,11 @@ function JournalPage() {
         if (missingTrades.length > 0) {
           progress = await importPreparedTrades(
             missingTrades,
+            userId,
             (nextProgress) => {
               progress = nextProgress
             },
+            isCurrentSession,
           )
           if (progress.inserted > 0) {
             award('journal-imported')
@@ -191,8 +234,13 @@ function JournalPage() {
             )
           }
         }
+        if (!isCurrentSession()) return
         markLegacyBrowserJournalMigrated(userId)
       } catch (error) {
+        if (error instanceof ImportCancelledError) {
+          progress = error.progress
+        }
+        if (!isCurrentSession()) return
         const message =
           error instanceof Error ? error.message : 'Migration failed'
         const saved = progress.inserted + progress.skipped
@@ -201,6 +249,10 @@ function JournalPage() {
             ? `Browser journal migration stopped: ${message}. ${progress.inserted} trades were saved and ${progress.skipped} were already present. Your browser copy was kept; reload to continue safely.`
             : `Browser journal migration stopped: ${message}. Your browser copy was kept.`,
         )
+      } finally {
+        if (migrationRunningForUserRef.current === userId) {
+          migrationRunningForUserRef.current = null
+        }
       }
     })()
   }, [importPreparedTrades, isAuthenticated, tradeDocuments, user?.id])
@@ -278,11 +330,17 @@ function JournalPage() {
         throw new Error('Import files are limited to 5,000 trades')
       }
       const importableTrades = prepareTradeImport(parsed)
+      const expectedSubject = accountSubjectRef.current
+      if (!expectedSubject) {
+        throw new Error('Sign in again before importing trades')
+      }
       progress = await importPreparedTrades(
         importableTrades,
+        expectedSubject,
         (nextProgress) => {
           progress = nextProgress
         },
+        () => accountSubjectRef.current === expectedSubject,
       )
       if (progress.inserted > 0) award('journal-imported')
       toast.success(
@@ -291,6 +349,9 @@ function JournalPage() {
           : `Imported ${progress.inserted} trades`,
       )
     } catch (error) {
+      if (error instanceof ImportCancelledError) {
+        progress = error.progress
+      }
       const message = error instanceof Error ? error.message : 'Import failed'
       const saved = progress.inserted + progress.skipped
       toast.error(

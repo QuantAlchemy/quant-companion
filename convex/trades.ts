@@ -10,13 +10,16 @@ import type { MutationCtx, QueryCtx } from './_generated/server'
  * "convex" JWT template.
  */
 
-const requireUserId = async (ctx: QueryCtx | MutationCtx): Promise<string> => {
+const requireUserIdentity = async (ctx: QueryCtx | MutationCtx) => {
   const identity = await ctx.auth.getUserIdentity()
   if (!identity) {
     throw new Error('User not authenticated')
   }
-  return identity.tokenIdentifier
+  return identity
 }
+
+const requireUserId = async (ctx: QueryCtx | MutationCtx): Promise<string> =>
+  (await requireUserIdentity(ctx)).tokenIdentifier
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 const MAX_IMPORT_BATCH = 50
@@ -266,6 +269,7 @@ export const remove = mutation({
 
 export const importMany = mutation({
   args: {
+    expectedSubject: v.string(),
     trades: v.array(
       v.object({
         ...tradeInput,
@@ -278,7 +282,13 @@ export const importMany = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const userId = await requireUserId(ctx)
+    const identity = await requireUserIdentity(ctx)
+    // The client subject only prevents a stale batch after an account switch.
+    // Ownership still comes exclusively from the authenticated token.
+    if (identity.subject !== args.expectedSubject) {
+      throw new Error('Signed-in account changed during import')
+    }
+    const userId = identity.tokenIdentifier
     if (args.trades.length > MAX_IMPORT_BATCH) {
       throw new Error(
         `Import batches are limited to ${MAX_IMPORT_BATCH} trades`,
