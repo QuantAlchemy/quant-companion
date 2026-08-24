@@ -1,3 +1,4 @@
+import { Popover } from '@base-ui/react/popover'
 import {
   flexRender,
   getCoreRowModel,
@@ -5,13 +6,14 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Columns3,
   MessageSquareText,
 } from 'lucide-react'
 
@@ -45,9 +47,11 @@ import { cn } from '@/lib/utils'
 import type {
   Column,
   ColumnDef,
+  OnChangeFn,
   PaginationState,
   RowSelectionState,
   SortingState,
+  VisibilityState,
 } from '@tanstack/react-table'
 import type { JournalTrade } from '@/lib/journal'
 
@@ -66,6 +70,201 @@ interface TradeTableProps extends TradeRowActions {
     updater:
       RowSelectionState | ((old: RowSelectionState) => RowSelectionState),
   ) => void
+  columnVisibility: VisibilityState
+  onColumnVisibilityChange: OnChangeFn<VisibilityState>
+}
+
+const TRADE_COLUMN_VISIBILITY_KEY = 'quant-companion:trade-log-columns:v1'
+
+const tradeColumnOptions = [
+  { id: 'assetName', label: 'Asset', group: 'core', locked: true },
+  { id: 'tradeType', label: 'Side', group: 'core' },
+  { id: 'quantity', label: 'Quantity', group: 'core' },
+  { id: 'price', label: 'Entry price', group: 'core' },
+  { id: 'tradeDate', label: 'Date', group: 'core' },
+  { id: 'status', label: 'Status', group: 'core' },
+  { id: 'marketPrice', label: 'Market price', group: 'core' },
+  { id: 'pnl', label: 'P&L', group: 'core' },
+  { id: 'exchange', label: 'Exchange', group: 'optional' },
+  { id: 'commission', label: 'Commission', group: 'optional' },
+  { id: 'closingDate', label: 'Close date', group: 'optional' },
+  { id: 'comments', label: 'Notes', group: 'optional' },
+] as const
+
+const defaultColumnVisibility: VisibilityState = {
+  assetName: true,
+  tradeType: true,
+  quantity: true,
+  price: true,
+  tradeDate: true,
+  status: true,
+  marketPrice: true,
+  pnl: true,
+  exchange: true,
+  commission: false,
+  closingDate: false,
+  comments: false,
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+
+const readSavedColumnVisibility = (): VisibilityState => {
+  try {
+    const stored = window.localStorage.getItem(TRADE_COLUMN_VISIBILITY_KEY)
+    if (!stored) return defaultColumnVisibility
+
+    const parsed: unknown = JSON.parse(stored)
+    if (!isRecord(parsed)) return defaultColumnVisibility
+
+    const visibility = { ...defaultColumnVisibility }
+    for (const option of tradeColumnOptions) {
+      const savedValue = parsed[option.id]
+      if (!('locked' in option) && typeof savedValue === 'boolean') {
+        visibility[option.id] = savedValue
+      }
+    }
+    return visibility
+  } catch {
+    return defaultColumnVisibility
+  }
+}
+
+/** Keep each browser's Trade Log layout stable across visits. */
+export function useTradeTableColumnVisibility() {
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
+    defaultColumnVisibility,
+  )
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false)
+
+  useEffect(() => {
+    setColumnVisibility(readSavedColumnVisibility())
+    setPreferencesLoaded(true)
+  }, [])
+
+  useEffect(() => {
+    if (!preferencesLoaded) return
+
+    const savedVisibility = Object.fromEntries(
+      tradeColumnOptions
+        .filter((option) => !('locked' in option))
+        .map((option) => [option.id, columnVisibility[option.id] !== false]),
+    )
+
+    try {
+      window.localStorage.setItem(
+        TRADE_COLUMN_VISIBILITY_KEY,
+        JSON.stringify(savedVisibility),
+      )
+    } catch {
+      // The grid still works when storage is unavailable.
+    }
+  }, [columnVisibility, preferencesLoaded])
+
+  return [columnVisibility, setColumnVisibility] as const
+}
+
+interface TradeTableColumnPickerProps {
+  columnVisibility: VisibilityState
+  onColumnVisibilityChange: OnChangeFn<VisibilityState>
+}
+
+export function TradeTableColumnPicker({
+  columnVisibility,
+  onColumnVisibilityChange,
+}: TradeTableColumnPickerProps) {
+  const visibleCount = tradeColumnOptions.filter(
+    (option) => columnVisibility[option.id] !== false,
+  ).length
+
+  const renderOptions = (group: 'core' | 'optional') =>
+    tradeColumnOptions
+      .filter((option) => option.group === group)
+      .map((option) => {
+        const locked = 'locked' in option && option.locked
+        const checked = columnVisibility[option.id] !== false
+        const checkboxId = `trade-column-${option.id}`
+
+        return (
+          <label
+            key={option.id}
+            htmlFor={checkboxId}
+            className={cn(
+              'flex min-h-8 items-center gap-2 rounded-md px-1.5 py-1 text-sm',
+              locked
+                ? 'cursor-default'
+                : 'cursor-pointer hover:bg-accent hover:text-accent-foreground',
+            )}
+          >
+            <Checkbox
+              id={checkboxId}
+              checked={checked}
+              disabled={locked}
+              onCheckedChange={(nextChecked) =>
+                onColumnVisibilityChange((current) => ({
+                  ...current,
+                  [option.id]: nextChecked === true,
+                }))
+              }
+            />
+            <span>{option.label}</span>
+            {locked && (
+              <span className="ml-auto text-[10px] text-muted-foreground">
+                Always on
+              </span>
+            )}
+          </label>
+        )
+      })
+
+  return (
+    <Popover.Root>
+      <Popover.Trigger
+        render={
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-primary/40 bg-primary/10 hover:bg-primary/15"
+          />
+        }
+      >
+        <Columns3 />
+        Columns
+        <span className="ml-0.5 font-mono text-[10px] text-muted-foreground">
+          {visibleCount}/{tradeColumnOptions.length}
+        </span>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Positioner
+          side="bottom"
+          sideOffset={6}
+          align="end"
+          className="isolate z-50"
+        >
+          <Popover.Popup className="max-h-(--available-height) w-64 origin-(--transform-origin) overflow-y-auto rounded-lg bg-popover p-2 text-popover-foreground shadow-lg ring-1 ring-foreground/10 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95">
+            <Popover.Title className="px-1.5 pt-0.5 text-sm font-semibold">
+              Visible columns
+            </Popover.Title>
+            <Popover.Description className="px-1.5 pt-1 pb-2 text-[11px] text-muted-foreground">
+              Your selection is remembered on this device.
+            </Popover.Description>
+            <div className="border-t border-border/70 pt-1">
+              <p className="px-1.5 py-1 font-mono text-[9px] tracking-[0.14em] text-muted-foreground uppercase">
+                Core
+              </p>
+              {renderOptions('core')}
+            </div>
+            <div className="mt-1 border-t border-border/70 pt-1">
+              <p className="px-1.5 py-1 font-mono text-[9px] tracking-[0.14em] text-muted-foreground uppercase">
+                Optional
+              </p>
+              {renderOptions('optional')}
+            </div>
+          </Popover.Popup>
+        </Popover.Positioner>
+      </Popover.Portal>
+    </Popover.Root>
+  )
 }
 
 const pnlClass = (value: number | null | undefined) =>
@@ -81,6 +280,7 @@ function SortHeader({
   const sorted = column.getIsSorted()
   return (
     <button
+      type="button"
       className={cn(
         'inline-flex items-center gap-1 transition-colors hover:text-foreground',
         sorted ? 'text-foreground' : 'text-muted-foreground',
@@ -118,6 +318,8 @@ export function TradeTable({
   prices,
   rowSelection,
   onRowSelectionChange,
+  columnVisibility,
+  onColumnVisibilityChange,
   onClose,
   onSplit,
   onEdit,
@@ -159,8 +361,9 @@ export function TradeTable({
       },
       {
         accessorKey: 'assetName',
+        enableHiding: false,
         header: ({ column }) => <SortHeader column={column}>Asset</SortHeader>,
-        cell: ({ row }) => (
+        cell: ({ row, table }) => (
           <div className="flex items-center gap-1.5">
             <span className="font-mono font-semibold">
               {row.original.assetName}
@@ -168,20 +371,37 @@ export function TradeTable({
             <Badge variant="outline" className="text-[10px] uppercase">
               {row.original.assetType === 'crypto' ? 'crypto' : 'trad'}
             </Badge>
-            {row.original.comments && (
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <MessageSquareText className="h-3.5 w-3.5 text-muted-foreground" />
-                  }
-                />
-                <TooltipContent className="max-w-72">
-                  {row.original.comments}
-                </TooltipContent>
-              </Tooltip>
-            )}
+            {row.original.comments &&
+              !table.getColumn('comments')?.getIsVisible() && (
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <MessageSquareText className="h-3.5 w-3.5 text-muted-foreground" />
+                    }
+                  />
+                  <TooltipContent className="max-w-72">
+                    {row.original.comments}
+                  </TooltipContent>
+                </Tooltip>
+              )}
           </div>
         ),
+      },
+      {
+        accessorKey: 'exchange',
+        header: ({ column }) => (
+          <SortHeader column={column}>Exchange</SortHeader>
+        ),
+        cell: ({ getValue }) => {
+          const exchange = getValue<string | undefined>()
+          return (
+            <span
+              className={cn('text-xs', !exchange && 'text-muted-foreground')}
+            >
+              {exchange || '—'}
+            </span>
+          )
+        },
       },
       {
         accessorKey: 'tradeType',
@@ -217,19 +437,63 @@ export function TradeTable({
         ),
       },
       {
+        accessorKey: 'commission',
+        header: ({ column }) => (
+          <SortHeader column={column}>Commission</SortHeader>
+        ),
+        sortingFn: (rowA, rowB) =>
+          compareNullableNumbers(
+            rowA.original.commission,
+            rowB.original.commission,
+          ),
+        cell: ({ getValue }) => {
+          const commission = getValue<number | undefined>()
+          return (
+            <span
+              className={cn(
+                'tabular',
+                commission == null && 'text-muted-foreground',
+              )}
+            >
+              {commission == null ? '—' : currencyFormatter.format(commission)}
+            </span>
+          )
+        },
+      },
+      {
         accessorKey: 'tradeDate',
         header: ({ column }) => <SortHeader column={column}>Date</SortHeader>,
-        cell: ({ row }) => (
+        cell: ({ row, table }) => (
           <span className="tabular text-xs">
             {row.original.tradeDate.slice(0, 10)}
-            {row.original.closingDate && (
-              <span className="text-muted-foreground">
-                {' '}
-                → {row.original.closingDate.slice(0, 10)}
-              </span>
-            )}
+            {row.original.closingDate &&
+              !table.getColumn('closingDate')?.getIsVisible() && (
+                <span className="text-muted-foreground">
+                  {' '}
+                  → {row.original.closingDate.slice(0, 10)}
+                </span>
+              )}
           </span>
         ),
+      },
+      {
+        accessorKey: 'closingDate',
+        header: ({ column }) => (
+          <SortHeader column={column}>Close date</SortHeader>
+        ),
+        cell: ({ getValue }) => {
+          const closingDate = getValue<string | undefined>()
+          return (
+            <span
+              className={cn(
+                'tabular text-xs',
+                !closingDate && 'text-muted-foreground',
+              )}
+            >
+              {closingDate?.slice(0, 10) ?? '—'}
+            </span>
+          )
+        },
       },
       {
         accessorKey: 'status',
@@ -329,7 +593,29 @@ export function TradeTable({
         },
       },
       {
+        accessorKey: 'comments',
+        header: ({ column }) => <SortHeader column={column}>Notes</SortHeader>,
+        cell: ({ getValue }) => {
+          const comments = getValue<string | undefined>()
+          if (!comments) return <span className="text-muted-foreground">—</span>
+
+          return (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <span className="block max-w-72 truncate text-xs">
+                    {comments}
+                  </span>
+                }
+              />
+              <TooltipContent className="max-w-72">{comments}</TooltipContent>
+            </Tooltip>
+          )
+        },
+      },
+      {
         id: 'actions',
+        enableHiding: false,
         header: '',
         cell: ({ row }) => {
           const trade = row.original
@@ -368,10 +654,11 @@ export function TradeTable({
   const table = useReactTable({
     data: trades,
     columns,
-    state: { sorting, rowSelection, pagination },
+    state: { sorting, rowSelection, pagination, columnVisibility },
     onSortingChange: setSorting,
     onRowSelectionChange,
     onPaginationChange: setPagination,
+    onColumnVisibilityChange,
     getRowId: (row) => row.id,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -410,7 +697,7 @@ export function TradeTable({
             {table.getRowModel().rows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={columns.length}
+                  colSpan={table.getVisibleLeafColumns().length}
                   className="py-10 text-center text-muted-foreground"
                 >
                   No trades yet - log your first transmutation.

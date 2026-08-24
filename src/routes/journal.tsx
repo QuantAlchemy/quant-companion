@@ -15,7 +15,10 @@ import {
   SplitTradeDialog,
   TradeFormDialog,
 } from '@/components/journal/TradeDialogs'
-import TradeTable from '@/components/journal/TradeTable'
+import TradeTable, {
+  TradeTableColumnPicker,
+  useTradeTableColumnVisibility,
+} from '@/components/journal/TradeTable'
 import PerformanceOverview from '@/components/performance/PerformanceOverview'
 import { Button } from '@/components/ui/button'
 import { api } from '@/../convex/_generated/api'
@@ -118,6 +121,8 @@ function JournalPage() {
   const importTrades = useMutation(api.trades.importMany)
   const startingEquity = useStore(startingEquityStore)
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
+  const [columnVisibility, setColumnVisibility] =
+    useTradeTableColumnVisibility()
   const [formOpen, setFormOpen] = useState(false)
   const [editingTrade, setEditingTrade] = useState<JournalTrade | null>(null)
   const [closingTrade, setClosingTrade] = useState<JournalTrade | null>(null)
@@ -496,11 +501,16 @@ function JournalPage() {
                 Delete {selectedTradeIds.length}
               </Button>
             )}
+            <TradeTableColumnPicker
+              columnVisibility={columnVisibility}
+              onColumnVisibilityChange={setColumnVisibility}
+            />
             <Button
               variant="ghost"
               size="sm"
               onClick={() => void pricesQuery.refetch()}
               disabled={pricesQuery.isFetching}
+              aria-label="Refresh market prices"
               title="Refresh market prices"
             >
               <RefreshCw
@@ -514,6 +524,8 @@ function JournalPage() {
           prices={prices}
           rowSelection={rowSelection}
           onRowSelectionChange={setRowSelection}
+          columnVisibility={columnVisibility}
+          onColumnVisibilityChange={setColumnVisibility}
           onClose={setClosingTrade}
           onSplit={setSplittingTrade}
           onEdit={(trade) => {
