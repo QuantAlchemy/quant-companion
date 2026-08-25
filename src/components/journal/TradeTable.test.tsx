@@ -142,4 +142,37 @@ describe('TradeTable column visibility', () => {
       screen.getByRole('columnheader', { name: /Commission/ }),
     ).toBeTruthy()
   })
+
+  it('opens notes from a keyboard-focusable control in both column states', async () => {
+    const firstRender = render(<TradeTableHarness />)
+    const compactTrigger = screen.getByRole('button', {
+      name: 'View note for STRC',
+    })
+
+    compactTrigger.focus()
+    expect(document.activeElement).toBe(compactTrigger)
+    fireEvent.click(compactTrigger)
+    expect(
+      await screen.findByRole('heading', { name: 'Note for STRC' }),
+    ).toBeTruthy()
+    expect(
+      screen.getByRole('button', { name: 'Close note for STRC' }),
+    ).toBeTruthy()
+
+    firstRender.unmount()
+    window.localStorage.clear()
+    render(<TradeTableHarness />)
+    fireEvent.click(screen.getByRole('button', { name: 'Change columns' }))
+
+    const visibleNotesTrigger = screen.getByRole('button', {
+      name: 'View note for STRC',
+    })
+    expect(visibleNotesTrigger.textContent).toBe('Long-term allocation')
+    visibleNotesTrigger.focus()
+    expect(document.activeElement).toBe(visibleNotesTrigger)
+    fireEvent.click(visibleNotesTrigger)
+    expect(
+      await screen.findByRole('heading', { name: 'Note for STRC' }),
+    ).toBeTruthy()
+  })
 })

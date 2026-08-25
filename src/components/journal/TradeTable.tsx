@@ -15,6 +15,7 @@ import {
   ChevronsRight,
   Columns3,
   MessageSquareText,
+  X,
 } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
@@ -35,11 +36,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
 import { currencyFormatter } from '@/lib/format'
 import { unrealizedPnl } from '@/lib/performance'
 import { cn } from '@/lib/utils'
@@ -270,6 +266,61 @@ export function TradeTableColumnPicker({
 const pnlClass = (value: number | null | undefined) =>
   value == null ? '' : value >= 0 ? 'text-profit' : 'text-loss'
 
+function TradeCommentPopover({
+  assetName,
+  comments,
+  compact = false,
+}: {
+  assetName: string
+  comments: string
+  compact?: boolean
+}) {
+  return (
+    <Popover.Root>
+      <Popover.Trigger
+        aria-label={`View note for ${assetName}`}
+        className={cn(
+          'border-0 bg-transparent p-0 text-left outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50',
+          compact
+            ? 'inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground'
+            : 'block max-w-72 truncate rounded-sm text-xs underline decoration-border underline-offset-2 hover:text-foreground',
+        )}
+      >
+        {compact ? (
+          <MessageSquareText aria-hidden="true" className="h-3.5 w-3.5" />
+        ) : (
+          comments
+        )}
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Positioner
+          side="bottom"
+          sideOffset={6}
+          align="start"
+          className="isolate z-50"
+        >
+          <Popover.Popup className="w-80 max-w-(--available-width) origin-(--transform-origin) rounded-lg bg-popover p-3 text-popover-foreground shadow-lg ring-1 ring-foreground/10 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95">
+            <div className="flex items-start justify-between gap-3">
+              <Popover.Title className="text-sm font-semibold">
+                Note for <span className="font-mono">{assetName}</span>
+              </Popover.Title>
+              <Popover.Close
+                aria-label={`Close note for ${assetName}`}
+                className="inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+              >
+                <X aria-hidden="true" className="size-3.5" />
+              </Popover.Close>
+            </div>
+            <p className="mt-2 whitespace-pre-wrap break-words text-sm text-muted-foreground">
+              {comments}
+            </p>
+          </Popover.Popup>
+        </Popover.Positioner>
+      </Popover.Portal>
+    </Popover.Root>
+  )
+}
+
 function SortHeader({
   column,
   children,
@@ -373,16 +424,11 @@ export function TradeTable({
             </Badge>
             {row.original.comments &&
               !table.getColumn('comments')?.getIsVisible() && (
-                <Tooltip>
-                  <TooltipTrigger
-                    render={
-                      <MessageSquareText className="h-3.5 w-3.5 text-muted-foreground" />
-                    }
-                  />
-                  <TooltipContent className="max-w-72">
-                    {row.original.comments}
-                  </TooltipContent>
-                </Tooltip>
+                <TradeCommentPopover
+                  assetName={row.original.assetName}
+                  comments={row.original.comments}
+                  compact
+                />
               )}
           </div>
         ),
@@ -595,21 +641,15 @@ export function TradeTable({
       {
         accessorKey: 'comments',
         header: ({ column }) => <SortHeader column={column}>Notes</SortHeader>,
-        cell: ({ getValue }) => {
+        cell: ({ getValue, row }) => {
           const comments = getValue<string | undefined>()
           if (!comments) return <span className="text-muted-foreground">—</span>
 
           return (
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <span className="block max-w-72 truncate text-xs">
-                    {comments}
-                  </span>
-                }
-              />
-              <TooltipContent className="max-w-72">{comments}</TooltipContent>
-            </Tooltip>
+            <TradeCommentPopover
+              assetName={row.original.assetName}
+              comments={comments}
+            />
           )
         },
       },
