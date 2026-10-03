@@ -152,6 +152,23 @@ describe('closed journal corrections', () => {
     })
   })
 
+  it('removes a cleared commission while preserving historical gross P&L', async () => {
+    const { ctx, tradeId, records, trades } = journal({
+      status: 'closed',
+      ...exit,
+      realizedPnl: 75,
+      commission: 20,
+    })
+    // Convex omits undefined object fields, as when the form clears commission.
+    await handler(edit)(ctx, { ...entry, tradeId })
+    expect(records.get(tradeId)?.commission).toBeUndefined()
+    expect(records.get(tradeId)?.realizedPnl).toBe(75)
+    expect(
+      summarizePerformance(journalTradesToPerformanceTrades(trades()))
+        .realizedPnl,
+    ).toBe(75)
+  })
+
   it('allows notes on incomplete historical trades but rejects calculation changes', async () => {
     const { ctx, tradeId, records, patch } = journal({
       status: 'closed',

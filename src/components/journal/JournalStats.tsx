@@ -86,8 +86,12 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
     )
     const open = trades.filter((t) => t.status === 'open')
 
-    const wins = closed.filter((t) => (netJournalPnl(t.realizedPnl, t.commission) ?? 0) > 0)
-    const losses = closed.filter((t) => (netJournalPnl(t.realizedPnl, t.commission) ?? 0) < 0)
+    const wins = closed.filter(
+      (t) => (netJournalPnl(t.realizedPnl, t.commission) ?? 0) > 0,
+    )
+    const losses = closed.filter(
+      (t) => (netJournalPnl(t.realizedPnl, t.commission) ?? 0) < 0,
+    )
     const winRate = closed.length > 0 ? wins.length / closed.length : 0
 
     const realizedPnlTotal = closed.reduce(
@@ -98,9 +102,15 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
       (sum, t) => sum + (unrealizedPnl(t, prices) ?? 0),
       0,
     )
-    const grossProfit = wins.reduce((sum, t) => sum + (netJournalPnl(t.realizedPnl, t.commission) ?? 0), 0)
+    const grossProfit = wins.reduce(
+      (sum, t) => sum + (netJournalPnl(t.realizedPnl, t.commission) ?? 0),
+      0,
+    )
     const grossLoss = Math.abs(
-      losses.reduce((sum, t) => sum + (netJournalPnl(t.realizedPnl, t.commission) ?? 0), 0),
+      losses.reduce(
+        (sum, t) => sum + (netJournalPnl(t.realizedPnl, t.commission) ?? 0),
+        0,
+      ),
     )
     const profitFactor =
       grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0
@@ -116,13 +126,12 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
     const avgDollarAtWork =
       closed.length > 0 ? closedCostBasis / closed.length : 0
     const openCostBasis = open.reduce((sum, t) => sum + t.price * t.quantity, 0)
-    const openMarketValue = openCostBasis + open.reduce(
-      (sum, t) => {
+    const openMarketValue =
+      openCostBasis +
+      open.reduce((sum, t) => {
         const pnl = unrealizedPnl(t, prices)
         return sum + (pnl == null ? 0 : pnl + (t.commission ?? 0))
-      },
-      0,
-    )
+      }, 0)
     const expectancyPct =
       avgDollarAtWork > 0 ? (expectancy / avgDollarAtWork) * 100 : 0
     const unrealizedPct =
@@ -136,10 +145,16 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
         : null
     const longTermPnl = closed
       .filter((t) => holdingDays(t) >= 365)
-      .reduce((sum, t) => sum + (netJournalPnl(t.realizedPnl, t.commission) ?? 0), 0)
+      .reduce(
+        (sum, t) => sum + (netJournalPnl(t.realizedPnl, t.commission) ?? 0),
+        0,
+      )
     const shortTermPnl = closed
       .filter((t) => holdingDays(t) < 365)
-      .reduce((sum, t) => sum + (netJournalPnl(t.realizedPnl, t.commission) ?? 0), 0)
+      .reduce(
+        (sum, t) => sum + (netJournalPnl(t.realizedPnl, t.commission) ?? 0),
+        0,
+      )
     const assetPerformance = [
       ...closed
         .reduce((assetMap, trade) => {
@@ -215,7 +230,10 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
     const monthly = new Map<string, number>()
     for (const t of stats.closed) {
       const month = (t.closingDate ?? t.tradeDate).slice(0, 7)
-      monthly.set(month, (monthly.get(month) ?? 0) + (netJournalPnl(t.realizedPnl, t.commission) ?? 0))
+      monthly.set(
+        month,
+        (monthly.get(month) ?? 0) + (netJournalPnl(t.realizedPnl, t.commission) ?? 0),
+      )
     }
     const months = [...monthly.keys()].sort()
     const values = months.map((m) => monthly.get(m) ?? 0)

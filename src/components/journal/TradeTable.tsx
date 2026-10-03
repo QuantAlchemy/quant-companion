@@ -597,7 +597,9 @@ export function TradeTable({
       },
       {
         id: 'pnl',
-        header: ({ column }) => <SortHeader column={column}>Net P&L</SortHeader>,
+        header: ({ column }) => (
+          <SortHeader column={column}>Net P&L</SortHeader>
+        ),
         sortingFn: (rowA, rowB) => {
           const pnlValue = (trade: JournalTrade) =>
             trade.status === 'closed'
@@ -614,15 +616,14 @@ export function TradeTable({
             const pnl = netJournalPnl(trade.realizedPnl, trade.commission)
             return (
               <span
-                title={trade.realizedPnl != null ? `Gross P&L: ${currencyFormatter.format(trade.realizedPnl)}` : undefined}
-                className={cn(
-                  'tabular font-semibold',
-                  pnlClass(pnl),
-                )}
+                title={
+                  trade.realizedPnl != null
+                    ? `Gross P&L: ${currencyFormatter.format(trade.realizedPnl)}`
+                    : undefined
+                }
+                className={cn('tabular font-semibold', pnlClass(pnl))}
               >
-                {pnl != null
-                  ? currencyFormatter.format(pnl)
-                  : '—'}
+                {pnl != null ? currencyFormatter.format(pnl) : '—'}
               </span>
             )
           }

@@ -77,9 +77,10 @@ export const calculateJournalUnrealizedPnl = (
   if (marketPrice == null) return null
   const entryValue = trade.price * trade.quantity
   const currentValue = marketPrice * trade.quantity
-  const grossPnl = trade.tradeType === 'buy'
-    ? currentValue - entryValue
-    : entryValue - currentValue
+  const grossPnl =
+    trade.tradeType === 'buy'
+      ? currentValue - entryValue
+      : entryValue - currentValue
   return netJournalPnl(grossPnl, trade.commission)
 }
 

@@ -160,7 +160,9 @@ export const edit = mutation({
     let realizedPnl = trade.realizedPnl
     if (trade.status === 'closed' && calculationChanged) {
       if (trade.closingPrice == null) {
-        throw new Error('Cannot recalculate a closed trade without a closing price')
+        throw new Error(
+          'Cannot recalculate a closed trade without a closing price',
+        )
       }
       assertPositiveNumber(trade.closingPrice, 'Closing price')
       realizedPnl = realizedPnlFor(
@@ -176,6 +178,8 @@ export const edit = mutation({
 
     await ctx.db.patch(tradeId, {
       ...args,
+      // A cleared form field is omitted from the request; remove its saved fee.
+      commission: args.commission,
       // Preserve supplied historical gross P&L when calculation inputs match.
       realizedPnl,
       assetName: args.assetName.trim().toUpperCase(),
