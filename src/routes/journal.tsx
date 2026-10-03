@@ -237,10 +237,11 @@ function JournalPage() {
         }
         if (!isCurrentSession()) return
         if (progress.conflicts > 0) {
-          throw new Error(
-            `${progress.conflicts} trades have conflicting risk. Existing trades were kept`,
+          toast.warning(
+            `Browser recovery kept ${progress.conflicts} account trades with different recorded risk. Your browser backup was retained.`,
           )
         }
+        // Account risk wins during recovery; retain the browser backup without retrying.
         markLegacyBrowserJournalMigrated(userId)
       } catch (error) {
         if (error instanceof ImportCancelledError) {
