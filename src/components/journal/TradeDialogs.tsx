@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { netJournalPnl } from '@/lib/journal'
 import { currencyFormatter } from '@/lib/format'
 
 import type {
@@ -309,9 +310,12 @@ export function CloseTradeDialog({
 
   const estPnl =
     closingPrice > 0
-      ? (trade.tradeType === 'buy'
-          ? closingPrice - trade.price
-          : trade.price - closingPrice) * trade.quantity
+      ? netJournalPnl(
+          (trade.tradeType === 'buy'
+            ? closingPrice - trade.price
+            : trade.price - closingPrice) * trade.quantity,
+          trade.commission,
+        )
       : null
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -325,7 +329,7 @@ export function CloseTradeDialog({
     try {
       const pnl = await onCloseTrade(closingPrice, closingDate)
       toast.success(
-        `Closed ${trade.assetName} for ${currencyFormatter.format(pnl)} ${pnl >= 0 ? 'profit' : 'loss'}`,
+        `Closed ${trade.assetName} for ${currencyFormatter.format(pnl)} net ${pnl >= 0 ? 'profit' : 'loss'}`,
       )
       onOpenChange(false)
     } catch (error) {
@@ -375,7 +379,7 @@ export function CloseTradeDialog({
             <p
               className={`tabular text-sm font-semibold ${estPnl >= 0 ? 'text-profit' : 'text-loss'}`}
             >
-              Estimated P&L: {currencyFormatter.format(estPnl)}
+              Estimated net P&L: {currencyFormatter.format(estPnl)}
             </p>
           )}
           <DialogFooter>
@@ -444,7 +448,7 @@ export function SplitTradeDialog({
     try {
       const pnl = await onSplitTrade(closingPrice, closingDate, closingQuantity)
       toast.success(
-        `Partially closed ${trade.assetName} for ${currencyFormatter.format(pnl)}`,
+        `Partially closed ${trade.assetName} for ${currencyFormatter.format(pnl)} net P&L`,
       )
       onOpenChange(false)
     } catch (error) {

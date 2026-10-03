@@ -1,9 +1,10 @@
 /** @vitest-environment jsdom */
 
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { JournalStats } from './JournalStats'
+import TradeTable from './TradeTable'
 import type { JournalTrade } from '@/lib/journal'
 import type { PlotParams } from 'react-plotly.js'
 
@@ -81,4 +82,81 @@ describe('recorded R-multiples', () => {
     expect(screen.getByText('0.50R')).toBeTruthy()
     expect(rTrace()?.y).toEqual([2, -0.5, 0])
   })
+})
+
+const closedTrade: JournalTrade = {
+  id: 'closed',
+  createdAt: 1,
+  assetName: 'TEST',
+  assetType: 'traditional',
+  quantity: 10,
+  price: 100,
+  tradeType: 'buy',
+  tradeDate: '2026-09-01',
+  status: 'closed',
+  closingPrice: 101,
+  closingDate: '2026-09-02',
+  realizedPnl: 10,
+  commission: 20,
+}
+
+function Journal({ trade }: { trade: JournalTrade }) {
+  return (
+    <>
+      <TradeTable
+        trades={[trade]}
+        prices={{}}
+        rowSelection={{}}
+        onRowSelectionChange={vi.fn()}
+        columnVisibility={{}}
+        onColumnVisibilityChange={vi.fn()}
+        onClose={vi.fn()}
+        onSplit={vi.fn()}
+        onEdit={vi.fn()}
+      />
+      <JournalStats trades={[trade]} prices={{}} />
+    </>
+  )
+}
+
+it('shows net losses in the row, expectancy, win rate, and charts after corrections', () => {
+  const { rerender } = render(<Journal trade={closedTrade} />)
+  const checkResult = (netPnl: number) => {
+    expect(screen.getByRole('columnheader', { name: /Net P&L/ })).toBeTruthy()
+    const rowPnl = screen.getByTitle(/Gross P&L:/)
+    expect(rowPnl.textContent).toBe(`-$${Math.abs(netPnl).toFixed(2)}`)
+    expect(rowPnl.className).toContain('text-loss')
+    expect(rowPnl.closest('tr')?.className).toContain('border-l-loss')
+    expect(screen.getByText('0W / 1L')).toBeTruthy()
+    const expectancy = screen.getByText('Expectancy').parentElement!
+    expect(
+      within(expectancy).getByText(`-$${Math.abs(netPnl).toFixed(2)}`),
+    ).toBeTruthy()
+    const plots = screen
+      .getAllByTestId('plot')
+      .map(
+        (plot) =>
+          JSON.parse(plot.textContent) as Array<{
+            name: string
+            y?: number[]
+            values?: number[]
+          }>,
+      )
+    expect(plots.flat()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'Realized net P&L', y: [netPnl] }),
+        expect.objectContaining({ name: 'Monthly net P&L', y: [netPnl] }),
+        expect.objectContaining({ values: [0, 1] }),
+      ]),
+    )
+  }
+  checkResult(-10)
+  rerender(<Journal trade={{ ...closedTrade, price: 102, realizedPnl: -10 }} />)
+  checkResult(-30)
+  rerender(<Journal trade={{ ...closedTrade, quantity: 4, realizedPnl: 4 }} />)
+  checkResult(-16)
+  rerender(
+    <Journal trade={{ ...closedTrade, tradeType: 'sell', realizedPnl: -10 }} />,
+  )
+  checkResult(-30)
 })

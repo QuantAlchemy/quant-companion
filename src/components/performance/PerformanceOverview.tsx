@@ -90,13 +90,13 @@ export function PerformanceOverview({
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricTile
-          label="Realized P&L"
+          label="Realized net P&L"
           value={currencyFormatter.format(summary.realizedPnl)}
           sub={`${summary.closedTrades} closed trades`}
           tone={summary.realizedPnl}
         />
         <MetricTile
-          label="Total P&L"
+          label="Total net P&L"
           value={currencyFormatter.format(summary.totalPnl)}
           sub={
             summary.openTrades > 0
