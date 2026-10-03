@@ -207,12 +207,12 @@ export function validateHeaders(headers: string[], config: HeaderConfig): boolea
 }
 
 // Function to transform data according to header configuration
-export function transformDataByHeaderConfig<T extends Record<string, string | number>>(
+export function transformDataByHeaderConfig<T extends Record<string, string | number | null | undefined>>(
   data: T[],
   config: HeaderConfig
 ): T[] {
   return data.map((record) => {
-    const transformedRecord: Record<string, string | number> = {}
+    const transformedRecord: Record<string, string | number | null | undefined> = {}
 
     // Process each field in the record
     Object.entries(record).forEach(([key, value]) => {
