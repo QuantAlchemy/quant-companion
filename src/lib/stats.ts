@@ -399,12 +399,8 @@ export function processTradingViewData(
   const groups = new Map<number, TradingViewRecord[]>()
   const excludedOpenTrades: number[] = []
   trades.forEach((trade, index) => {
-    const tradeNum = trade['Trade #']
-    if (
-      typeof tradeNum !== 'number' ||
-      !Number.isInteger(tradeNum) ||
-      tradeNum <= 0
-    ) {
+    const tradeNum = Number(trade['Trade #'])
+    if (!Number.isInteger(tradeNum) || tradeNum <= 0) {
       throw new Error(
         `${filename} - row ${index + 2}: provide a valid Trade #.`,
       )

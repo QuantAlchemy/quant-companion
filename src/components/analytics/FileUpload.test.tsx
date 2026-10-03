@@ -90,12 +90,12 @@ function csvFile(
   })
 }
 
-function xlsxFile(config: HeaderConfig, date1904 = false) {
+function xlsxFile(config: HeaderConfig, date1904 = false, rows = mixedRows) {
   const workbook = XLSX.utils.book_new()
   workbook.Workbook = { WBProps: { date1904 } }
   XLSX.utils.book_append_sheet(
     workbook,
-    XLSX.utils.json_to_sheet(exportRows(mixedRows, config, true, date1904)),
+    XLSX.utils.json_to_sheet(exportRows(rows, config, true, date1904)),
     'List of trades',
   )
   const buffer = XLSX.write(workbook, {
@@ -104,7 +104,10 @@ function xlsxFile(config: HeaderConfig, date1904 = false) {
   }) as ArrayBuffer
   const file = new File([buffer], 'trades.xlsx')
   // jsdom's File lacks arrayBuffer; the workbook bytes still use the real XLSX reader.
-  Object.defineProperty(file, 'arrayBuffer', { value: async () => buffer })
+  Object.defineProperty(file, 'arrayBuffer', {
+    value: async () => buffer,
+    configurable: true,
+  })
   return file
 }
 
@@ -163,6 +166,32 @@ describe('trade pairing', () => {
 })
 
 describe('file uploads', () => {
+  it('accepts Excel trade numbers stored as text', async () => {
+    const rows = mixedRows.map((record) => ({
+      ...record,
+      'Trade #': String(record['Trade #']),
+    }))
+    const { container } = render(<FileUpload />)
+    upload(container, [xlsxFile(tradingViewExportHeaderConfig, false, rows)])
+    await screen.findByRole('status')
+    expect(
+      originalTradeDataStore.state?.map((trade) => trade.tradeNoOrig),
+    ).toEqual([1, 2])
+  })
+
+  it('preserves ISO CSV timestamps with timezone offsets', async () => {
+    const rows = closedRows.map((record) => ({
+      ...record,
+      'Date/Time': `${String(record['Date/Time']).replace(' ', 'T')}-04:00`,
+    }))
+    const { container } = render(<FileUpload />)
+    upload(container, [csvFile(rows)])
+    await waitFor(() => expect(originalTradeDataStore.state).toHaveLength(2))
+    expect(originalTradeDataStore.state?.[0].entryDate.toISOString()).toBe(
+      '2026-01-01T13:30:15.250Z',
+    )
+  })
+
   it('imports complete CSV trades and reports the excluded open trade', async () => {
     const { container } = render(<FileUpload />)
     upload(container, [csvFile()])
@@ -234,6 +263,38 @@ describe('file uploads', () => {
     expect(originalTradeDataStore.state?.[0].entryDate).toEqual(
       new Date(2026, 0, 1, 9, 30, 15, 250),
     )
+  })
+
+  it('keeps the selected mapping while reading and prevents overlapping uploads', async () => {
+    currentHeaderConfigStore.setState(() => defaultHeaderConfig)
+    const file = xlsxFile(defaultHeaderConfig)
+    const buffer = await file.arrayBuffer()
+    let finishReading!: (value: ArrayBuffer) => void
+    vi.spyOn(file, 'arrayBuffer').mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finishReading = resolve
+        }),
+    )
+    const { container } = render(<FileUpload />)
+    upload(container, [file])
+    expect(
+      screen
+        .getByRole('button', { name: 'Upload Data' })
+        .hasAttribute('disabled'),
+    ).toBe(true)
+    currentHeaderConfigStore.setState(() => tradingViewExportHeaderConfig)
+    upload(container, [csvFile(closedRows, 'overlap.csv')])
+    finishReading(buffer)
+    await screen.findByRole('status')
+    expect(
+      originalTradeDataStore.state?.map((trade) => trade.filename),
+    ).toEqual(['trades.xlsx', 'trades.xlsx'])
+    expect(
+      screen
+        .getByRole('button', { name: 'Upload Data' })
+        .hasAttribute('disabled'),
+    ).toBe(false)
   })
 
   it.each(['malformed', 'open only', 'empty', 'wrong headers'] as const)(

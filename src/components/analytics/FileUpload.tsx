@@ -29,10 +29,18 @@ const processCSVFile = (
   file: File,
   config: HeaderConfig,
 ): Promise<TradingViewRecord[]> => {
+  const dateHeaders = config.mappings
+    .filter((mapping) => mapping.targetHeader === TARGET_HEADERS.DATE_TIME)
+    .flatMap((mapping) => [
+      mapping.sourceHeader,
+      ...(mapping.alternatives ?? []),
+    ])
+    .map((header) => header.trim())
   return new Promise((resolve, reject) => {
     Papa.parse(file, {
       header: true,
-      dynamicTyping: true,
+      // Keep ISO dates as strings instead of Papa Parse's automatic Date objects.
+      dynamicTyping: (field) => !dateHeaders.includes(String(field).trim()),
       skipEmptyLines: true,
       complete: function (csv: ParseResult<TradingViewRecord>) {
         const { data, errors, meta } = csv
