@@ -77,20 +77,20 @@ export interface SummaryStats {
   winRate: number
   totalProfit: number
   averageProfit: number
-  averageProfitWin: number
-  averageProfitLoss: number
+  averageProfitWin: number | null
+  averageProfitLoss: number | null
   medianProfit: number
-  medianProfitWin: number
-  medianProfitLoss: number
+  medianProfitWin: number | null
+  medianProfitLoss: number | null
   firstStdDev: number
   secondStdDev: number
   maxProfit: number
   minProfit: number
   maxDrawdown: number
   maxDrawdownPercent: number
-  mar: number
-  netProfitByAvgDrawdown: number
-  sharpeRatio: number
+  mar: number | null
+  netProfitByAvgDrawdown: number | null
+  sharpeRatio: number | null
 }
 
 export interface ProbabilityConeData {
@@ -220,7 +220,16 @@ export const applyTradeDataView = (): void => {
     selectedFile === ALL_TRADE_FILES
       ? originalData
       : originalData.filter((trade) => trade.filename === selectedFile)
-  const { topCount, bottomCount } = tradeTrimStore.state
+  const trim = tradeTrimStore.state
+  const clampCount = (count: number) =>
+    Number.isFinite(count)
+      ? Math.min(filteredData.length, Math.max(0, Math.floor(count)))
+      : 0
+  const topCount = clampCount(trim.topCount)
+  const bottomCount = clampCount(trim.bottomCount)
+  if (topCount !== trim.topCount || bottomCount !== trim.bottomCount) {
+    tradeTrimStore.setState(() => ({ topCount, bottomCount }))
+  }
 
   const topTrades = [...filteredData]
     .sort((a, b) => b.exitProfit - a.exitProfit)
@@ -333,7 +342,7 @@ export const calculateDrawdowns = (
 export const calculateZScores = (data: number[]): number[] => {
   const average = mean(data)
   const stdDev = standardDeviation(data)
-  return data.map((value) => (value - average) / stdDev)
+  return data.map((value) => (stdDev > 0 ? (value - average) / stdDev : 0))
 }
 
 // Calculate next date `i` points in the future from the date provided based on the average time delta
@@ -514,14 +523,18 @@ export const simulateTradeData = (): TradeRecord[] => {
 
 // Process raw data into format needed for charts
 export const processTradeMetrics = (
-  rawData: TradeRecord[],
+  rawData: Pick<TradeRecord, 'exitDate' | 'exitProfit'>[],
   startingEquity: number = 100000,
-): TradeMetrics => {
+): TradeMetrics | null => {
+  if (rawData.length === 0) return null
+
   // we add one data point for the starting date and equity so the dates and equity values are the same length
   // as an estimate, we use the average time delta between dates to estimate the date for the extra equity value
   const dates = rawData.map((trade) => trade.exitDate)
   const avgTimeDelta = averageTimeDelta(dates)
-  const startingDate = calculateNextDate(dates[0], -1, avgTimeDelta)
+  const startingDate = calculateNextDate(
+    dates[0], -1, avgTimeDelta > 0 ? avgTimeDelta : DAY_MS,
+  )
   dates.unshift(startingDate)
 
   const equity = rawData.reduce(
@@ -586,9 +599,7 @@ export const generateProbabilityCones = (
 
   // Check if we have enough data points for meaningful calculation
   if (historicalLength < 2) {
-    console.error(
-      'Insufficient historical data points for calculating probability cones. Need at least 2 points.',
-    )
+    return { futureDates: [], upperCone: [], lowerCone: [] }
   }
 
   // Calculate historical returns using the equity values
@@ -680,9 +691,7 @@ export const generateLinearProbabilityCones = (
 
   // Check if we have enough data points for meaningful calculation
   if (historicalLength < 2) {
-    console.error(
-      'Insufficient historical data points for calculating probability cones. Need at least 2 points.',
-    )
+    return { futureDates: [], upperCone: [], lowerCone: [] }
   }
 
   // Calculate average daily return and standard deviation using the specified length of historical data
@@ -762,11 +771,15 @@ export const calculateSummaryStats = (data: TradeMetrics): SummaryStats => {
   const totalProfitWin = winningTrades.reduce((sum, profit) => sum + profit, 0)
   const totalProfitLoss = losingTrades.reduce((sum, profit) => sum + profit, 0)
   const averageProfit = totalProfit / totalTrades
-  const averageProfitWin = totalProfitWin / winningTradesCnt
-  const averageProfitLoss = totalProfitLoss / losingTradesCnt
+  const averageProfitWin = winningTradesCnt
+    ? totalProfitWin / winningTradesCnt
+    : null
+  const averageProfitLoss = losingTradesCnt
+    ? totalProfitLoss / losingTradesCnt
+    : null
   const medianProfit = median(data.netProfit)
-  const medianProfitWin = median(winningTrades)
-  const medianProfitLoss = median(losingTrades)
+  const medianProfitWin = winningTradesCnt ? median(winningTrades) : null
+  const medianProfitLoss = losingTradesCnt ? median(losingTrades) : null
   const firstStdDev = standardDeviation(data.netProfit)
   const secondStdDev = 2 * firstStdDev
   const maxProfit = Math.max(...data.netProfit)
@@ -776,10 +789,11 @@ export const calculateSummaryStats = (data: TradeMetrics): SummaryStats => {
   const maxDrawdownPercent = Math.max(
     ...drawdowns.map((dd) => dd.drawdownPercent),
   )
-  const netProfitByAvgDrawdown =
-    totalProfit / mean(drawdowns.map((dd) => dd.drawdownValue))
+  const netProfitByAvgDrawdown = finiteOrNull(
+    totalProfit / mean(drawdowns.map((dd) => dd.drawdownValue)),
+  )
   const mar = marRatio(data)
-  const sharpeRatio = calculateSharpeRatio(data.equity, data.dates)
+  const sharpeRatio = calculateRealizedEquitySharpe(data)
 
   // INFO: Trading Edge Ratio: (MFE/MAE > 1)
   // To accurately calculate MFE and MAE, you need intra-trade data capturing the peak unrealized profits during each trade.
@@ -816,7 +830,8 @@ export const calculateSummaryStats = (data: TradeMetrics): SummaryStats => {
 // annualizing returns. This standardization is crucial because it accounts for the effect of time on returns.
 // Return Period: If you calculate the return over a period that is not one year and do not annualize it, then the resulting ratio will
 // not accurately represent the MAR Ratio.
-const marRatio = (data: TradeMetrics): number => {
+const marRatio = (data: TradeMetrics): number | null => {
+  if (data.equity.some((value) => value <= 0)) return null
   const startingEquity = data.equity[0]
   const finalEquity = data.equity[data.equity.length - 1]
   const totalReturn = finalEquity - startingEquity
@@ -831,76 +846,78 @@ const marRatio = (data: TradeMetrics): number => {
   const maxDrawdownPercent = Math.max(
     ...drawdowns.map((dd) => dd.drawdownPercent),
   )
-  return annualizedReturnPercent / (maxDrawdownPercent * 100)
+  return finiteOrNull(annualizedReturnPercent / (maxDrawdownPercent * 100))
 }
 
-// Function to calculate Sharpe ratio
-// 1. Calculate Periodic Returns Adjusted for Time Intervals
-//   * Calculating Logarithmic Returns (Continuously Compounded Returns): This is preferred for irregular time intervals.
-//   * Annualizing Returns: Adjusting the returns to a common annual scale based on the time difference between trades.
-// 2. Adjust for the Risk-Free Rate
-//   * Since the risk-free rate is typically an annual rate, you can subtract it directly from the annualized returns to get the excess returns.
-// 3. Calculate the Mean and Standard Deviation of Excess Returns
-//   * Mean Excess Return: Average of the excess returns.
-//   * Standard Deviation of Excess Returns: Measures the variability of the excess returns.
-// 4. Calculate the Sharpe Ratio
+const DAY_MS = 86_400_000
+const DAYS_PER_YEAR = 365.25
+const finiteOrNull = (value: number): number | null =>
+  Number.isFinite(value) ? value : null
+
+// The chart's estimated starting date must not add idle days to realized returns.
+// Sample from the day before the first close through the last close, inclusive.
+export const calculateRealizedEquitySharpe = (
+  data: TradeMetrics,
+): number | null => {
+  if (data.netProfit.length === 0) return null
+  const baseline = new Date(
+    Math.floor(data.dates[1].getTime() / DAY_MS) * DAY_MS - DAY_MS,
+  )
+  return calculateSharpeRatio(data.equity, [baseline, ...data.dates.slice(1)])
+}
+
+// UTC calendar-day log returns, carrying equity forward on days without closes.
+// Same-day observations use the last equity. The first observation is the baseline.
+// Use sample volatility and convert the annual effective risk-free rate to daily log units.
 export const calculateSharpeRatio = (
   equityValues: number[],
   dates: Date[],
   riskFreeRate: number = 0.02,
-) => {
-  if (equityValues.length !== dates.length) {
-    throw new Error('Equity values and dates arrays must have the same length.')
+): number | null => {
+  if (
+    equityValues.length !== dates.length ||
+    equityValues.length < 2 ||
+    !Number.isFinite(riskFreeRate) ||
+    riskFreeRate <= -1 ||
+    equityValues.some((value) => !Number.isFinite(value) || value <= 0)
+  ) {
+    return null
   }
 
-  const excessReturns = []
-
-  for (let i = 1; i < equityValues.length; i++) {
-    const equityPrev = equityValues[i - 1]
-    const equityCurr = equityValues[i]
-    const datePrev = new Date(dates[i - 1])
-    const dateCurr = new Date(dates[i])
-
-    // Time difference in years
-    const timeDiff =
-      (dateCurr.getTime() - datePrev.getTime()) / (365.25 * 24 * 60 * 60 * 1000)
-
-    // Handle cases where time difference is zero or negative
-    if (timeDiff <= 0) {
-      continue // Skip this interval
+  const dailyEquity = new Map<number, number>()
+  for (let i = 0; i < dates.length; i++) {
+    const time = dates[i].getTime()
+    if (!Number.isFinite(time) || (i > 0 && time < dates[i - 1].getTime())) {
+      return null
     }
-
-    // Logarithmic return
-    const logReturn = Math.log(equityCurr / equityPrev)
-
-    // Annualized return
-    const annualizedReturn = logReturn * (1 / timeDiff)
-
-    // Excess return
-    const excessReturn = annualizedReturn - riskFreeRate
-
-    excessReturns.push(excessReturn)
+    dailyEquity.set(Math.floor(time / DAY_MS), equityValues[i])
   }
 
-  if (excessReturns.length === 0) {
-    throw new Error('No valid returns to calculate Sharpe Ratio.')
+  const firstDay = Math.floor(dates[0].getTime() / DAY_MS)
+  const lastDay = Math.floor(dates[dates.length - 1].getTime() / DAY_MS)
+  if (lastDay - firstDay < 2) return null
+
+  const dailyRiskFree = Math.log1p(riskFreeRate) / DAYS_PER_YEAR
+  const excessReturns: number[] = []
+  let previousEquity = dailyEquity.get(firstDay)!
+  for (let day = firstDay + 1; day <= lastDay; day++) {
+    const equity = dailyEquity.get(day) ?? previousEquity
+    excessReturns.push(Math.log(equity / previousEquity) - dailyRiskFree)
+    previousEquity = equity
   }
 
-  // Calculate mean and standard deviation of excess returns
-  const meanExcessReturn =
-    excessReturns.reduce((sum, r) => sum + r, 0) / excessReturns.length
-
-  const stdDevExcessReturn = Math.sqrt(
+  const meanExcessReturn = mean(excessReturns)
+  const volatility = Math.sqrt(
     excessReturns.reduce(
-      (sum, r) => sum + Math.pow(r - meanExcessReturn, 2),
-      0,
+      (sum, value) => sum + (value - meanExcessReturn) ** 2, 0,
     ) /
       (excessReturns.length - 1),
   )
-
-  const sharpeRatio = meanExcessReturn / stdDevExcessReturn
-
-  return sharpeRatio
+  // Floating-point noise in equal log returns is not measurable volatility.
+  if (volatility <= Number.EPSILON) return null
+  return finiteOrNull(
+    (meanExcessReturn / volatility) * Math.sqrt(DAYS_PER_YEAR),
+  )
 }
 
 // // Function to filter data by date range

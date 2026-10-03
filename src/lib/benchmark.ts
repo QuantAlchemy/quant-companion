@@ -1,4 +1,8 @@
-import { calculateDrawdowns, calculateSharpeRatio } from '@/lib/stats'
+import {
+  calculateDrawdowns,
+  calculateRealizedEquitySharpe,
+  calculateSharpeRatio,
+} from '@/lib/stats'
 import { currencyFormatter, percentageFormatter } from '@/lib/format'
 
 import type { DailyBar } from '@/lib/prices'
@@ -97,19 +101,13 @@ export function benchmarkComparison(
     ...calculateDrawdowns(benchEquity).map((d) => d.drawdownPercent),
   )
 
-  let stratSharpe = NaN
-  let benchSharpe = NaN
-  try {
-    stratSharpe = calculateSharpeRatio(metrics.equity, metrics.dates)
-    benchSharpe = calculateSharpeRatio(benchEquity, benchDates)
-  } catch {
-    // insufficient data for one of the Sharpe computations — compare what we have
-  }
+  const stratSharpe = calculateRealizedEquitySharpe(metrics)
+  const benchSharpe = calculateSharpeRatio(benchEquity, benchDates)
 
   const betterReturn = stratReturnPct > benchReturnPct
   const betterDrawdown = stratMaxDd < benchMaxDd
   const betterSharpe =
-    Number.isFinite(stratSharpe) && Number.isFinite(benchSharpe)
+    stratSharpe !== null && benchSharpe !== null
       ? stratSharpe > benchSharpe
       : betterReturn
 
@@ -143,7 +141,7 @@ export function benchmarkComparison(
       {
         label: 'Sharpe (strategy / benchmark)',
         value:
-          Number.isFinite(stratSharpe) && Number.isFinite(benchSharpe)
+          stratSharpe !== null && benchSharpe !== null
             ? `${stratSharpe.toFixed(2)} / ${benchSharpe.toFixed(2)}`
             : 'n/a',
         tone: betterSharpe ? 'pass' : 'watch',
