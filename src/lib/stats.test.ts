@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
+import { benchmarkComparison } from '@/lib/benchmark'
+
 import {
   calculateRealizedEquitySharpe,
   calculateSharpeRatio,
@@ -188,4 +190,26 @@ describe('small trade sets', () => {
     })
     expect(calculateZScores([5, 5])).toEqual([0, 0])
   })
+})
+
+it('compares benchmark Sharpe over the requested range without shortening the strategy history', () => {
+  const metrics = processTradeMetrics(
+    [1000, -500, 2000].map((exitProfit, i) => ({
+      exitDate: day((i + 1) * 30),
+      exitProfit,
+    })),
+    10000,
+  )!
+  let close = 100
+  const bars = Array.from({ length: 91 }, (_, i) => {
+    if (i > 0) close *= Math.exp(0.0035 + (i % 2 ? 0.03 : -0.03))
+    return { date: day(i).toISOString().slice(0, 10), close }
+  })
+  const result = benchmarkComparison(metrics, bars, 'TEST')
+  expect(result.status).toBe('invalidate')
+  expect(
+    result.metrics.find(
+      (metric) => metric.label === 'Sharpe (strategy / benchmark)',
+    )?.value,
+  ).toBe('2.16 / 2.18')
 })

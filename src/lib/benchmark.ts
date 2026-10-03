@@ -1,8 +1,4 @@
-import {
-  calculateDrawdowns,
-  calculateRealizedEquitySharpe,
-  calculateSharpeRatio,
-} from '@/lib/stats'
+import { calculateDrawdowns, calculateSharpeRatio } from '@/lib/stats'
 import { currencyFormatter, percentageFormatter } from '@/lib/format'
 
 import type { DailyBar } from '@/lib/prices'
@@ -101,7 +97,8 @@ export function benchmarkComparison(
     ...calculateDrawdowns(benchEquity).map((d) => d.drawdownPercent),
   )
 
-  const stratSharpe = calculateRealizedEquitySharpe(metrics)
+  // Keep the benchmark comparison on the requested chart date range for both series.
+  const stratSharpe = calculateSharpeRatio(metrics.equity, metrics.dates)
   const benchSharpe = calculateSharpeRatio(benchEquity, benchDates)
 
   const betterReturn = stratReturnPct > benchReturnPct
