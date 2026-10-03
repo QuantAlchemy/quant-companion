@@ -110,6 +110,93 @@ describe('recorded trade risk', () => {
     ).toBe(100)
   })
 
+  it('does not duplicate imported trades after risk edits and a backup round trip', async () => {
+    const t = convexTest(schema, modules).withIdentity(identity)
+    await t.mutation(api.trades.importMany, {
+      expectedSubject: identity.subject,
+      trades: prepareTradeImport(parseTradeFile(JSON.stringify([input]))),
+    })
+    const [original] = await t.query(api.trades.list)
+    for (const initialRisk of [100, 150, null]) {
+      await t.mutation(api.trades.edit, {
+        ...input,
+        tradeId: original._id,
+        initialRisk,
+      })
+      const [trade] = await t.query(api.trades.list)
+      const { _id, _creationTime, userId: _userId, ...data } = trade
+      const backup = serializeTrades([
+        { ...data, id: _id, createdAt: _creationTime },
+      ])
+      expect(
+        await t.mutation(api.trades.importMany, {
+          expectedSubject: identity.subject,
+          trades: prepareTradeImport(parseTradeFile(backup)),
+        }),
+      ).toEqual({ inserted: 0, skipped: 1 })
+      const saved = await t.query(api.trades.list)
+      expect(saved).toHaveLength(1)
+      expect(saved[0].initialRisk).toBe(initialRisk ?? undefined)
+    }
+  })
+
+  it('keeps distinct risks when an ID-free backup gains a trade in a different order', async () => {
+    const t = convexTest(schema, modules).withIdentity(identity)
+    const first = { ...input, status: 'open' as const, initialRisk: 100 }
+    const second = { ...first, initialRisk: 200 }
+    await t.mutation(api.trades.importMany, {
+      expectedSubject: identity.subject,
+      trades: prepareTradeImport([first]),
+    })
+    expect(
+      await t.mutation(api.trades.importMany, {
+        expectedSubject: identity.subject,
+        trades: prepareTradeImport([second, first]),
+      }),
+    ).toEqual({ inserted: 1, skipped: 1 })
+    expect(
+      (await t.query(api.trades.list)).map((trade) => trade.initialRisk).sort(),
+    ).toEqual([100, 200])
+  })
+
+  it.each([false, true])(
+    'restores every row in a mixed backup, reversed: %s',
+    async (reverse) => {
+      const t = convexTest(schema, modules).withIdentity(identity)
+      await t.mutation(api.trades.importMany, {
+        expectedSubject: identity.subject,
+        trades: prepareTradeImport([
+          { ...input, status: 'open', initialRisk: 100 },
+        ]),
+      })
+      await t.mutation(api.trades.add, { ...input, initialRisk: 100 })
+      const rows = (await t.query(api.trades.list)).map(
+        ({ _id, _creationTime, userId: _userId, ...data }) => ({
+          ...data,
+          id: _id,
+          createdAt: _creationTime,
+        }),
+      )
+      const backup = serializeTrades(reverse ? rows.reverse() : rows)
+      const other = convexTest(schema, modules).withIdentity(identity)
+      const args = {
+        expectedSubject: identity.subject,
+        trades: prepareTradeImport(parseTradeFile(backup)),
+      }
+      expect(await other.mutation(api.trades.importMany, args)).toEqual({
+        inserted: 2,
+        skipped: 0,
+      })
+      expect(
+        (await other.query(api.trades.list)).map((trade) => trade.initialRisk),
+      ).toEqual([100, 100])
+      expect(await other.mutation(api.trades.importMany, args)).toEqual({
+        inserted: 0,
+        skipped: 2,
+      })
+    },
+  )
+
   it('imports and splits older trades without inventing risk', async () => {
     const t = convexTest(schema, modules).withIdentity(identity)
     await t.mutation(api.trades.importMany, {

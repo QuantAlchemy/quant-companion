@@ -96,13 +96,7 @@ function JournalRoute() {
 }
 
 const toJournalTrade = (trade: Doc<'trades'>): JournalTrade => {
-  const {
-    _creationTime,
-    _id,
-    sourceId: _sourceId,
-    userId: _userId,
-    ...journalData
-  } = trade
+  const { _creationTime, _id, userId: _userId, ...journalData } = trade
   return { ...journalData, id: _id, createdAt: _creationTime }
 }
 

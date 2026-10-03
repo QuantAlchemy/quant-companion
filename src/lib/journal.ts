@@ -6,6 +6,7 @@ export type TradeStatus = 'open' | 'closed'
 
 export interface JournalTrade {
   id: string
+  sourceId?: string
   assetName: string
   assetType: AssetType
   quantity: number
@@ -38,9 +39,7 @@ export interface NewTrade {
 
 export type JournalTradeData = Omit<JournalTrade, 'id' | 'createdAt'>
 
-export interface AccountTradeData extends JournalTradeData {
-  sourceId?: string
-}
+export type AccountTradeData = JournalTradeData
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 
@@ -165,14 +164,25 @@ export function tradeImportSourceId(trade: JournalTradeData) {
 /** Preserve identical trades while keeping repeated imports idempotent. */
 export function prepareTradeImport(trades: JournalTradeData[]) {
   const occurrences = new Map<string, number>()
+  const sourceIds = new Set(
+    trades.flatMap((trade) => (trade.sourceId == null ? [] : [trade.sourceId])),
+  )
   return trades.map((trade) => {
+    // Exported import IDs survive edits; older files still use content identity.
+    if (trade.sourceId != null) return { ...trade, sourceId: trade.sourceId }
     const baseSourceId = tradeImportSourceId(trade)
-    const occurrence = occurrences.get(baseSourceId) ?? 0
-    occurrences.set(baseSourceId, occurrence + 1)
+    let occurrence = occurrences.get(baseSourceId) ?? 0
+    let sourceId: string
+    do {
+      sourceId =
+        occurrence === 0 ? baseSourceId : `${baseSourceId}:${occurrence}`
+      occurrence += 1
+    } while (sourceIds.has(sourceId))
+    occurrences.set(baseSourceId, occurrence)
+    sourceIds.add(sourceId)
     return {
       ...trade,
-      sourceId:
-        occurrence === 0 ? baseSourceId : `${baseSourceId}:${occurrence}`,
+      sourceId,
     }
   })
 }
@@ -344,6 +354,10 @@ export function parseTradeFile(input: string): JournalTradeData[] {
         : storedRealizedPnl
 
     return {
+      sourceId:
+        value.sourceId == null
+          ? undefined
+          : requiredString(value.sourceId, 'import source ID', index, 128),
       assetName: assetName.toUpperCase(),
       assetType,
       quantity,
