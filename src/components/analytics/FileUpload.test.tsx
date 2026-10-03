@@ -168,10 +168,29 @@ describe('trade pairing', () => {
 })
 
 describe('file uploads', () => {
+  it('preserves short fractional seconds and their chronological order', async () => {
+    const rows = [
+      { ...closedRows[0], 'Date/Time': '01/01/2026 09:30:15.09' },
+      { ...closedRows[1], 'Date/Time': '01/01/2026 09:30:15.1' },
+      ...closedRows.slice(2),
+    ]
+    const { container } = render(<FileUpload />)
+    upload(container, [csvFile(rows)])
+    await waitFor(() => expect(originalTradeDataStore.state).toHaveLength(2))
+    expect(originalTradeDataStore.state?.[0].entryDate.getMilliseconds()).toBe(
+      90,
+    )
+    expect(originalTradeDataStore.state?.[0].exitDate.getMilliseconds()).toBe(
+      100,
+    )
+  })
+
   it.each([
     ['Date/Time', 'invalid'],
     ['Date/Time', '46023'],
     ['Date/Time', '2026-02-30 10:00:00'],
+    ['Date/Time', '2026/02/30 10:00:00'],
+    ['Date/Time', '02/30/2026 10:00:00'],
     ['Date/Time', '2026-01-03 25:00:00'],
     ['Price', 'invalid'],
     ['Contracts', 'invalid'],
@@ -240,6 +259,20 @@ describe('file uploads', () => {
     )
   })
 
+  it('uses normalized date components when constructing offset timestamps', async () => {
+    const rows = [
+      { ...closedRows[0], 'Date/Time': '2026-1-1T9:30:15.250-0400' },
+      { ...closedRows[1], 'Date/Time': '2026-1-1T10:45:30.500-0400' },
+      ...closedRows.slice(2),
+    ]
+    const { container } = render(<FileUpload />)
+    upload(container, [csvFile(rows)])
+    await waitFor(() => expect(originalTradeDataStore.state).toHaveLength(2))
+    expect(originalTradeDataStore.state?.[0].entryDate.toISOString()).toBe(
+      '2026-01-01T13:30:15.250Z',
+    )
+  })
+
   it('imports complete CSV trades and reports the excluded open trade', async () => {
     const { container } = render(<FileUpload />)
     upload(container, [csvFile()])
@@ -264,6 +297,25 @@ describe('file uploads', () => {
         : mapping,
     ),
   }
+
+  it.each([
+    '2026/01/01 09:30:15.250',
+    '2026/1/1 9:30:15.250',
+    '01/01/2026 09:30:15.250',
+    '01/01/2026T09:30:15.250',
+  ])('preserves custom CSV date format %s', async (date) => {
+    currentHeaderConfigStore.setState(() => customConfig)
+    const rows = [
+      { ...closedRows[0], 'Date/Time': date },
+      ...closedRows.slice(1),
+    ]
+    const { container } = render(<FileUpload />)
+    upload(container, [csvFile(rows, 'custom.csv', customConfig)])
+    await waitFor(() => expect(originalTradeDataStore.state).toHaveLength(2))
+    expect(originalTradeDataStore.state?.[0].entryDate).toEqual(
+      new Date(2026, 0, 1, 9, 30, 15, 250),
+    )
+  })
 
   it.each([defaultHeaderConfig, tradingViewExportHeaderConfig, customConfig])(
     'matches CSV dates and performance for $name numeric XLSX dates',

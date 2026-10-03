@@ -398,6 +398,29 @@ const tradeDateSchema = z.union([
   z.iso.datetime({ local: true, offset: true }),
 ])
 
+function normalizeTradeDate(value: string): string {
+  const isoDate = (_match: string, year: string, month: string, day: string) =>
+    `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+  return value
+    .replace(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/, isoDate)
+    .replace(
+      /^(\d{1,2})\/(\d{1,2})\/(\d{4})/,
+      (match: string, month: string, day: string, year: string) =>
+        isoDate(match, year, month, day),
+    )
+    .replace(' ', 'T')
+    .replace(
+      /T(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/,
+      (_match, hour: string, minute: string, second: string | undefined) =>
+        `T${hour.padStart(2, '0')}:${minute.padStart(2, '0')}${second === undefined ? '' : `:${second.padStart(2, '0')}`}`,
+    )
+    .replace(
+      /\.(\d+)/,
+      (_match, fraction: string) => `.${fraction.padEnd(3, '0')}`,
+    )
+    .replace(/([+-]\d{2})(\d{2})$/, '$1:$2')
+}
+
 export function processTradingViewData(
   filename: string,
   trades: TradingViewRecord[],
@@ -412,7 +435,11 @@ export function processTradingViewData(
       )
     }
     const group = groups.get(tradeNum) ?? []
-    group.push(trade)
+    const date = trade['Date/Time']
+    group.push({
+      ...trade,
+      'Date/Time': typeof date === 'string' ? normalizeTradeDate(date) : date,
+    })
     groups.set(tradeNum, group)
   })
 
@@ -443,10 +470,10 @@ export function processTradingViewData(
       const prefix = row === entry ? 'entry' : 'exit'
       if (
         typeof row['Date/Time'] !== 'string' ||
-        !tradeDateSchema.safeParse(row['Date/Time'].replace(' ', 'T')).success
+        !tradeDateSchema.safeParse(row['Date/Time']).success
       ) {
         fail(
-          `Provide a valid ${prefix} Date/Time in YYYY-MM-DD or YYYY-MM-DD HH:mm:ss format. ISO timestamps with timezone offsets are also supported.`,
+          `Provide a valid ${prefix} Date/Time in YYYY-MM-DD, YYYY/MM/DD, or MM/DD/YYYY format, with an optional time. ISO timestamps with timezone offsets are also supported.`,
         )
       }
       for (const key of ['Price', 'Contracts', 'Profit']) {
