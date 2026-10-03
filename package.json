@@ -64,6 +64,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@edge-runtime/vm": "^5.0.0",
     "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/typography": "^0.5.16",
     "@tanstack/devtools-event-client": "0.5.0",
@@ -80,6 +81,7 @@
     "@types/react-dom": "^19.2.0",
     "@types/react-plotly.js": "^2.6.4",
     "@vitejs/plugin-react": "^6.0.1",
+    "convex-test": "^0.0.54",
     "eslint": "^9.20.0",
     "jsdom": "^28.1.0",
     "prettier": "^3.8.1",

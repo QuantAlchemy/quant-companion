@@ -17,6 +17,7 @@ export interface JournalTrade {
   closingDate?: string
   realizedPnl?: number
   commission?: number
+  initialRisk?: number
   exchange?: string
   comments?: string
   createdAt: number
@@ -30,6 +31,7 @@ export interface NewTrade {
   tradeType: TradeType
   tradeDate: string
   commission?: number
+  initialRisk?: number
   exchange?: string
   comments?: string
 }
@@ -139,6 +141,8 @@ export const tradeSignature = (trade: JournalTradeData) =>
     trade.commission ?? null,
     trade.exchange ?? null,
     trade.comments ?? null,
+    // Preserve the source IDs of backups created before risk was recorded.
+    ...(trade.initialRisk == null ? [] : [trade.initialRisk]),
   ])
 
 const stableHash = (input: string) => {
@@ -303,6 +307,15 @@ export function parseTradeFile(input: string): JournalTradeData[] {
       )
     }
 
+    const initialRisk = optionalFiniteNumber(
+      value.initialRisk,
+      'initial risk',
+      index,
+      0,
+    )
+    if (initialRisk === 0) {
+      throw new Error(`Trade ${index + 1} must have a positive initial risk`)
+    }
     const closingPrice = optionalFiniteNumber(
       value.closingPrice,
       'closing price',
@@ -341,6 +354,7 @@ export function parseTradeFile(input: string): JournalTradeData[] {
       closingPrice,
       closingDate,
       realizedPnl,
+      initialRisk,
       commission: optionalFiniteNumber(
         value.commission,
         'commission',

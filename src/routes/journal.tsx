@@ -397,7 +397,11 @@ function JournalPage() {
 
   const saveTrade = async (input: NewTrade) => {
     if (editingTrade) {
-      await editTrade({ tradeId: requireTradeId(editingTrade.id), ...input })
+      await editTrade({
+        tradeId: requireTradeId(editingTrade.id),
+        ...input,
+        initialRisk: input.initialRisk ?? null,
+      })
       return
     }
     await addTrade(input)

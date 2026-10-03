@@ -81,6 +81,7 @@ describe('parseTradeFile', () => {
       commission: 12.5,
     })
     expect(trades[0]).not.toHaveProperty('marketPrice')
+    expect(trades.every((trade) => trade.initialRisk === undefined)).toBe(true)
   })
 
   it('parses Convex snapshot JSONL and drops ownership fields', () => {
@@ -121,7 +122,10 @@ describe('parseTradeFile', () => {
   })
 
   it('round-trips the public export shape', () => {
-    const parsed = parseTradeFile(legacyExport)
+    const parsed = parseTradeFile(legacyExport).map((trade, index) => ({
+      ...trade,
+      initialRisk: index === 0 ? 100 : undefined,
+    }))
     const exported = serializeTrades(
       parsed.map((trade, index) => ({
         ...trade,
@@ -131,6 +135,16 @@ describe('parseTradeFile', () => {
     )
     expect(parseTradeFile(exported)).toEqual(parsed)
   })
+
+  it.each([0, -1, '100', 'Infinity'])(
+    'rejects invalid imported risk %s',
+    (initialRisk) => {
+      const [trade] = parseTradeFile(legacyExport)
+      expect(() =>
+        parseTradeFile(JSON.stringify([{ ...trade, initialRisk }])),
+      ).toThrow(/initial risk/)
+    },
+  )
 
   it.each([
     ['missing fields', JSON.stringify([{ assetName: 'BTC' }])],
@@ -210,9 +224,20 @@ describe('tradeImportSourceId', () => {
   it('builds a stable key from normalized trade content', () => {
     const [trade] = parseTradeFile(legacyExport)
     expect(tradeImportSourceId(trade)).toMatch(/^import:[a-f0-9]{16}$/)
+    expect(tradeImportSourceId(trade)).toBe('import:1edfc0c38fc3644f')
     expect(tradeImportSourceId(trade)).toBe(
       tradeImportSourceId(parseTradeFile(legacyExport)[0]),
     )
+  })
+
+  it('distinguishes trades with different recorded risk', () => {
+    const [trade] = parseTradeFile(legacyExport)
+    const variants = [
+      trade,
+      { ...trade, initialRisk: 100 },
+      { ...trade, initialRisk: 200 },
+    ]
+    expect(new Set(variants.map(tradeImportSourceId)).size).toBe(3)
   })
 
   it('preserves identical trades with deterministic distinct source IDs', () => {
