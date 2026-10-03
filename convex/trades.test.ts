@@ -159,6 +159,35 @@ describe('recorded trade risk', () => {
     ).toEqual([100, 200])
   })
 
+  it('rejects conflicting risk for the same import ID without dropping a record silently', async () => {
+    const t = convexTest(schema, modules).withIdentity(identity)
+    const [first] = prepareTradeImport([
+      { ...input, status: 'open', initialRisk: 100 },
+    ])
+    await t.mutation(api.trades.importMany, {
+      expectedSubject: identity.subject,
+      trades: [first],
+    })
+    await expect(
+      t.mutation(api.trades.importMany, {
+        expectedSubject: identity.subject,
+        trades: [{ ...first, initialRisk: 200 }],
+      }),
+    ).rejects.toThrow('conflicting initial risk')
+    const saved = await t.query(api.trades.list)
+    expect(saved).toHaveLength(1)
+    expect(saved[0].initialRisk).toBe(100)
+    expect(
+      await t.mutation(api.trades.importMany, {
+        expectedSubject: identity.subject,
+        trades: [{ ...first, initialRisk: 200, sourceId: 'separate-trade' }],
+      }),
+    ).toEqual({ inserted: 1, skipped: 0 })
+    expect(
+      (await t.query(api.trades.list)).map((trade) => trade.initialRisk).sort(),
+    ).toEqual([100, 200])
+  })
+
   it.each([false, true])(
     'restores every row in a mixed backup, reversed: %s',
     async (reverse) => {

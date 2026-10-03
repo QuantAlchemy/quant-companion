@@ -345,6 +345,12 @@ export const importMany = mutation({
         )
         .unique()
       if (existing) {
+        // A reused identity with different risk needs an explicit user choice.
+        if (existing.initialRisk !== trade.initialRisk) {
+          throw new Error(
+            `Import source ID ${trade.sourceId} has conflicting initial risk. The existing trade was kept. To import a separate trade, give that backup record a new, unique sourceId.`,
+          )
+        }
         skipped += 1
         continue
       }
