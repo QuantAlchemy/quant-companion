@@ -319,6 +319,7 @@ export const importMany = mutation({
     }
     let inserted = 0
     let skipped = 0
+    let conflicts = 0
     // Each Convex mutation is transactional. A validation error rolls back
     // this batch; the client reports progress from earlier committed batches.
     for (const trade of args.trades) {
@@ -345,11 +346,10 @@ export const importMany = mutation({
         )
         .unique()
       if (existing) {
-        // A reused identity with different risk needs an explicit user choice.
+        // Keep current risk and report conflicts without blocking other records.
         if (existing.initialRisk !== trade.initialRisk) {
-          throw new Error(
-            `Import source ID ${trade.sourceId} has conflicting initial risk. The existing trade was kept. To import a separate trade, give that backup record a new, unique sourceId.`,
-          )
+          conflicts += 1
+          continue
         }
         skipped += 1
         continue
@@ -361,6 +361,6 @@ export const importMany = mutation({
       })
       inserted += 1
     }
-    return { inserted, skipped }
+    return { inserted, skipped, conflicts }
   },
 })

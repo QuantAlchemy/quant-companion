@@ -200,13 +200,16 @@ export function prepareMissingTradeImport(
       accountIndexBySourceId.set(accountTrade.sourceId, accountIndex)
     }
   }
-  const matchedBrowserIndexes = new Set<number>()
+  const matchingRiskByBrowserIndex = new Map<number, boolean>()
 
   for (const [browserIndex, browserTrade] of preparedBrowserTrades.entries()) {
     const accountIndex = accountIndexBySourceId.get(browserTrade.sourceId)
     if (accountIndex == null) continue
     unusedAccountIndexes.delete(accountIndex)
-    matchedBrowserIndexes.add(browserIndex)
+    matchingRiskByBrowserIndex.set(
+      browserIndex,
+      accountTrades[accountIndex].initialRisk === browserTrade.initialRisk,
+    )
   }
 
   const accountOccurrences = new Map<string, number>()
@@ -220,7 +223,9 @@ export function prepareMissingTradeImport(
   }
 
   return preparedBrowserTrades.filter((trade, browserIndex) => {
-    if (matchedBrowserIndexes.has(browserIndex)) return false
+    const matchingRisk = matchingRiskByBrowserIndex.get(browserIndex)
+    // Let the importer report risk conflicts instead of marking them migrated.
+    if (matchingRisk !== undefined) return !matchingRisk
     const signature = tradeSignature(trade)
     const remaining = accountOccurrences.get(signature) ?? 0
     if (remaining === 0) return true

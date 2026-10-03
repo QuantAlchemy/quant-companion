@@ -49,6 +49,7 @@ describe('recorded trade risk', () => {
     expect(await other.mutation(api.trades.importMany, args)).toEqual({
       inserted: 1,
       skipped: 0,
+      conflicts: 0,
     })
     expect((await other.query(api.trades.list))[0]).toMatchObject({
       initialRisk: 100,
@@ -57,6 +58,7 @@ describe('recorded trade risk', () => {
     expect(await other.mutation(api.trades.importMany, args)).toEqual({
       inserted: 0,
       skipped: 1,
+      conflicts: 0,
     })
     await t.mutation(api.trades.edit, { ...input, tradeId, initialRisk: null })
     expect((await t.query(api.trades.list))[0].initialRisk).toBeUndefined()
@@ -133,7 +135,7 @@ describe('recorded trade risk', () => {
           expectedSubject: identity.subject,
           trades: prepareTradeImport(parseTradeFile(backup)),
         }),
-      ).toEqual({ inserted: 0, skipped: 1 })
+      ).toEqual({ inserted: 0, skipped: 1, conflicts: 0 })
       const saved = await t.query(api.trades.list)
       expect(saved).toHaveLength(1)
       expect(saved[0].initialRisk).toBe(initialRisk ?? undefined)
@@ -153,13 +155,13 @@ describe('recorded trade risk', () => {
         expectedSubject: identity.subject,
         trades: prepareTradeImport([second, first]),
       }),
-    ).toEqual({ inserted: 1, skipped: 1 })
+    ).toEqual({ inserted: 1, skipped: 1, conflicts: 0 })
     expect(
       (await t.query(api.trades.list)).map((trade) => trade.initialRisk).sort(),
     ).toEqual([100, 200])
   })
 
-  it('rejects conflicting risk for the same import ID without dropping a record silently', async () => {
+  it('reports conflicting risk while importing the rest of an older backup', async () => {
     const t = convexTest(schema, modules).withIdentity(identity)
     const [first] = prepareTradeImport([
       { ...input, status: 'open', initialRisk: 100 },
@@ -168,24 +170,43 @@ describe('recorded trade risk', () => {
       expectedSubject: identity.subject,
       trades: [first],
     })
-    await expect(
-      t.mutation(api.trades.importMany, {
-        expectedSubject: identity.subject,
-        trades: [{ ...first, initialRisk: 200 }],
-      }),
-    ).rejects.toThrow('conflicting initial risk')
+    const [stored] = await t.query(api.trades.list)
+    await t.mutation(api.trades.edit, {
+      ...input,
+      tradeId: stored._id,
+      initialRisk: 200,
+    })
+    const [unrelated] = prepareTradeImport([
+      { ...input, assetName: 'OTHER', status: 'open' },
+    ])
+    const backup = {
+      expectedSubject: identity.subject,
+      trades: [first, unrelated],
+    }
+    expect(await t.mutation(api.trades.importMany, backup)).toEqual({
+      inserted: 1,
+      skipped: 0,
+      conflicts: 1,
+    })
     const saved = await t.query(api.trades.list)
-    expect(saved).toHaveLength(1)
-    expect(saved[0].initialRisk).toBe(100)
+    expect(saved).toHaveLength(2)
+    expect(saved.find((trade) => trade._id === stored._id)?.initialRisk).toBe(
+      200,
+    )
+    expect(await t.mutation(api.trades.importMany, backup)).toEqual({
+      inserted: 0,
+      skipped: 1,
+      conflicts: 1,
+    })
     expect(
       await t.mutation(api.trades.importMany, {
         expectedSubject: identity.subject,
-        trades: [{ ...first, initialRisk: 200, sourceId: 'separate-trade' }],
+        trades: [{ ...first, sourceId: 'separate-trade' }],
       }),
-    ).toEqual({ inserted: 1, skipped: 0 })
+    ).toEqual({ inserted: 1, skipped: 0, conflicts: 0 })
     expect(
-      (await t.query(api.trades.list)).map((trade) => trade.initialRisk).sort(),
-    ).toEqual([100, 200])
+      (await t.query(api.trades.list)).map((trade) => trade.initialRisk),
+    ).toEqual(expect.arrayContaining([100, 200, undefined]))
   })
 
   it.each([false, true])(
@@ -215,6 +236,7 @@ describe('recorded trade risk', () => {
       expect(await other.mutation(api.trades.importMany, args)).toEqual({
         inserted: 2,
         skipped: 0,
+        conflicts: 0,
       })
       expect(
         (await other.query(api.trades.list)).map((trade) => trade.initialRisk),
@@ -222,6 +244,7 @@ describe('recorded trade risk', () => {
       expect(await other.mutation(api.trades.importMany, args)).toEqual({
         inserted: 0,
         skipped: 2,
+        conflicts: 0,
       })
     },
   )

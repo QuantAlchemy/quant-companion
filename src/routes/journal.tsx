@@ -48,6 +48,7 @@ const MAX_DELETE_BATCH = 100
 interface ImportProgress {
   inserted: number
   skipped: number
+  conflicts: number
 }
 
 class ImportCancelledError extends Error {
@@ -147,7 +148,7 @@ function JournalPage() {
       onProgress: (progress: ImportProgress) => void,
       isActive: () => boolean,
     ) => {
-      let progress: ImportProgress = { inserted: 0, skipped: 0 }
+      let progress: ImportProgress = { inserted: 0, skipped: 0, conflicts: 0 }
       for (
         let index = 0;
         index < preparedTrades.length;
@@ -163,6 +164,7 @@ function JournalPage() {
         progress = {
           inserted: progress.inserted + result.inserted,
           skipped: progress.skipped + result.skipped,
+          conflicts: progress.conflicts + result.conflicts,
         }
         if (!isActive()) {
           throw new ImportCancelledError(progress)
@@ -205,7 +207,7 @@ function JournalPage() {
     const isCurrentSession = () => accountSubjectRef.current === userId
 
     void (async () => {
-      let progress: ImportProgress = { inserted: 0, skipped: 0 }
+      let progress: ImportProgress = { inserted: 0, skipped: 0, conflicts: 0 }
       try {
         const browserTrades = readLegacyBrowserJournal(userId)
         if (!browserTrades) return
@@ -234,6 +236,11 @@ function JournalPage() {
           }
         }
         if (!isCurrentSession()) return
+        if (progress.conflicts > 0) {
+          throw new Error(
+            `${progress.conflicts} trades have conflicting risk. Existing trades were kept`,
+          )
+        }
         markLegacyBrowserJournalMigrated(userId)
       } catch (error) {
         if (error instanceof ImportCancelledError) {
@@ -242,10 +249,10 @@ function JournalPage() {
         if (!isCurrentSession()) return
         const message =
           error instanceof Error ? error.message : 'Migration failed'
-        const saved = progress.inserted + progress.skipped
+        const saved = progress.inserted + progress.skipped + progress.conflicts
         toast.error(
           saved > 0
-            ? `Browser journal migration stopped: ${message}. ${progress.inserted} trades were saved and ${progress.skipped} were already present. Your browser copy was kept; reload to continue safely.`
+            ? `Browser journal migration stopped: ${message}. ${progress.inserted} trades were saved and ${progress.skipped} were already present. ${progress.conflicts} had conflicting risk and were not imported. Your browser copy was kept; reload to continue safely.`
             : `Browser journal migration stopped: ${message}. Your browser copy was kept.`,
         )
       } finally {
@@ -318,7 +325,7 @@ function JournalPage() {
   const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
-    let progress: ImportProgress = { inserted: 0, skipped: 0 }
+    let progress: ImportProgress = { inserted: 0, skipped: 0, conflicts: 0 }
     setIsImporting(true)
     try {
       if (file.size > MAX_IMPORT_BYTES) {
@@ -342,6 +349,12 @@ function JournalPage() {
         () => accountSubjectRef.current === expectedSubject,
       )
       if (progress.inserted > 0) award('journal-imported')
+      if (progress.conflicts > 0) {
+        toast.warning(
+          `Imported ${progress.inserted} trades; skipped ${progress.skipped} already present. ${progress.conflicts} backup trades have conflicting risk and were not imported. Existing trades were kept. For a separate trade, give its backup record a new unique sourceId.`,
+        )
+        return
+      }
       toast.success(
         progress.skipped > 0
           ? `Imported ${progress.inserted} trades; skipped ${progress.skipped} already present`
@@ -352,10 +365,10 @@ function JournalPage() {
         progress = error.progress
       }
       const message = error instanceof Error ? error.message : 'Import failed'
-      const saved = progress.inserted + progress.skipped
+      const saved = progress.inserted + progress.skipped + progress.conflicts
       toast.error(
         saved > 0
-          ? `Import stopped: ${message}. ${progress.inserted} trades were saved and ${progress.skipped} were already present. Re-import the same file to continue safely.`
+          ? `Import stopped: ${message}. ${progress.inserted} trades were saved and ${progress.skipped} were already present. ${progress.conflicts} had conflicting risk and were not imported. Re-import the same file to continue safely.`
           : message,
       )
     } finally {

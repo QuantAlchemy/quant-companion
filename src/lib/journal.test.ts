@@ -270,6 +270,14 @@ describe('tradeImportSourceId', () => {
       ),
     ).toEqual([])
   })
+
+  it('sends browser trades with conflicting risk to the importer for reporting', () => {
+    const [trade] = parseTradeFile(legacyExport)
+    const [prepared] = prepareTradeImport([trade])
+    expect(
+      prepareMissingTradeImport([trade], [{ ...prepared, initialRisk: 100 }]),
+    ).toEqual([prepared])
+  })
 })
 
 describe('legacy browser journal migration', () => {
