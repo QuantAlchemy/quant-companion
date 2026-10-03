@@ -1,5 +1,6 @@
 import dayjs from 'dayjs'
 import { Store } from '@tanstack/store'
+import { z } from 'zod'
 
 export type TradingViewRecord = {
   [key: string]: number | string | null | undefined
@@ -392,6 +393,11 @@ function normalizePropertyName(key: string, prefix: string): string {
   return `${prefix}${normalizedKey}`
 }
 
+const tradeDateSchema = z.union([
+  z.iso.date(),
+  z.iso.datetime({ local: true, offset: true }),
+])
+
 export function processTradingViewData(
   filename: string,
   trades: TradingViewRecord[],
@@ -423,26 +429,25 @@ export function processTradingViewData(
     )
     const entry = entries[0]
     const exit = exits[0]
-    if (rows.length === 1 && entries.length === 1) {
-      excludedOpenTrades.push(tradeNo)
-      return []
-    }
-    if (rows.length !== 2 || entries.length !== 1 || exits.length !== 1) {
+    const isOpen = rows.length === 1 && entries.length === 1
+    if (
+      !isOpen &&
+      (rows.length !== 2 || entries.length !== 1 || exits.length !== 1)
+    ) {
       fail(
         'Expected one Entry row and one Exit row. Check the Type column and remove duplicate rows.',
       )
     }
 
-    for (const [prefix, row] of [
-      ['entry', entry],
-      ['exit', exit],
-    ] as const) {
+    for (const row of rows) {
+      const prefix = row === entry ? 'entry' : 'exit'
       if (
         typeof row['Date/Time'] !== 'string' ||
-        !row['Date/Time'].trim() ||
-        !dayjs(row['Date/Time']).isValid()
+        !tradeDateSchema.safeParse(row['Date/Time'].replace(' ', 'T')).success
       ) {
-        fail(`Provide a valid ${prefix} Date/Time.`)
+        fail(
+          `Provide a valid ${prefix} Date/Time in YYYY-MM-DD or YYYY-MM-DD HH:mm:ss format. ISO timestamps with timezone offsets are also supported.`,
+        )
       }
       for (const key of ['Price', 'Contracts', 'Profit']) {
         if (
@@ -453,6 +458,22 @@ export function processTradingViewData(
           fail(`Provide a numeric ${prefix} ${key}.`)
         }
       }
+      for (const [key, value] of Object.entries(row)) {
+        const normalizedKey = normalizePropertyName(key, prefix)
+        if (
+          isValidTradeRecordKey(normalizedKey) &&
+          isNumberField(normalizedKey) &&
+          (value == null ||
+            String(value).trim() === '' ||
+            !Number.isFinite(Number(value)))
+        ) {
+          fail(`Provide a numeric ${prefix} ${key}.`)
+        }
+      }
+    }
+    if (isOpen) {
+      excludedOpenTrades.push(tradeNo)
+      return []
     }
     if (dayjs(exit['Date/Time']).isBefore(dayjs(entry['Date/Time']))) {
       fail('The Exit date must be on or after the Entry date.')
@@ -482,13 +503,6 @@ export function processTradingViewData(
             mergedTrade[normalizedKey] = String(value ?? '')
           } else if (isNumberField(normalizedKey)) {
             // Handle number fields
-            if (
-              value == null ||
-              String(value).trim() === '' ||
-              !Number.isFinite(Number(value))
-            ) {
-              fail(`Provide a numeric ${prefix} ${key}.`)
-            }
             mergedTrade[normalizedKey] = Number(value)
           }
         }

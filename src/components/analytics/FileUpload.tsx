@@ -2,6 +2,7 @@ import Papa from 'papaparse'
 import { useRef, useState } from 'react'
 import * as XLSX from 'xlsx'
 import { Upload } from 'lucide-react'
+import { useStore } from '@tanstack/react-store'
 
 import { Button } from '@/components/ui/button'
 import { award } from '@/lib/gamification'
@@ -11,10 +12,14 @@ import {
   transformDataByHeaderConfig,
   validateHeaders,
 } from '@/lib/headerMappings'
-import { processTradingViewData, setOriginalTradeData } from '@/lib/stats'
+import {
+  originalTradeDataStore,
+  processTradingViewData,
+  setOriginalTradeData,
+} from '@/lib/stats'
 
 import type { ParseResult } from 'papaparse'
-import type { TradingViewRecord } from '@/lib/stats'
+import type { TradeRecord, TradingViewRecord } from '@/lib/stats'
 import type { HeaderConfig } from '@/lib/headerMappings'
 
 const MESSAGES = {
@@ -137,11 +142,15 @@ const processFile = async (
 }
 
 export function FileUpload() {
+  const originalData = useStore(originalTradeDataStore)
   const inputRef = useRef<HTMLInputElement>(null)
   const uploadInProgress = useRef(false)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
-  const [uploadNotice, setUploadNotice] = useState<string | null>(null)
+  const [uploadNotice, setUploadNotice] = useState<{
+    trades: TradeRecord[]
+    message: string
+  } | null>(null)
 
   const handleFileUpload = async (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -159,7 +168,6 @@ export function FileUpload() {
     uploadInProgress.current = true
     setIsUploading(true)
     setUploadError(null)
-    setUploadNotice(null)
 
     try {
       const results = await Promise.all(
@@ -188,7 +196,7 @@ export function FileUpload() {
         tradeNo: i + 1,
       }))
       setOriginalTradeData(mergedTrades)
-      setUploadNotice(notice)
+      setUploadNotice(notice ? { trades: mergedTrades, message: notice } : null)
       award('csv-uploaded')
     } catch (error) {
       setUploadError(
@@ -230,9 +238,9 @@ export function FileUpload() {
           {uploadError}
         </p>
       )}
-      {uploadNotice && (
+      {uploadNotice && uploadNotice.trades === originalData && (
         <p role="status" className="mt-2 text-sm text-muted-foreground">
-          {uploadNotice}
+          {uploadNotice.message}
         </p>
       )}
     </div>

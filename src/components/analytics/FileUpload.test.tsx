@@ -1,6 +1,7 @@
 /** @vitest-environment jsdom */
 
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -26,6 +27,7 @@ import {
   setOriginalTradeData,
   setSelectedTradeFile,
   setTradeTrim,
+  simulateTradeData,
   tradeDataStore,
   tradeMetricsStore,
   tradeTrimStore,
@@ -166,6 +168,52 @@ describe('trade pairing', () => {
 })
 
 describe('file uploads', () => {
+  it.each([
+    ['Date/Time', 'invalid'],
+    ['Date/Time', '46023'],
+    ['Date/Time', '2026-02-30 10:00:00'],
+    ['Date/Time', '2026-01-03 25:00:00'],
+    ['Price', 'invalid'],
+    ['Contracts', 'invalid'],
+    ['Profit', 'invalid'],
+    ['Run-up', 'invalid'],
+  ])(
+    'rejects a lone entry with %s = %s before replacing data',
+    async (key, value) => {
+      const { container } = render(<FileUpload />)
+      upload(container, [csvFile()])
+      await screen.findByRole('status')
+      const original = originalTradeDataStore.state
+      const view = tradeDataStore.state
+      const metrics = processTradeMetrics(original!)
+      tradeMetricsStore.setState(() => metrics)
+      upload(container, [
+        csvFile(
+          [...closedRows, { ...mixedRows[4], [key]: value }],
+          'broken.csv',
+        ),
+      ])
+      expect((await screen.findByRole('alert')).textContent).toContain(
+        'broken.csv - trade 3:',
+      )
+      expect(originalTradeDataStore.state).toBe(original)
+      expect(tradeDataStore.state).toBe(view)
+      expect(tradeMetricsStore.state).toBe(metrics)
+      expect(screen.getByRole('status').textContent).toBe(
+        'Excluded 1 open trade without an Exit row.',
+      )
+    },
+  )
+
+  it('hides the exclusion notice when Demo Data replaces the uploaded dataset', async () => {
+    const { container } = render(<FileUpload />)
+    upload(container, [csvFile()])
+    await screen.findByRole('status')
+    act(() => setOriginalTradeData(simulateTradeData()))
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(originalTradeDataStore.state).toHaveLength(100)
+  })
+
   it('accepts Excel trade numbers stored as text', async () => {
     const rows = mixedRows.map((record) => ({
       ...record,
