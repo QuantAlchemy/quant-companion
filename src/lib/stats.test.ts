@@ -96,6 +96,21 @@ describe('daily realized-equity Sharpe', () => {
     )
   })
 
+  it('handles distant valid dates without allocating one return per calendar day', () => {
+    const lastDay = 100_000_000
+    const dates = [
+      new Date(0),
+      new Date(86_400_000),
+      new Date(lastDay * 86_400_000),
+    ]
+    const equity = equityFromReturns([0.01, -0.005])
+    const meanReturn = 0.005 / lastDay
+    const variance =
+      (0.01 ** 2 + 0.005 ** 2 - lastDay * meanReturn ** 2) / (lastDay - 1)
+    const expected = (meanReturn / Math.sqrt(variance)) * Math.sqrt(365.25)
+    expect(calculateSharpeRatio(equity, dates, 0)).toBeCloseTo(expected, 10)
+  })
+
   it.each([
     { equity: [], dates: [] },
     { equity: [100], dates: [day(0)] },

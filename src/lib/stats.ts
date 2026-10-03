@@ -220,16 +220,7 @@ export const applyTradeDataView = (): void => {
     selectedFile === ALL_TRADE_FILES
       ? originalData
       : originalData.filter((trade) => trade.filename === selectedFile)
-  const trim = tradeTrimStore.state
-  const clampCount = (count: number) =>
-    Number.isFinite(count)
-      ? Math.min(filteredData.length, Math.max(0, Math.floor(count)))
-      : 0
-  const topCount = clampCount(trim.topCount)
-  const bottomCount = clampCount(trim.bottomCount)
-  if (topCount !== trim.topCount || bottomCount !== trim.bottomCount) {
-    tradeTrimStore.setState(() => ({ topCount, bottomCount }))
-  }
+  const { topCount, bottomCount } = tradeTrimStore.state
 
   const topTrades = [...filteredData]
     .sort((a, b) => b.exitProfit - a.exitProfit)
@@ -260,9 +251,13 @@ export const setSelectedTradeFile = (file: string): void => {
 }
 
 export const setTradeTrim = (topCount: number, bottomCount: number): void => {
+  // File selection must not overwrite the user's trim settings.
+  const maxCount = originalTradeDataStore.state?.length ?? 0
+  const clampCount = (count: number) =>
+    Number.isFinite(count) ? Math.min(maxCount, Math.max(0, Math.floor(count))) : 0
   tradeTrimStore.setState(() => ({
-    topCount: Math.max(0, topCount),
-    bottomCount: Math.max(0, bottomCount),
+    topCount: clampCount(topCount),
+    bottomCount: clampCount(bottomCount),
   }))
   applyTradeDataView()
 }
@@ -898,25 +893,27 @@ export const calculateSharpeRatio = (
   if (lastDay - firstDay < 2) return null
 
   const dailyRiskFree = Math.log1p(riskFreeRate) / DAYS_PER_YEAR
-  const excessReturns: number[] = []
+  const logReturns: number[] = []
   let previousEquity = dailyEquity.get(firstDay)!
-  for (let day = firstDay + 1; day <= lastDay; day++) {
-    const equity = dailyEquity.get(day) ?? previousEquity
-    excessReturns.push(Math.log(equity / previousEquity) - dailyRiskFree)
+  for (const [day, equity] of dailyEquity) {
+    if (day === firstDay) continue
+    logReturns.push(Math.log(equity / previousEquity))
     previousEquity = equity
   }
 
-  const meanExcessReturn = mean(excessReturns)
+  // Empty calendar days have zero log return. Weight them without allocating
+  // one array entry per day, so a distant valid date cannot stall rendering.
+  const dayCount = lastDay - firstDay
+  const meanLogReturn = logReturns.reduce((sum, value) => sum + value, 0) / dayCount
+  const idleDays = dayCount - logReturns.length
   const volatility = Math.sqrt(
-    excessReturns.reduce(
-      (sum, value) => sum + (value - meanExcessReturn) ** 2, 0,
-    ) /
-      (excessReturns.length - 1),
+    (logReturns.reduce((sum, value) => sum + (value - meanLogReturn) ** 2, 0) +
+      idleDays * meanLogReturn ** 2) / (dayCount - 1),
   )
   // Floating-point noise in equal log returns is not measurable volatility.
   if (volatility <= Number.EPSILON) return null
   return finiteOrNull(
-    (meanExcessReturn / volatility) * Math.sqrt(DAYS_PER_YEAR),
+    ((meanLogReturn - dailyRiskFree) / volatility) * Math.sqrt(DAYS_PER_YEAR),
   )
 }
 

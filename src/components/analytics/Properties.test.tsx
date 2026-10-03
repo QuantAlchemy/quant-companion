@@ -40,6 +40,7 @@ function loadTrades(profits: number[], sameTime = false) {
     .slice(0, profits.length)
     .map((trade, i) => ({
       ...trade,
+      filename: i < 2 ? 'a.csv' : 'b.csv',
       exitProfit: profits[i],
       exitDate: new Date(Date.UTC(2026, 0, sameTime ? 1 : i + 1)),
     }))
@@ -77,6 +78,26 @@ describe('analytics trim and summary', () => {
     fireEvent.change(best, { target: { value: '999' } })
     expect((best as HTMLInputElement).value).toBe('2')
     fireEvent.change(best, { target: { value: '0' } })
+    expect(screen.getByRole('table').textContent).toBe(originalSummary)
+  })
+
+  it('preserves requested trimming when switching to a smaller file and back', async () => {
+    loadTrades([100, 90, 80, -40])
+    render(<AnalyticsHarness />)
+    const best = screen.getByRole('spinbutton', { name: 'Remove Best Trades' })
+    fireEvent.change(best, { target: { value: '3' } })
+    const originalSummary = screen.getByRole('table').textContent
+    fireEvent.click(screen.getByRole('combobox'))
+    const smallerFile = await screen.findByRole('option', { name: 'a.csv' })
+    fireEvent.pointerDown(smallerFile)
+    fireEvent.click(smallerFile)
+    expect(screen.getByText(/No trades to analyze/)).toBeTruthy()
+    expect((best as HTMLInputElement).value).toBe('3')
+    fireEvent.click(screen.getByRole('combobox'))
+    const allFiles = await screen.findByRole('option', { name: 'All Files' })
+    fireEvent.pointerDown(allFiles)
+    fireEvent.click(allFiles)
+    expect((best as HTMLInputElement).value).toBe('3')
     expect(screen.getByRole('table').textContent).toBe(originalSummary)
   })
 

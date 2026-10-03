@@ -10,9 +10,7 @@ import { Button } from '@/components/ui/button'
 import { isLocalhostHostname } from '@/lib/environment'
 import { initSavedConfigs } from '@/lib/headerMappings'
 import {
-  ALL_TRADE_FILES,
   originalTradeDataStore,
-  selectedTradeFileStore,
   processTradeMetrics,
   setOriginalTradeData,
   setTradeTrim,
@@ -28,10 +26,7 @@ export function Properties() {
   const tradeData = useStore(tradeDataStore)
   const tradeTrim = useStore(tradeTrimStore)
   const originalTradeData = useStore(originalTradeDataStore)
-  const selectedFile = useStore(selectedTradeFileStore)
-  const availableCount = (originalTradeData ?? []).filter(
-    (trade) => selectedFile === ALL_TRADE_FILES || trade.filename === selectedFile,
-  ).length
+  const availableCount = originalTradeData?.length ?? 0
   const [isLocalhost, setIsLocalhost] = useState(false)
 
   // hydrate saved header configs from localStorage once on the client
