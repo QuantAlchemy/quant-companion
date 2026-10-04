@@ -232,7 +232,8 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
       const month = (t.closingDate ?? t.tradeDate).slice(0, 7)
       monthly.set(
         month,
-        (monthly.get(month) ?? 0) + (netJournalPnl(t.realizedPnl, t.commission) ?? 0),
+        (monthly.get(month) ?? 0) +
+          (netJournalPnl(t.realizedPnl, t.commission) ?? 0),
       )
     }
     const months = [...monthly.keys()].sort()

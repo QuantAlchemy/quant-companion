@@ -1,10 +1,14 @@
 /** @vitest-environment jsdom */
+/// <reference types="vite/client" />
 
 import { cleanup, render, screen, within } from '@testing-library/react'
+import { convexTest } from 'convex-test'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { JournalStats } from './JournalStats'
 import TradeTable from './TradeTable'
+import { api } from '../../../convex/_generated/api'
+import schema from '../../../convex/schema'
 import type { JournalTrade } from '@/lib/journal'
 import type { PlotParams } from 'react-plotly.js'
 
@@ -42,6 +46,47 @@ const rTrace = () => {
 }
 
 afterEach(cleanup)
+
+it('shows corrected net P&L and R from the saved commission and recorded risk', async () => {
+  const t = convexTest(
+    schema,
+    import.meta.glob('../../../convex/**/*.ts'),
+  ).withIdentity({ subject: 'corrected-risk', issuer: 'https://test.invalid' })
+  const entry = {
+    assetName: 'TEST',
+    assetType: 'traditional' as const,
+    quantity: 10,
+    price: 100,
+    tradeType: 'buy' as const,
+    tradeDate: '2026-10-01',
+    commission: 20,
+    initialRisk: 100,
+  }
+  const tradeId = await t.mutation(api.trades.add, entry)
+  await t.mutation(api.trades.close, {
+    tradeId,
+    closingPrice: 120,
+    closingDate: '2026-10-02',
+  })
+  await t.mutation(api.trades.edit, { ...entry, tradeId, price: 110 })
+  const [saved] = await t.query(api.trades.list)
+  expect(saved).toMatchObject({
+    realizedPnl: 100,
+    commission: 20,
+    initialRisk: 100,
+  })
+  render(
+    <Journal
+      trade={{ ...saved, id: saved._id, createdAt: saved._creationTime }}
+    />,
+  )
+  expect(screen.getByTitle(/Gross P&L:/).textContent).toBe('$80.00')
+  expect(screen.getByText('0.80R')).toBeTruthy()
+  expect(rTrace()?.y).toEqual([0.8])
+  expect(
+    within(screen.getByText('Expectancy').parentElement!).getByText('$80.00'),
+  ).toBeTruthy()
+})
 
 describe('recorded R-multiples', () => {
   it('displays 2R for $200 profit on $100 risk and excludes missing risk', () => {
@@ -100,11 +145,11 @@ const closedTrade: JournalTrade = {
   commission: 20,
 }
 
-function Journal({ trade }: { trade: JournalTrade }) {
+function Journal({ trade: journalTrade }: { trade: JournalTrade }) {
   return (
     <>
       <TradeTable
-        trades={[trade]}
+        trades={[journalTrade]}
         prices={{}}
         rowSelection={{}}
         onRowSelectionChange={vi.fn()}
@@ -114,7 +159,7 @@ function Journal({ trade }: { trade: JournalTrade }) {
         onSplit={vi.fn()}
         onEdit={vi.fn()}
       />
-      <JournalStats trades={[trade]} prices={{}} />
+      <JournalStats trades={[journalTrade]} prices={{}} />
     </>
   )
 }
@@ -132,16 +177,14 @@ it('shows net losses in the row, expectancy, win rate, and charts after correcti
     expect(
       within(expectancy).getByText(`-$${Math.abs(netPnl).toFixed(2)}`),
     ).toBeTruthy()
-    const plots = screen
-      .getAllByTestId('plot')
-      .map(
-        (plot) =>
-          JSON.parse(plot.textContent) as Array<{
-            name: string
-            y?: number[]
-            values?: number[]
-          }>,
-      )
+    const plots = screen.getAllByTestId('plot').map(
+      (plot) =>
+        JSON.parse(plot.textContent) as Array<{
+          name: string
+          y?: number[]
+          values?: number[]
+        }>,
+    )
     expect(plots.flat()).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ name: 'Realized net P&L', y: [netPnl] }),
