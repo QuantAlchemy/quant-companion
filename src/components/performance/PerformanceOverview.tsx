@@ -49,7 +49,12 @@ function MetricTile({
   return (
     <div className="min-h-24 rounded-lg border border-border bg-muted/25 px-4 py-3">
       <div className="text-xs text-muted-foreground">{label}</div>
-      <div className={cn('tabular mt-1 text-xl font-semibold', tone != null && valueTone(tone))}>
+      <div
+        className={cn(
+          'tabular mt-1 text-xl font-semibold',
+          tone != null && valueTone(tone),
+        )}
+      >
         {value}
       </div>
       {sub && <div className="mt-0.5 text-xs text-muted-foreground">{sub}</div>}
@@ -67,7 +72,7 @@ export function PerformanceOverview({
   const summary = useMemo(() => summarizePerformance(trades), [trades])
   const metrics = useMemo(
     () => performanceTradesToTradeMetrics(trades, startingEquity),
-    [startingEquity, trades]
+    [startingEquity, trades],
   )
   const hasTrades = summary.totalTrades > 0
   const hasClosedTrades = summary.closedTrades > 0
@@ -90,13 +95,13 @@ export function PerformanceOverview({
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricTile
-          label="Realized P&L"
+          label="Realized net P&L"
           value={currencyFormatter.format(summary.realizedPnl)}
           sub={`${summary.closedTrades} closed trades`}
           tone={summary.realizedPnl}
         />
         <MetricTile
-          label="Total P&L"
+          label="Total net P&L"
           value={currencyFormatter.format(summary.totalPnl)}
           sub={
             summary.openTrades > 0

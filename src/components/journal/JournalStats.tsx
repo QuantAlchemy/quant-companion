@@ -11,6 +11,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { currencyFormatter, percentageFormatter } from '@/lib/format'
+import { netJournalPnl } from '@/lib/journal'
 import { unrealizedPnl } from '@/lib/performance'
 import { PROFIT_LOSS_COLORS, profitLossColor } from '@/lib/colors'
 import { createLayout } from '@/lib/plotly'
@@ -71,9 +72,10 @@ const holdingDays = (trade: JournalTrade) => {
 }
 
 const rMultipleFor = (trade: JournalTrade) => {
+  // Intentional: R uses net P&L so fees count against the recorded dollar risk.
   const risk = trade.initialRisk
   return risk != null && Number.isFinite(risk) && risk > 0
-    ? (trade.realizedPnl ?? 0) / risk
+    ? (netJournalPnl(trade.realizedPnl, trade.commission) ?? 0) / risk
     : null
 }
 
@@ -84,21 +86,31 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
     )
     const open = trades.filter((t) => t.status === 'open')
 
-    const wins = closed.filter((t) => (t.realizedPnl ?? 0) > 0)
-    const losses = closed.filter((t) => (t.realizedPnl ?? 0) < 0)
+    const wins = closed.filter(
+      (t) => (netJournalPnl(t.realizedPnl, t.commission) ?? 0) > 0,
+    )
+    const losses = closed.filter(
+      (t) => (netJournalPnl(t.realizedPnl, t.commission) ?? 0) < 0,
+    )
     const winRate = closed.length > 0 ? wins.length / closed.length : 0
 
     const realizedPnlTotal = closed.reduce(
-      (sum, t) => sum + (t.realizedPnl ?? 0),
+      (sum, t) => sum + (netJournalPnl(t.realizedPnl, t.commission) ?? 0),
       0,
     )
     const unrealizedPnlTotal = open.reduce(
       (sum, t) => sum + (unrealizedPnl(t, prices) ?? 0),
       0,
     )
-    const grossProfit = wins.reduce((sum, t) => sum + (t.realizedPnl ?? 0), 0)
+    const grossProfit = wins.reduce(
+      (sum, t) => sum + (netJournalPnl(t.realizedPnl, t.commission) ?? 0),
+      0,
+    )
     const grossLoss = Math.abs(
-      losses.reduce((sum, t) => sum + (t.realizedPnl ?? 0), 0),
+      losses.reduce(
+        (sum, t) => sum + (netJournalPnl(t.realizedPnl, t.commission) ?? 0),
+        0,
+      ),
     )
     const profitFactor =
       grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0
@@ -114,7 +126,12 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
     const avgDollarAtWork =
       closed.length > 0 ? closedCostBasis / closed.length : 0
     const openCostBasis = open.reduce((sum, t) => sum + t.price * t.quantity, 0)
-    const openMarketValue = openCostBasis + unrealizedPnlTotal
+    const openMarketValue =
+      openCostBasis +
+      open.reduce((sum, t) => {
+        const pnl = unrealizedPnl(t, prices)
+        return sum + (pnl == null ? 0 : pnl + (t.commission ?? 0))
+      }, 0)
     const expectancyPct =
       avgDollarAtWork > 0 ? (expectancy / avgDollarAtWork) * 100 : 0
     const unrealizedPct =
@@ -128,15 +145,21 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
         : null
     const longTermPnl = closed
       .filter((t) => holdingDays(t) >= 365)
-      .reduce((sum, t) => sum + (t.realizedPnl ?? 0), 0)
+      .reduce(
+        (sum, t) => sum + (netJournalPnl(t.realizedPnl, t.commission) ?? 0),
+        0,
+      )
     const shortTermPnl = closed
       .filter((t) => holdingDays(t) < 365)
-      .reduce((sum, t) => sum + (t.realizedPnl ?? 0), 0)
+      .reduce(
+        (sum, t) => sum + (netJournalPnl(t.realizedPnl, t.commission) ?? 0),
+        0,
+      )
     const assetPerformance = [
       ...closed
         .reduce((assetMap, trade) => {
           const current = assetMap.get(trade.assetName) ?? { pnl: 0, trades: 0 }
-          current.pnl += trade.realizedPnl ?? 0
+          current.pnl += netJournalPnl(trade.realizedPnl, trade.commission) ?? 0
           current.trades += 1
           assetMap.set(trade.assetName, current)
           return assetMap
@@ -186,7 +209,7 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
     const x: string[] = []
     const y: number[] = []
     for (const t of sorted) {
-      cumulative += t.realizedPnl ?? 0
+      cumulative += netJournalPnl(t.realizedPnl, t.commission) ?? 0
       x.push((t.closingDate ?? t.tradeDate).slice(0, 10))
       y.push(cumulative)
     }
@@ -195,7 +218,7 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
         x,
         y,
         type: 'scatter',
-        name: 'Realized P&L',
+        name: 'Realized net P&L',
         line: { color: '#7C5CFF', width: 2 },
         fill: 'tozeroy',
         fillcolor: 'rgba(124, 92, 255, 0.08)',
@@ -207,7 +230,11 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
     const monthly = new Map<string, number>()
     for (const t of stats.closed) {
       const month = (t.closingDate ?? t.tradeDate).slice(0, 7)
-      monthly.set(month, (monthly.get(month) ?? 0) + (t.realizedPnl ?? 0))
+      monthly.set(
+        month,
+        (monthly.get(month) ?? 0) +
+          (netJournalPnl(t.realizedPnl, t.commission) ?? 0),
+      )
     }
     const months = [...monthly.keys()].sort()
     const values = months.map((m) => monthly.get(m) ?? 0)
@@ -216,7 +243,7 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
         x: months,
         y: values,
         type: 'bar',
-        name: 'Monthly P&L',
+        name: 'Monthly net P&L',
         marker: {
           color: values.map(profitLossColor),
         },
@@ -280,14 +307,14 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
           }
         />
         <StatCard
-          label="Unrealized P&L"
+          label="Unrealized net P&L"
           value={formatPercentNumber(stats.unrealizedPct)}
           sub={currencyFormatter.format(stats.unrealizedPnlTotal)}
           footnote="Current open positions"
           tone={valueTone(stats.unrealizedPnlTotal)}
         />
         <StatCard
-          label="Total P&L"
+          label="Total net P&L"
           value={formatPercentNumber(stats.totalPnlPct)}
           sub={currencyFormatter.format(stats.realizedPnlTotal)}
           footnote="All closed trades"
@@ -322,7 +349,7 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
           <Card className="panel">
             <CardHeader>
-              <CardTitle>Realized Equity Curve</CardTitle>
+              <CardTitle>Net realized equity curve</CardTitle>
             </CardHeader>
             <CardContent>
               <Plot
@@ -352,7 +379,7 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
           </Card>
           <Card className="panel">
             <CardHeader>
-              <CardTitle>Monthly P&L</CardTitle>
+              <CardTitle>Monthly net P&L</CardTitle>
             </CardHeader>
             <CardContent>
               <Plot
@@ -392,9 +419,9 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
                 <TableHeader className="sticky top-0 z-10 bg-muted">
                   <TableRow>
                     <TableHead>Asset</TableHead>
-                    <TableHead>Total P&L</TableHead>
+                    <TableHead>Total net P&L</TableHead>
                     <TableHead>Trades</TableHead>
-                    <TableHead>Avg P&L/Trade</TableHead>
+                    <TableHead>Avg net P&L/Trade</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -453,7 +480,7 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
                   stats.unrealizedPnlTotal >= 0 ? 'text-profit' : 'text-loss'
                 }
               >
-                Unrealized P&L (Open):{' '}
+                Unrealized net P&L (Open):{' '}
                 <span className="tabular font-semibold">
                   {currencyFormatter.format(stats.unrealizedPnlTotal)}
                 </span>
@@ -463,7 +490,7 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
                   stats.realizedPnlTotal >= 0 ? 'text-profit' : 'text-loss'
                 }
               >
-                Realized P&L (Closed):{' '}
+                Realized net P&L (Closed):{' '}
                 <span className="tabular font-semibold">
                   {currencyFormatter.format(stats.realizedPnlTotal)}
                 </span>

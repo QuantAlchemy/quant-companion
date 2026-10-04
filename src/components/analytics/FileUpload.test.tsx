@@ -340,8 +340,12 @@ describe('file uploads', () => {
       expect(excelTrades[0].exitDate).toEqual(
         new Date(2026, 0, 1, 10, 45, 30, 500),
       )
-      expect(processTradeMetrics(excelTrades)).toEqual(csvMetrics)
-      expect(calculateSummaryStats(processTradeMetrics(excelTrades))).toEqual(
+      const excelMetrics = processTradeMetrics(excelTrades)
+      expect(excelMetrics).toEqual(csvMetrics)
+      if (!csvMetrics || !excelMetrics) {
+        throw new Error('Expected performance metrics for both imports')
+      }
+      expect(calculateSummaryStats(excelMetrics)).toEqual(
         calculateSummaryStats(csvMetrics),
       )
     },

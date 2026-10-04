@@ -37,6 +37,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { currencyFormatter } from '@/lib/format'
+import { netJournalPnl } from '@/lib/journal'
 import { unrealizedPnl } from '@/lib/performance'
 import { cn } from '@/lib/utils'
 
@@ -80,7 +81,7 @@ const tradeColumnOptions = [
   { id: 'tradeDate', label: 'Date', group: 'core' },
   { id: 'status', label: 'Status', group: 'core' },
   { id: 'marketPrice', label: 'Market price', group: 'core' },
-  { id: 'pnl', label: 'P&L', group: 'core' },
+  { id: 'pnl', label: 'Net P&L', group: 'core' },
   { id: 'exchange', label: 'Exchange', group: 'optional' },
   { id: 'commission', label: 'Commission', group: 'optional' },
   { id: 'closingDate', label: 'Close date', group: 'optional' },
@@ -348,7 +349,7 @@ const rowToneClass = (trade: JournalTrade) => {
   if (trade.status === 'open') {
     return '[&>td:first-child]:border-l-2 [&>td:first-child]:border-l-sky/70'
   }
-  const pnl = trade.realizedPnl ?? 0
+  const pnl = netJournalPnl(trade.realizedPnl, trade.commission) ?? 0
   return pnl >= 0
     ? '[&>td:first-child]:border-l-2 [&>td:first-child]:border-l-profit/70'
     : '[&>td:first-child]:border-l-2 [&>td:first-child]:border-l-loss/70'
@@ -596,11 +597,13 @@ export function TradeTable({
       },
       {
         id: 'pnl',
-        header: ({ column }) => <SortHeader column={column}>P&L</SortHeader>,
+        header: ({ column }) => (
+          <SortHeader column={column}>Net P&L</SortHeader>
+        ),
         sortingFn: (rowA, rowB) => {
           const pnlValue = (trade: JournalTrade) =>
             trade.status === 'closed'
-              ? trade.realizedPnl
+              ? netJournalPnl(trade.realizedPnl, trade.commission)
               : unrealizedPnl(trade, prices)
           return compareNullableNumbers(
             pnlValue(rowA.original),
@@ -610,16 +613,17 @@ export function TradeTable({
         cell: ({ row }) => {
           const trade = row.original
           if (trade.status === 'closed') {
+            const pnl = netJournalPnl(trade.realizedPnl, trade.commission)
             return (
               <span
-                className={cn(
-                  'tabular font-semibold',
-                  pnlClass(trade.realizedPnl),
-                )}
+                title={
+                  trade.realizedPnl != null
+                    ? `Gross P&L: ${currencyFormatter.format(trade.realizedPnl)}`
+                    : undefined
+                }
+                className={cn('tabular font-semibold', pnlClass(pnl))}
               >
-                {trade.realizedPnl != null
-                  ? currencyFormatter.format(trade.realizedPnl)
-                  : '—'}
+                {pnl != null ? currencyFormatter.format(pnl) : '—'}
               </span>
             )
           }

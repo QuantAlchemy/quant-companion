@@ -150,8 +150,38 @@ export const edit = mutation({
     if (!trade) throw new Error('Trade not found')
     if (trade.userId !== userId) throw new Error('Not authorized')
 
+    if (trade.closingDate != null && args.tradeDate > trade.closingDate) {
+      throw new Error('Trade date cannot be after the closing date')
+    }
+    const calculationChanged =
+      args.price !== trade.price ||
+      args.quantity !== trade.quantity ||
+      args.tradeType !== trade.tradeType
+    let realizedPnl = trade.realizedPnl
+    if (trade.status === 'closed' && calculationChanged) {
+      if (trade.closingPrice == null) {
+        throw new Error(
+          'Cannot recalculate a closed trade without a closing price',
+        )
+      }
+      assertPositiveNumber(trade.closingPrice, 'Closing price')
+      realizedPnl = realizedPnlFor(
+        args.tradeType,
+        args.price,
+        trade.closingPrice,
+        args.quantity,
+      )
+      if (!Number.isFinite(realizedPnl)) {
+        throw new Error('Realized P&L must be finite')
+      }
+    }
+
     await ctx.db.patch(tradeId, {
       ...args,
+      // A cleared form field is omitted from the request; remove its saved fee.
+      commission: args.commission,
+      // Preserve supplied historical gross P&L when calculation inputs match.
+      realizedPnl,
       assetName: args.assetName.trim().toUpperCase(),
       // Omission preserves risk for older clients; null explicitly clears it.
       initialRisk:
@@ -192,7 +222,7 @@ export const close = mutation({
       closingDate: args.closingDate,
       realizedPnl,
     })
-    return { realizedPnl }
+    return { realizedPnl, commission: trade.commission }
   },
 })
 
@@ -232,6 +262,10 @@ export const split = mutation({
       trade.initialRisk == null
         ? undefined
         : trade.initialRisk * (args.closingQuantity / trade.quantity)
+    const commission =
+      trade.commission != null
+        ? (trade.commission * args.closingQuantity) / trade.quantity
+        : undefined
 
     const closedTradeId = await ctx.db.insert('trades', {
       userId,
@@ -246,10 +280,7 @@ export const split = mutation({
       closingDate: args.closingDate,
       realizedPnl,
       initialRisk: closedRisk,
-      commission:
-        trade.commission != null
-          ? (trade.commission * args.closingQuantity) / trade.quantity
-          : undefined,
+      commission,
       exchange: trade.exchange,
       comments: trade.comments
         ? `${trade.comments} (Split from original trade)`
@@ -268,7 +299,7 @@ export const split = mutation({
           : undefined,
     })
 
-    return { closedTradeId, realizedPnl }
+    return { closedTradeId, realizedPnl, commission }
   },
 })
 

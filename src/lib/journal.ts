@@ -16,6 +16,7 @@ export interface JournalTrade {
   status: TradeStatus
   closingPrice?: number
   closingDate?: string
+  /** Gross P&L. Keep commission separate in storage and exports. */
   realizedPnl?: number
   commission?: number
   initialRisk?: number
@@ -23,6 +24,10 @@ export interface JournalTrade {
   comments?: string
   createdAt: number
 }
+
+/** Deduct recorded commission once when displaying journal P&L. */
+export const netJournalPnl = (grossPnl: number | undefined, commission = 0) =>
+  grossPnl == null ? null : grossPnl - commission
 
 export interface NewTrade {
   assetName: string

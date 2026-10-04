@@ -25,6 +25,7 @@ import { api } from '@/../convex/_generated/api'
 import { award } from '@/lib/gamification'
 import {
   markLegacyBrowserJournalMigrated,
+  netJournalPnl,
   parseTradeFile,
   prepareMissingTradeImport,
   prepareTradeImport,
@@ -563,15 +564,16 @@ function JournalPage() {
         trade={closingTrade}
         onCloseTrade={async (closingPrice, closingDate) => {
           if (!closingTrade) throw new Error('Trade not found')
-          const { realizedPnl } = await closeTrade({
+          const { realizedPnl, commission } = await closeTrade({
             tradeId: requireTradeId(closingTrade.id),
             closingPrice,
             closingDate,
           })
+          const netPnl = netJournalPnl(realizedPnl, commission) ?? 0
           award('trade-closed')
-          if (realizedPnl > 0) award('trade-won')
-          if (realizedPnl < 0) award('trade-lost')
-          return realizedPnl
+          if (netPnl > 0) award('trade-won')
+          if (netPnl < 0) award('trade-lost')
+          return netPnl
         }}
       />
       <SplitTradeDialog
@@ -580,16 +582,17 @@ function JournalPage() {
         trade={splittingTrade}
         onSplitTrade={async (closingPrice, closingDate, closingQuantity) => {
           if (!splittingTrade) throw new Error('Trade not found')
-          const { realizedPnl } = await splitTrade({
+          const { realizedPnl, commission } = await splitTrade({
             tradeId: requireTradeId(splittingTrade.id),
             closingPrice,
             closingDate,
             closingQuantity,
           })
+          const netPnl = netJournalPnl(realizedPnl, commission) ?? 0
           award('trade-closed')
-          if (realizedPnl > 0) award('trade-won')
-          if (realizedPnl < 0) award('trade-lost')
-          return realizedPnl
+          if (netPnl > 0) award('trade-won')
+          if (netPnl < 0) award('trade-lost')
+          return netPnl
         }}
       />
     </div>

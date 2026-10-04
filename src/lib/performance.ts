@@ -1,3 +1,4 @@
+import { netJournalPnl } from '@/lib/journal'
 import { calculateZScores } from '@/lib/stats'
 
 import type { JournalTrade } from '@/lib/journal'
@@ -18,6 +19,7 @@ export interface PerformanceTrade {
   quantity?: number
   entryPrice?: number
   exitPrice?: number
+  /** Net P&L, including any recorded fees. */
   realizedPnl: number
   unrealizedPnl?: number
   fees?: number
@@ -75,9 +77,11 @@ export const calculateJournalUnrealizedPnl = (
   if (marketPrice == null) return null
   const entryValue = trade.price * trade.quantity
   const currentValue = marketPrice * trade.quantity
-  return trade.tradeType === 'buy'
-    ? currentValue - entryValue
-    : entryValue - currentValue
+  const grossPnl =
+    trade.tradeType === 'buy'
+      ? currentValue - entryValue
+      : entryValue - currentValue
+  return netJournalPnl(grossPnl, trade.commission)
 }
 
 export const unrealizedPnl = calculateJournalUnrealizedPnl
@@ -99,7 +103,7 @@ export const journalTradesToPerformanceTrades = (
       quantity: trade.quantity,
       entryPrice: trade.price,
       exitPrice: trade.closingPrice,
-      realizedPnl: numberOrZero(trade.realizedPnl),
+      realizedPnl: netJournalPnl(trade.realizedPnl, trade.commission) ?? 0,
       unrealizedPnl: livePnl,
       fees: trade.commission,
       status: trade.status,
