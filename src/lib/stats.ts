@@ -1,12 +1,9 @@
 import dayjs from 'dayjs'
 import { Store } from '@tanstack/store'
+import { z } from 'zod'
 
 export type TradingViewRecord = {
-  'Trade #': number
-  Type: string
-  Signal: string
-  'Date/Time': string
-  [key: string]: number | string // For dynamic property names
+  [key: string]: number | string | null | undefined
   // INFO: this is what the data looks like in the CSV file, but some of the keys are dynamic so we use this and normalize it.
   // "Trade #": number
   // "Type": string
@@ -400,62 +397,152 @@ function normalizePropertyName(key: string, prefix: string): string {
   return `${prefix}${normalizedKey}`
 }
 
+const tradeDateSchema = z.union([
+  z.iso.date(),
+  z.iso.datetime({ local: true, offset: true }),
+])
+
+function normalizeTradeDate(value: string): string {
+  const isoDate = (_match: string, year: string, month: string, day: string) =>
+    `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+  return value
+    .replace(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/, isoDate)
+    .replace(
+      /^(\d{1,2})\/(\d{1,2})\/(\d{4})/,
+      (match: string, month: string, day: string, year: string) =>
+        isoDate(match, year, month, day),
+    )
+    .replace(' ', 'T')
+    .replace(
+      /T(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/,
+      (_match, hour: string, minute: string, second: string | undefined) =>
+        `T${hour.padStart(2, '0')}:${minute.padStart(2, '0')}${second === undefined ? '' : `:${second.padStart(2, '0')}`}`,
+    )
+    .replace(
+      /\.(\d+)/,
+      (_match, fraction: string) => `.${fraction.padEnd(3, '0')}`,
+    )
+    .replace(/([+-]\d{2})(\d{2})$/, '$1:$2')
+}
+
 export function processTradingViewData(
   filename: string,
   trades: TradingViewRecord[],
-): TradeRecord[] {
-  return Object.values(
-    trades.reduce(
-      (acc, trade) => {
-        const tradeNum = trade['Trade #']
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- index access may be undefined
-        if (!acc[tradeNum]) {
-          acc[tradeNum] = []
-        }
-        acc[tradeNum].push(trade)
-        return acc
-      },
-      {} as Record<number, TradingViewRecord[]>,
-    ),
-  )
-    .map((tradePair) => {
-      const [entry, exit] = tradePair.sort((a, _) =>
-        a.Type.includes('Entry') ? -1 : 1,
+): { trades: TradeRecord[]; excludedOpenTrades: number[] } {
+  const groups = new Map<number, TradingViewRecord[]>()
+  const excludedOpenTrades: number[] = []
+  trades.forEach((trade, index) => {
+    const tradeNum = Number(trade['Trade #'])
+    if (!Number.isInteger(tradeNum) || tradeNum <= 0) {
+      throw new Error(
+        `${filename} - row ${index + 2}: provide a valid Trade #.`,
       )
-
-      const mergedTrade: Partial<TradeRecord> = {
-        filename,
-        tradeNoOrig: entry['Trade #'],
-      }
-
-      ;[
-        { trade: entry, prefix: 'entry' as const },
-        { trade: exit, prefix: 'exit' as const },
-      ].forEach(({ trade, prefix }) => {
-        Object.entries(trade).forEach(([key, value]) => {
-          if (key === 'Trade #') return
-
-          const normalizedKey = normalizePropertyName(key, prefix)
-
-          if (isValidTradeRecordKey(normalizedKey)) {
-            if (key === 'Date/Time') {
-              if (isDateField(normalizedKey)) {
-                mergedTrade[normalizedKey] = dayjs(value).toDate()
-              }
-            } else if (isStringField(normalizedKey)) {
-              // Handle string fields (Type and Signal)
-              mergedTrade[normalizedKey] = value as string
-            } else if (isNumberField(normalizedKey)) {
-              // Handle number fields
-              mergedTrade[normalizedKey] = Number(value)
-            }
-          }
-        })
-      })
-
-      return mergedTrade as TradeRecord
+    }
+    const group = groups.get(tradeNum) ?? []
+    const date = trade['Date/Time']
+    group.push({
+      ...trade,
+      'Date/Time': typeof date === 'string' ? normalizeTradeDate(date) : date,
     })
-    .filter((trade) => dayjs(trade.exitDate).isValid())
+    groups.set(tradeNum, group)
+  })
+
+  const completedTrades = [...groups.entries()].flatMap(([tradeNo, rows]) => {
+    const fail = (reason: string): never => {
+      throw new Error(`${filename} - trade ${tradeNo}: ${reason}`)
+    }
+    const entries = rows.filter(
+      (row) =>
+        typeof row.Type === 'string' && /^Entry\b/i.test(row.Type.trim()),
+    )
+    const exits = rows.filter(
+      (row) => typeof row.Type === 'string' && /^Exit\b/i.test(row.Type.trim()),
+    )
+    const entry = entries[0]
+    const exit = exits[0]
+    const isOpen = rows.length === 1 && entries.length === 1
+    if (
+      !isOpen &&
+      (rows.length !== 2 || entries.length !== 1 || exits.length !== 1)
+    ) {
+      fail(
+        'Expected one Entry row and one Exit row. Check the Type column and remove duplicate rows.',
+      )
+    }
+
+    for (const row of rows) {
+      const prefix = row === entry ? 'entry' : 'exit'
+      if (
+        typeof row['Date/Time'] !== 'string' ||
+        !tradeDateSchema.safeParse(row['Date/Time']).success
+      ) {
+        fail(
+          `Provide a valid ${prefix} Date/Time in YYYY-MM-DD, YYYY/MM/DD, or MM/DD/YYYY format, with an optional time. ISO timestamps with timezone offsets are also supported.`,
+        )
+      }
+      for (const key of ['Price', 'Contracts', 'Profit']) {
+        if (
+          row[key] == null ||
+          String(row[key]).trim() === '' ||
+          !Number.isFinite(Number(row[key]))
+        ) {
+          fail(`Provide a numeric ${prefix} ${key}.`)
+        }
+      }
+      for (const [key, value] of Object.entries(row)) {
+        const normalizedKey = normalizePropertyName(key, prefix)
+        if (
+          isValidTradeRecordKey(normalizedKey) &&
+          isNumberField(normalizedKey) &&
+          (value == null ||
+            String(value).trim() === '' ||
+            !Number.isFinite(Number(value)))
+        ) {
+          fail(`Provide a numeric ${prefix} ${key}.`)
+        }
+      }
+    }
+    if (isOpen) {
+      excludedOpenTrades.push(tradeNo)
+      return []
+    }
+    if (dayjs(exit['Date/Time']).isBefore(dayjs(entry['Date/Time']))) {
+      fail('The Exit date must be on or after the Entry date.')
+    }
+
+    const mergedTrade: Partial<TradeRecord> = {
+      filename,
+      tradeNoOrig: tradeNo,
+    }
+
+    ;[
+      { trade: entry, prefix: 'entry' as const },
+      { trade: exit, prefix: 'exit' as const },
+    ].forEach(({ trade, prefix }) => {
+      Object.entries(trade).forEach(([key, value]) => {
+        if (key === 'Trade #') return
+
+        const normalizedKey = normalizePropertyName(key, prefix)
+
+        if (isValidTradeRecordKey(normalizedKey)) {
+          if (key === 'Date/Time') {
+            if (isDateField(normalizedKey)) {
+              mergedTrade[normalizedKey] = dayjs(value).toDate()
+            }
+          } else if (isStringField(normalizedKey)) {
+            // Handle string fields (Type and Signal)
+            mergedTrade[normalizedKey] = String(value ?? '')
+          } else if (isNumberField(normalizedKey)) {
+            // Handle number fields
+            mergedTrade[normalizedKey] = Number(value)
+          }
+        }
+      })
+    })
+
+    return [mergedTrade as TradeRecord]
+  })
+  return { trades: completedTrades, excludedOpenTrades }
 }
 
 // Simulate Trade data
