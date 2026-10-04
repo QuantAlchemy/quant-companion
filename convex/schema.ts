@@ -23,6 +23,7 @@ export default defineSchema({
     closingDate: v.optional(v.string()),
     realizedPnl: v.optional(v.number()),
     commission: v.optional(v.number()),
+    initialRisk: v.optional(v.number()), // dollars allocated to this portion
     exchange: v.optional(v.string()),
     comments: v.optional(v.string()),
   })

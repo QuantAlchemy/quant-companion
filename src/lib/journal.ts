@@ -6,6 +6,7 @@ export type TradeStatus = 'open' | 'closed'
 
 export interface JournalTrade {
   id: string
+  sourceId?: string
   assetName: string
   assetType: AssetType
   quantity: number
@@ -17,6 +18,7 @@ export interface JournalTrade {
   closingDate?: string
   realizedPnl?: number
   commission?: number
+  initialRisk?: number
   exchange?: string
   comments?: string
   createdAt: number
@@ -30,15 +32,14 @@ export interface NewTrade {
   tradeType: TradeType
   tradeDate: string
   commission?: number
+  initialRisk?: number
   exchange?: string
   comments?: string
 }
 
 export type JournalTradeData = Omit<JournalTrade, 'id' | 'createdAt'>
 
-export interface AccountTradeData extends JournalTradeData {
-  sourceId?: string
-}
+export type AccountTradeData = JournalTradeData
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 
@@ -139,6 +140,8 @@ export const tradeSignature = (trade: JournalTradeData) =>
     trade.commission ?? null,
     trade.exchange ?? null,
     trade.comments ?? null,
+    // Preserve the source IDs of backups created before risk was recorded.
+    ...(trade.initialRisk == null ? [] : [trade.initialRisk]),
   ])
 
 const stableHash = (input: string) => {
@@ -161,14 +164,25 @@ export function tradeImportSourceId(trade: JournalTradeData) {
 /** Preserve identical trades while keeping repeated imports idempotent. */
 export function prepareTradeImport(trades: JournalTradeData[]) {
   const occurrences = new Map<string, number>()
+  const sourceIds = new Set(
+    trades.flatMap((trade) => (trade.sourceId == null ? [] : [trade.sourceId])),
+  )
   return trades.map((trade) => {
+    // Exported import IDs survive edits; older files still use content identity.
+    if (trade.sourceId != null) return { ...trade, sourceId: trade.sourceId }
     const baseSourceId = tradeImportSourceId(trade)
-    const occurrence = occurrences.get(baseSourceId) ?? 0
-    occurrences.set(baseSourceId, occurrence + 1)
+    let occurrence = occurrences.get(baseSourceId) ?? 0
+    let sourceId: string
+    do {
+      sourceId =
+        occurrence === 0 ? baseSourceId : `${baseSourceId}:${occurrence}`
+      occurrence += 1
+    } while (sourceIds.has(sourceId))
+    occurrences.set(baseSourceId, occurrence)
+    sourceIds.add(sourceId)
     return {
       ...trade,
-      sourceId:
-        occurrence === 0 ? baseSourceId : `${baseSourceId}:${occurrence}`,
+      sourceId,
     }
   })
 }
@@ -186,13 +200,16 @@ export function prepareMissingTradeImport(
       accountIndexBySourceId.set(accountTrade.sourceId, accountIndex)
     }
   }
-  const matchedBrowserIndexes = new Set<number>()
+  const matchingRiskByBrowserIndex = new Map<number, boolean>()
 
   for (const [browserIndex, browserTrade] of preparedBrowserTrades.entries()) {
     const accountIndex = accountIndexBySourceId.get(browserTrade.sourceId)
     if (accountIndex == null) continue
     unusedAccountIndexes.delete(accountIndex)
-    matchedBrowserIndexes.add(browserIndex)
+    matchingRiskByBrowserIndex.set(
+      browserIndex,
+      accountTrades[accountIndex].initialRisk === browserTrade.initialRisk,
+    )
   }
 
   const accountOccurrences = new Map<string, number>()
@@ -206,7 +223,9 @@ export function prepareMissingTradeImport(
   }
 
   return preparedBrowserTrades.filter((trade, browserIndex) => {
-    if (matchedBrowserIndexes.has(browserIndex)) return false
+    const matchingRisk = matchingRiskByBrowserIndex.get(browserIndex)
+    // Let the importer report risk conflicts instead of marking them migrated.
+    if (matchingRisk !== undefined) return !matchingRisk
     const signature = tradeSignature(trade)
     const remaining = accountOccurrences.get(signature) ?? 0
     if (remaining === 0) return true
@@ -303,6 +322,15 @@ export function parseTradeFile(input: string): JournalTradeData[] {
       )
     }
 
+    const initialRisk = optionalFiniteNumber(
+      value.initialRisk,
+      'initial risk',
+      index,
+      0,
+    )
+    if (initialRisk === 0) {
+      throw new Error(`Trade ${index + 1} must have a positive initial risk`)
+    }
     const closingPrice = optionalFiniteNumber(
       value.closingPrice,
       'closing price',
@@ -331,6 +359,10 @@ export function parseTradeFile(input: string): JournalTradeData[] {
         : storedRealizedPnl
 
     return {
+      sourceId:
+        value.sourceId == null
+          ? undefined
+          : requiredString(value.sourceId, 'import source ID', index, 128),
       assetName: assetName.toUpperCase(),
       assetType,
       quantity,
@@ -341,6 +373,7 @@ export function parseTradeFile(input: string): JournalTradeData[] {
       closingPrice,
       closingDate,
       realizedPnl,
+      initialRisk,
       commission: optionalFiniteNumber(
         value.commission,
         'commission',

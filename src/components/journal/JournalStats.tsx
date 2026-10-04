@@ -70,12 +70,11 @@ const holdingDays = (trade: JournalTrade) => {
     : 0
 }
 
-const riskAmountFor = (trade: JournalTrade) =>
-  trade.price * trade.quantity * 0.01
-
 const rMultipleFor = (trade: JournalTrade) => {
-  const riskAmount = riskAmountFor(trade)
-  return riskAmount > 0 ? (trade.realizedPnl ?? 0) / riskAmount : 0
+  const risk = trade.initialRisk
+  return risk != null && Number.isFinite(risk) && risk > 0
+    ? (trade.realizedPnl ?? 0) / risk
+    : null
 }
 
 export function JournalStats({ trades, prices }: JournalStatsProps) {
@@ -122,11 +121,11 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
       openCostBasis > 0 ? (unrealizedPnlTotal / openCostBasis) * 100 : 0
     const totalPnlPct =
       closedCostBasis > 0 ? (realizedPnlTotal / closedCostBasis) * 100 : 0
-    const rMultiples = closed.map(rMultipleFor)
+    const rMultiples = closed.map(rMultipleFor).filter((r) => r != null)
     const avgRMultiple =
       rMultiples.length > 0
         ? rMultiples.reduce((sum, r) => sum + r, 0) / rMultiples.length
-        : 0
+        : null
     const longTermPnl = closed
       .filter((t) => holdingDays(t) >= 365)
       .reduce((sum, t) => sum + (t.realizedPnl ?? 0), 0)
@@ -234,7 +233,7 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
         type: 'bar',
         name: 'R-Multiple',
         marker: {
-          color: y.map(profitLossColor),
+          color: y.map((r) => profitLossColor(r ?? 0)),
         },
         hovertemplate: 'Trade #%{x}<br>%{y:.2f}R<extra></extra>',
       },
@@ -270,9 +269,15 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
         />
         <StatCard
           label="R-Multiple"
-          value={`${stats.avgRMultiple.toFixed(2)}R`}
-          footnote="Average risk multiple"
-          tone={valueTone(stats.avgRMultiple)}
+          value={
+            stats.avgRMultiple == null
+              ? 'Unavailable'
+              : `${stats.avgRMultiple.toFixed(2)}R`
+          }
+          footnote="Closed trades with recorded risk"
+          tone={
+            stats.avgRMultiple == null ? null : valueTone(stats.avgRMultiple)
+          }
         />
         <StatCard
           label="Unrealized P&L"
@@ -332,6 +337,12 @@ export function JournalStats({ trades, prices }: JournalStatsProps) {
               <CardTitle>R-Multiple per Trade</CardTitle>
             </CardHeader>
             <CardContent>
+              {stats.closed.some((trade) => rMultipleFor(trade) == null) && (
+                <p className="mb-3 text-sm text-muted-foreground">
+                  R unavailable without recorded risk. Missing values are
+                  excluded from the average.
+                </p>
+              )}
               <Plot
                 data={rMultipleBars}
                 layout={createLayout()}

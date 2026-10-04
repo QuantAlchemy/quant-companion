@@ -58,6 +58,7 @@ const validateTradeInput = (trade: {
   price: number
   tradeDate: string
   commission?: number
+  initialRisk?: number | null
   exchange?: string
   comments?: string
 }) => {
@@ -67,6 +68,9 @@ const validateTradeInput = (trade: {
   assertPositiveNumber(trade.quantity, 'Quantity')
   assertPositiveNumber(trade.price, 'Price')
   assertIsoDate(trade.tradeDate, 'Trade date')
+  if (trade.initialRisk != null) {
+    assertPositiveNumber(trade.initialRisk, 'Initial risk')
+  }
   if (
     trade.commission != null &&
     (!Number.isFinite(trade.commission) || trade.commission < 0)
@@ -85,6 +89,7 @@ const tradeInput = {
   tradeType: v.union(v.literal('buy'), v.literal('sell')),
   tradeDate: v.string(),
   commission: v.optional(v.number()),
+  initialRisk: v.optional(v.number()),
   exchange: v.optional(v.string()),
   comments: v.optional(v.string()),
 }
@@ -133,7 +138,11 @@ export const add = mutation({
 })
 
 export const edit = mutation({
-  args: { tradeId: v.id('trades'), ...tradeInput },
+  args: {
+    tradeId: v.id('trades'),
+    ...tradeInput,
+    initialRisk: v.optional(v.union(v.number(), v.null())),
+  },
   handler: async (ctx, { tradeId, ...args }) => {
     const userId = await requireUserId(ctx)
     validateTradeInput(args)
@@ -144,6 +153,11 @@ export const edit = mutation({
     await ctx.db.patch(tradeId, {
       ...args,
       assetName: args.assetName.trim().toUpperCase(),
+      // Omission preserves risk for older clients; null explicitly clears it.
+      initialRisk:
+        args.initialRisk === null
+          ? undefined
+          : (args.initialRisk ?? trade.initialRisk),
     })
   },
 })
@@ -214,6 +228,10 @@ export const split = mutation({
       args.closingQuantity,
     )
     const remainingQuantity = trade.quantity - args.closingQuantity
+    const closedRisk =
+      trade.initialRisk == null
+        ? undefined
+        : trade.initialRisk * (args.closingQuantity / trade.quantity)
 
     const closedTradeId = await ctx.db.insert('trades', {
       userId,
@@ -227,6 +245,7 @@ export const split = mutation({
       closingPrice: args.closingPrice,
       closingDate: args.closingDate,
       realizedPnl,
+      initialRisk: closedRisk,
       commission:
         trade.commission != null
           ? (trade.commission * args.closingQuantity) / trade.quantity
@@ -239,6 +258,10 @@ export const split = mutation({
 
     await ctx.db.patch(args.tradeId, {
       quantity: remainingQuantity,
+      initialRisk:
+        trade.initialRisk != null && closedRisk != null
+          ? trade.initialRisk - closedRisk
+          : undefined,
       commission:
         trade.commission != null
           ? (trade.commission * remainingQuantity) / trade.quantity
@@ -296,6 +319,7 @@ export const importMany = mutation({
     }
     let inserted = 0
     let skipped = 0
+    let conflicts = 0
     // Each Convex mutation is transactional. A validation error rolls back
     // this batch; the client reports progress from earlier committed batches.
     for (const trade of args.trades) {
@@ -322,6 +346,11 @@ export const importMany = mutation({
         )
         .unique()
       if (existing) {
+        // Keep current risk and report conflicts without blocking other records.
+        if (existing.initialRisk !== trade.initialRisk) {
+          conflicts += 1
+          continue
+        }
         skipped += 1
         continue
       }
@@ -332,6 +361,6 @@ export const importMany = mutation({
       })
       inserted += 1
     }
-    return { inserted, skipped }
+    return { inserted, skipped, conflicts }
   },
 })

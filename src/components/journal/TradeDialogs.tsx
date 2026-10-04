@@ -74,6 +74,7 @@ export function TradeFormDialog({
             tradeType: trade.tradeType,
             tradeDate: trade.tradeDate.slice(0, 10),
             commission: trade.commission,
+            initialRisk: trade.initialRisk,
             exchange: trade.exchange ?? '',
             comments: trade.comments ?? '',
           }
@@ -94,6 +95,12 @@ export function TradeFormDialog({
       return toast.error('Quantity must be greater than 0')
     if (form.price <= 0)
       return toast.error('Entry price must be greater than 0')
+    if (
+      form.initialRisk != null &&
+      (!Number.isFinite(form.initialRisk) || form.initialRisk <= 0)
+    ) {
+      return toast.error('Initial risk must be a finite number greater than 0')
+    }
 
     setIsSaving(true)
     try {
@@ -224,6 +231,28 @@ export function TradeFormDialog({
               value={form.exchange ?? ''}
               onChange={(e) => set('exchange', e.target.value)}
             />
+          </div>
+          <div className="col-span-2 space-y-1.5">
+            <Label htmlFor="initialRisk">
+              Initial risk in dollars (optional)
+            </Label>
+            <Input
+              id="initialRisk"
+              type="number"
+              step="any"
+              min={0}
+              value={form.initialRisk ?? ''}
+              onChange={(e) =>
+                set(
+                  'initialRisk',
+                  e.target.value === '' ? undefined : e.target.valueAsNumber,
+                )
+              }
+              aria-describedby="initialRiskHelp"
+            />
+            <p id="initialRiskHelp" className="text-xs text-muted-foreground">
+              Planned loss for this quantity at entry. Leave blank if unknown.
+            </p>
           </div>
           <div className="col-span-2 space-y-1.5">
             <Label htmlFor="comments">Notes: why this trade?</Label>
