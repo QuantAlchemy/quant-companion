@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { isLocalhostHostname } from '@/lib/environment'
 import { initSavedConfigs } from '@/lib/headerMappings'
 import {
+  originalTradeDataStore,
   processTradeMetrics,
   setOriginalTradeData,
   setTradeTrim,
@@ -24,6 +25,8 @@ export function Properties() {
   const startingEquity = useStore(startingEquityStore)
   const tradeData = useStore(tradeDataStore)
   const tradeTrim = useStore(tradeTrimStore)
+  const originalTradeData = useStore(originalTradeDataStore)
+  const availableCount = originalTradeData?.length ?? 0
   const [isLocalhost, setIsLocalhost] = useState(false)
 
   // hydrate saved header configs from localStorage once on the client
@@ -54,6 +57,7 @@ export function Properties() {
         className="w-auto"
         label="Remove Best Trades"
         min={0}
+        max={availableCount}
         value={tradeTrim.topCount}
         onValueChange={(value) => {
           setTradeTrim(value, tradeTrim.bottomCount)
@@ -63,6 +67,7 @@ export function Properties() {
         className="w-auto"
         label="Remove Worst Trades"
         min={0}
+        max={availableCount}
         value={tradeTrim.bottomCount}
         onValueChange={(value) => {
           setTradeTrim(tradeTrim.topCount, value)

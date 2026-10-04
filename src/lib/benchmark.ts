@@ -97,19 +97,14 @@ export function benchmarkComparison(
     ...calculateDrawdowns(benchEquity).map((d) => d.drawdownPercent),
   )
 
-  let stratSharpe = NaN
-  let benchSharpe = NaN
-  try {
-    stratSharpe = calculateSharpeRatio(metrics.equity, metrics.dates)
-    benchSharpe = calculateSharpeRatio(benchEquity, benchDates)
-  } catch {
-    // insufficient data for one of the Sharpe computations — compare what we have
-  }
+  // Keep the benchmark comparison on the requested chart date range for both series.
+  const stratSharpe = calculateSharpeRatio(metrics.equity, metrics.dates)
+  const benchSharpe = calculateSharpeRatio(benchEquity, benchDates)
 
   const betterReturn = stratReturnPct > benchReturnPct
   const betterDrawdown = stratMaxDd < benchMaxDd
   const betterSharpe =
-    Number.isFinite(stratSharpe) && Number.isFinite(benchSharpe)
+    stratSharpe !== null && benchSharpe !== null
       ? stratSharpe > benchSharpe
       : betterReturn
 
@@ -143,7 +138,7 @@ export function benchmarkComparison(
       {
         label: 'Sharpe (strategy / benchmark)',
         value:
-          Number.isFinite(stratSharpe) && Number.isFinite(benchSharpe)
+          stratSharpe !== null && benchSharpe !== null
             ? `${stratSharpe.toFixed(2)} / ${benchSharpe.toFixed(2)}`
             : 'n/a',
         tone: betterSharpe ? 'pass' : 'watch',

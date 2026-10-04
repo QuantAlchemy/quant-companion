@@ -75,7 +75,11 @@ const formatStatLabel = (key: string): ReactNode => {
         </>
       )
     case 'sharpeRatio':
-      return 'Sharpe Ratio'
+      return (
+        <span title="Daily realized-equity log returns on UTC calendar days, including days without closes. Annualized with 365.25 days and a 2% annual risk-free rate. Does not measure daily marked-to-market equity.">
+          Sharpe Ratio (realized equity)
+        </span>
+      )
     case 'maxDrawdownCombined':
       return 'Max Drawdown'
     default:
@@ -83,16 +87,19 @@ const formatStatLabel = (key: string): ReactNode => {
   }
 }
 
+const formatCurrency = (value: number | null) =>
+  value === null || !Number.isFinite(value)
+    ? 'Unavailable'
+    : currencyFormatter.format(value)
+
 const formatStatValue = (
   key: string,
-  value: number,
-  stats: SummaryStats
+  value: number | null,
+  stats: SummaryStats,
 ): ReactNode => {
-  if (typeof value !== 'number') return String(value)
-
   switch (key) {
     case 'totalTrades':
-      return value.toString()
+      return value?.toString() ?? 'Unavailable'
     case 'winsLossesCombined': {
       const wins = stats.winningTradesCnt
       const losses = stats.losingTradesCnt
@@ -105,12 +112,18 @@ const formatStatValue = (
     case 'mar':
     case 'netProfitByAvgDrawdown':
     case 'sharpeRatio':
-      return value.toFixed(2)
+      return value === null || !Number.isFinite(value)
+        ? 'Unavailable'
+        : value.toFixed(2)
     case 'winRate':
-      return percentageFormatter.format(value)
+      return value === null || !Number.isFinite(value)
+        ? 'Unavailable'
+        : percentageFormatter.format(value)
     case 'maxDrawdownCombined': {
-      const drawdown = currencyFormatter.format(stats.maxDrawdown)
-      const drawdownPct = percentageFormatter.format(stats.maxDrawdownPercent)
+      const drawdown = formatCurrency(stats.maxDrawdown)
+      const drawdownPct = Number.isFinite(stats.maxDrawdownPercent)
+        ? percentageFormatter.format(stats.maxDrawdownPercent)
+        : 'Unavailable'
       return (
         <>
           <div>{drawdown}</div>
@@ -121,46 +134,53 @@ const formatStatValue = (
     case 'averageProfitWinLoss': {
       return (
         <>
-          {currencyFormatter.format(stats.averageProfitWin)} <Divider />{' '}
-          {currencyFormatter.format(stats.averageProfitLoss)}
+          {formatCurrency(stats.averageProfitWin)} <Divider />{' '}
+          {formatCurrency(stats.averageProfitLoss)}
         </>
       )
     }
     case 'medianProfitWinLoss': {
       return (
         <>
-          {currencyFormatter.format(stats.medianProfitWin)} <Divider />{' '}
-          {currencyFormatter.format(stats.medianProfitLoss)}
+          {formatCurrency(stats.medianProfitWin)} <Divider />{' '}
+          {formatCurrency(stats.medianProfitLoss)}
         </>
       )
     }
     case 'σCombined': {
       return (
         <>
-          {currencyFormatter.format(stats.firstStdDev)} <Divider />{' '}
-          {currencyFormatter.format(stats.secondStdDev)}
+          {formatCurrency(stats.firstStdDev)} <Divider />{' '}
+          {formatCurrency(stats.secondStdDev)}
         </>
       )
     }
     case 'maxMinProfitCombined': {
       return (
         <>
-          {currencyFormatter.format(stats.maxProfit)} <Divider />{' '}
-          {currencyFormatter.format(stats.minProfit)}
+          {formatCurrency(stats.maxProfit)} <Divider />{' '}
+          {formatCurrency(stats.minProfit)}
         </>
       )
     }
     default:
-      return currencyFormatter.format(value)
+      return formatCurrency(value)
   }
 }
 
 export function TradeDataStats({ data }: Props) {
-  const stats = data ? calculateSummaryStats(data) : ({} as SummaryStats)
+  if (!data) {
+    return (
+      <p className="py-6 text-sm text-muted-foreground">
+        No trades to analyze. Upload trades or reduce trimming.
+      </p>
+    )
+  }
+  const stats = calculateSummaryStats(data)
 
   // Combine paired stats (win/loss, max/min, σ, drawdown) into single rows
   const processedStats = Object.entries(stats).reduce(
-    (acc: [string, number][], [key, value]) => {
+    (acc: [string, number | null][], [key, value]) => {
       if (key === 'maxDrawdown') {
         acc.push(['maxDrawdownCombined', value])
       } else if (key === 'averageProfitWin') {
@@ -185,7 +205,7 @@ export function TradeDataStats({ data }: Props) {
       }
       return acc
     },
-    []
+    [],
   )
 
   return (
@@ -197,9 +217,11 @@ export function TradeDataStats({ data }: Props) {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {(data ? processedStats : []).map(([key, value]) => (
+        {processedStats.map(([key, value]) => (
           <TableRow key={key}>
-            <TableCell className="font-medium">{formatStatLabel(key)}</TableCell>
+            <TableCell className="font-medium">
+              {formatStatLabel(key)}
+            </TableCell>
             <TableCell className="tabular text-right">
               {formatStatValue(key, value, stats)}
             </TableCell>
