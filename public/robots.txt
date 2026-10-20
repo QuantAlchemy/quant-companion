@@ -7,6 +7,7 @@ User-agent: PerplexityBot
 User-agent: Google-Extended
 Allow: /
 Disallow: /journal
+Disallow: /agents
 Disallow: /sign-in
 Disallow: /sign-up
 

@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Quant Companion · Connect an agent · Mocks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,600;1,9..144,800&family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0a0d16;
+    --card: #111525;
+    --card-2: #151a2d;
+    --muted: #1b2034;
+    --border: rgba(146, 155, 205, 0.16);
+    --ink: #e9ecf8;
+    --ink2: #a7aecb;
+    --violet: #7c5cff;
+    --violet-hi: #b48cff;
+    --gold: #e8b45a;
+    --gold-hi: #f4cf87;
+    --profit: #00d084;
+    --loss: #ff3366;
+    --display: 'Fraunces', Georgia, serif;
+    --sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+    --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); line-height: 1.55; }
+  a { color: var(--violet-hi); }
+  code, .mono { font-family: var(--mono); font-size: 0.86em; }
+
+  /* Review chrome (not part of the product) */
+  .review { max-width: 1180px; margin: 0 auto; padding: 40px 24px 8px; }
+  .review h1 { font-family: var(--display); font-style: italic; font-weight: 800; font-size: 2.1rem; margin: 6px 0 8px; }
+  .review p { color: var(--ink2); max-width: 75ch; margin: 6px 0; }
+  .review ul { color: var(--ink2); margin: 8px 0 0; padding-left: 20px; }
+  .variant-label { max-width: 1180px; margin: 56px auto 12px; padding: 0 24px; display: flex; gap: 14px; align-items: baseline; }
+  .variant-label .letter { font-family: var(--display); font-style: italic; font-weight: 800; font-size: 2rem; color: var(--gold-hi); }
+  .variant-label h2 { margin: 0; font-size: 1.15rem; }
+  .variant-label p { margin: 2px 0 0; color: var(--ink2); font-size: 0.92rem; }
+
+  /* Product frame */
+  .frame { max-width: 1180px; margin: 0 auto 24px; border: 1px solid var(--border); border-radius: 18px; overflow: hidden; background: var(--bg); box-shadow: 0 30px 80px rgba(4,6,12,.6); }
+  .appbar { height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; border-bottom: 1px solid var(--border); background: rgba(10,13,22,.8); }
+  .appbar .left { display: flex; align-items: center; gap: 32px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+  .brand span { font-family: var(--display); font-style: italic; font-weight: 600; font-size: 1.05rem; }
+  .nav { display: flex; gap: 22px; font-size: 0.9rem; color: var(--ink2); }
+  .nav .on { color: var(--ink); box-shadow: 0 9px 0 -7px var(--violet); }
+  .nav .new { color: var(--ink); }
+  .appbar .right { display: flex; align-items: center; gap: 12px; font-family: var(--mono); font-size: 0.78rem; color: var(--gold-hi); }
+  .avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, var(--violet-hi), var(--violet)); }
+  .page { padding: 36px 40px 48px; }
+
+  .kicker { letter-spacing: .22em; text-transform: uppercase; font-weight: 600; font-size: .68rem; color: var(--violet-hi); }
+  .title { font-family: var(--display); font-style: italic; font-weight: 800; font-size: 2.3rem; line-height: 1.1; margin: 8px 0 10px; }
+  .gold { color: var(--gold-hi); }
+  .lede { color: var(--ink2); max-width: 64ch; margin: 0; }
+
+  .panel { border: 1px solid var(--border); border-radius: 16px; background: linear-gradient(172deg, rgba(146,155,205,.07), rgba(146,155,205,.02) 38%), var(--card); padding: 22px 24px; }
+  .panel h3 { margin: 0 0 4px; font-size: 1rem; display: flex; align-items: center; gap: 10px; }
+  .panel .sub { color: var(--ink2); font-size: .9rem; margin: 0 0 14px; }
+  .grid-2 { display: grid; grid-template-columns: minmax(0,1.35fr) minmax(0,1fr); gap: 20px; margin-top: 28px; align-items: start; }
+  .stack { display: grid; gap: 20px; align-content: start; }
+
+  .prompt { position: relative; font-family: var(--mono); font-size: .8rem; line-height: 1.6; color: var(--ink); background: #0c1020; border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; white-space: pre-wrap; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .btn { font: 600 .85rem var(--sans); border-radius: 10px; padding: 9px 14px; border: 1px solid transparent; cursor: pointer; display: inline-flex; gap: 8px; align-items: center; }
+  .btn-primary { background: var(--violet); color: #fff; }
+  .btn-primary:hover { background: #6b4bf2; }
+  .btn-ghost { background: transparent; color: var(--ink); border-color: var(--border); }
+  .btn-ghost:hover { border-color: var(--violet); }
+  .btn-sm { padding: 6px 10px; font-size: .78rem; }
+
+  .url { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #0c1020; border: 1px solid var(--border); border-radius: 10px; padding: 8px 8px 8px 12px; font-family: var(--mono); font-size: .8rem; }
+  .url span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
+  .panel, .stack, ol.steps, ol.steps > li, [data-panels] { min-width: 0; }
+
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 16px; }
+  .tab { font: 500 .82rem var(--sans); color: var(--ink2); background: transparent; border: 1px solid var(--border); padding: 6px 11px; border-radius: 999px; cursor: pointer; }
+  .tab[aria-selected="true"] { color: #fff; background: rgba(124,92,255,.22); border-color: var(--violet); }
+  ol.steps { margin: 0; padding-left: 20px; display: grid; gap: 10px; color: var(--ink); font-size: .9rem; }
+  ol.steps .cmd { margin-top: 6px; }
+  .note { margin-top: 14px; font-size: .82rem; color: var(--ink2); border-left: 2px solid var(--violet); padding-left: 10px; }
+
+  .caps { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .cap { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; background: var(--card-2); }
+  .cap b { display: block; font-size: .88rem; margin-bottom: 2px; }
+  .cap span { color: var(--ink2); font-size: .82rem; }
+  .cap .tag { font-family: var(--mono); font-size: .66rem; color: var(--gold-hi); letter-spacing: .08em; text-transform: uppercase; }
+
+  .example { background: #0c1020; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font-size: .86rem; }
+  .example .who { font-family: var(--mono); font-size: .7rem; color: var(--violet-hi); text-transform: uppercase; letter-spacing: .12em; }
+  .example pre { margin: 6px 0 0; font-family: var(--mono); font-size: .76rem; color: var(--ink2); white-space: pre-wrap; }
+
+  .security li { margin: 4px 0; color: var(--ink2); font-size: .86rem; }
+  .security { margin: 0; padding-left: 18px; }
+
+  /* Variant B: journal context */
+  .journal-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 24px 0 18px; }
+  .stat { border: 1px solid var(--border); border-radius: 14px; background: var(--card); padding: 14px 16px; }
+  .stat .k { font-size: .72rem; color: var(--ink2); text-transform: uppercase; letter-spacing: .14em; }
+  .stat .v { font-family: var(--mono); font-size: 1.25rem; margin-top: 4px; }
+  .agent-strip { display: grid; grid-template-columns: auto 1fr auto; gap: 16px; align-items: center; border: 1px solid rgba(124,92,255,.45); border-radius: 14px; padding: 14px 16px; background: linear-gradient(100deg, rgba(124,92,255,.16), rgba(124,92,255,.03) 60%), var(--card); }
+  .agent-icon { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: rgba(124,92,255,.22); color: var(--violet-hi); }
+  .agent-strip p { margin: 2px 0 0; color: var(--ink2); font-size: .86rem; }
+  .drawer { margin-top: 12px; display: none; }
+  .drawer.open { display: grid; grid-template-columns: minmax(0,1.4fr) minmax(0,1fr); gap: 16px; align-items: start; }
+  .table { margin-top: 18px; border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  .table table { width: 100%; border-collapse: collapse; font-size: .84rem; }
+  .table th { text-align: left; font-weight: 500; color: var(--ink2); background: var(--card); padding: 10px 14px; font-size: .74rem; letter-spacing: .08em; text-transform: uppercase; }
+  .table td { padding: 10px 14px; border-top: 1px solid var(--border); font-family: var(--mono); font-size: .8rem; }
+  .pos { color: var(--profit); }
+  .chip { font-family: var(--sans); font-size: .72rem; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--ink2); }
+  .chip.open { color: var(--violet-hi); border-color: rgba(124,92,255,.5); }
+
+  /* Variant C: guided flow */
+  .flow { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 18px; margin-top: 28px; align-items: start; }
+  .step { position: relative; }
+  .step .num { font-family: var(--display); font-style: italic; font-weight: 800; font-size: 1.6rem; color: var(--gold-hi); line-height: 1; }
+  .step h3 { margin: 6px 0 4px; }
+  .result { margin-top: 20px; }
+  .lots { display: grid; gap: 8px; margin-top: 8px; }
+  .lot { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; background: var(--card-2); font-family: var(--mono); font-size: .78rem; }
+  .lot .lbl { font-family: var(--sans); color: var(--ink2); }
+  .verified { display: inline-flex; gap: 6px; align-items: center; font-size: .78rem; color: var(--gold-hi); border: 1px solid rgba(232,180,90,.45); border-radius: 999px; padding: 3px 10px; }
+  .copied { color: var(--profit) !important; }
+
+  @media (max-width: 900px) {
+    .grid-2, .flow, .drawer.open, .caps, .stats { grid-template-columns: 1fr; }
+    .page { padding: 24px 18px 32px; }
+    .nav { display: none; }
+    .agent-strip { grid-template-columns: auto 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="review">
+  <div class="kicker">Quant Companion · UI mocks · 2026-10-20</div>
+  <h1>Connect an agent: three directions</h1>
+  <p>The MCP server is live. Users need setup steps inside the app, as ClickAlchemy has. Each direction below shows the same content: the setup prompt, the server URL, steps for each agent, what the agent can do, and how to revoke access.</p>
+  <ul>
+    <li><b>A.</b> A dedicated Agents page in the main navigation. Closest to ClickAlchemy.</li>
+    <li><b>B.</b> A compact strip on the Journal page that opens setup in place. No new page.</li>
+    <li><b>C.</b> A guided page built around the main use: paste a broker email and the journal updates.</li>
+  </ul>
+  <p>Static mocks. Tabs and copy buttons work so you can feel the flow. Pick one, or combine parts.</p>
+</header>
+
+<!-- Shared mark -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="mv" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#B48CFF"/><stop offset=".55" stop-color="#7C5CFF"/><stop offset="1" stop-color="#552EF0"/></linearGradient>
+    <linearGradient id="mg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F4CF87"/><stop offset="1" stop-color="#E8B45A"/></linearGradient>
+    <symbol id="mark" viewBox="0 0 64 64">
+      <path d="M49 47.5A23 23 0 1 1 54.2 37" fill="none" stroke="url(#mv)" stroke-width="7" stroke-linecap="round"/>
+      <path d="M37.5 40.5 53.5 55" fill="none" stroke="url(#mv)" stroke-width="7" stroke-linecap="round"/>
+      <path d="m17.5 36 9-8.5 7 6 12.5-14" fill="none" stroke="url(#mg)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="46" cy="19.5" r="3.5" fill="#F4CF87"/>
+    </symbol>
+    <symbol id="bot" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 8V4M9 14h.01M15 14h.01M2 13v3M22 13v3"/></g></symbol>
+  </defs>
+</svg>
+
+<!-- ============ A ============ -->
+<div class="variant-label"><div class="letter">A</div><div><h2>Agents page</h2><p>New "Agents" link in the header. One page holds setup, capabilities, and security.</p></div></div>
+<section class="frame">
+  <div class="appbar">
+    <div class="left">
+      <div class="brand"><svg width="28" height="28"><use href="#mark"/></svg><span>Quant Companion</span></div>
+      <nav class="nav"><span>Analytics</span><span>Journal</span><span>Calculator</span><span>Proof Ladder</span><span class="on">Agents</span></nav>
+    </div>
+    <div class="right">◆ 1,240 XP <div class="avatar"></div></div>
+  </div>
+  <div class="page">
+    <div class="kicker">Agents</div>
+    <div class="title">Let your agent <span class="gold">keep the journal</span></div>
+    <p class="lede">Connect Claude, ChatGPT, Codex, or another AI agent to your trade journal. Paste a broker confirmation and the agent records the trade in the right account. You sign in with this account. You do not need an API key.</p>
+
+    <div class="grid-2">
+      <div class="stack">
+        <div class="panel">
+          <h3>Setup prompt</h3>
+          <p class="sub">Paste this into your agent. It adds the server and opens sign-in.</p>
+          <div class="prompt" id="a-prompt">Connect this agent to the Quant Companion MCP server at https://…convex.site/mcp using Streamable HTTP and OAuth browser sign-in. Name the connection quant-companion. … After I approve access, call list_accounts to verify the connection.</div>
+          <div class="row" style="margin-top:12px">
+            <button class="btn btn-primary" data-copy>Copy setup prompt</button>
+            <span style="color:var(--ink2);font-size:.82rem">Works in agents that support remote MCP with OAuth.</span>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Step by step</h3>
+          <p class="sub">Or set it up yourself. Choose your agent.</p>
+          <div class="tabs" role="tablist" data-tabs="a">
+            <button class="tab" role="tab" aria-selected="true" data-tab="claude-code">Claude Code</button>
+            <button class="tab" role="tab" aria-selected="false" data-tab="codex">Codex</button>
+            <button class="tab" role="tab" aria-selected="false" data-tab="claude-app">Claude app</button>
+            <button class="tab" role="tab" aria-selected="false" data-tab="chatgpt">ChatGPT</button>
+            <button class="tab" role="tab" aria-selected="false" data-tab="vscode">VS Code</button>
+            <button class="tab" role="tab" aria-selected="false" data-tab="other">Other</button>
+          </div>
+          <div data-panels="a"></div>
+          <div class="url" style="margin-top:16px"><span>https://…convex.site/mcp</span><button class="btn btn-ghost btn-sm" data-copy>Copy URL</button></div>
+        </div>
+      </div>
+
+      <div class="stack">
+        <div class="panel">
+          <h3>What your agent can do</h3>
+          <p class="sub">The same rules as the journal page.</p>
+          <div class="caps">
+            <div class="cap"><span class="tag">Read</span><b>Accounts and positions</b><span>Account names and open lots.</span></div>
+            <div class="cap"><span class="tag">Read</span><b>Trades and stats</b><span>Trades, filters, and your performance summary.</span></div>
+            <div class="cap"><span class="tag">Write</span><b>Broker fills</b><span>Closes the oldest lots first, after a preview.</span></div>
+            <div class="cap"><span class="tag">Write</span><b>Edit and import</b><span>Add, edit, close, delete, and import trades.</span></div>
+          </div>
+        </div>
+        <div class="panel">
+          <h3>Try this</h3>
+          <div class="example">
+            <div class="who">You</div>
+            Update my trade log. This is my Vanguard account.
+            <pre>Transaction type: Sell
+Security: STRATEGY INC … (STRC)
+Quantity: 53 share(s)
+Price: $97.95</pre>
+          </div>
+        </div>
+        <div class="panel">
+          <h3>Access and safety</h3>
+          <ul class="security">
+            <li>The agent sees only your journal.</li>
+            <li>It uses your existing account names, and asks before it adds a new one.</li>
+            <li>Removing the server from an agent does not end its access. Revoke it in <a href="#">Manage account → Security</a>.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ B ============ -->
+<div class="variant-label"><div class="letter">B</div><div><h2>Journal panel</h2><p>No new page. A strip above the trades opens setup in place. Dismissed state collapses to a small "Agent" button.</p></div></div>
+<section class="frame">
+  <div class="appbar">
+    <div class="left">
+      <div class="brand"><svg width="28" height="28"><use href="#mark"/></svg><span>Quant Companion</span></div>
+      <nav class="nav"><span>Analytics</span><span class="on">Journal</span><span>Calculator</span><span>Proof Ladder</span></nav>
+    </div>
+    <div class="right">◆ 1,240 XP <div class="avatar"></div></div>
+  </div>
+  <div class="page">
+    <div class="journal-head">
+      <div>
+        <div class="kicker">Trading journal</div>
+        <div class="title" style="font-size:2rem">Your record</div>
+      </div>
+      <div class="row"><button class="btn btn-ghost">Import</button><button class="btn btn-ghost">Export</button><button class="btn btn-primary">Add trade</button></div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="k">Realized P&amp;L</div><div class="v pos">+$4,812.40</div></div>
+      <div class="stat"><div class="k">Win rate</div><div class="v">58%</div></div>
+      <div class="stat"><div class="k">Open trades</div><div class="v">23</div></div>
+      <div class="stat"><div class="k">Profit factor</div><div class="v">1.84</div></div>
+    </div>
+
+    <div class="agent-strip">
+      <div class="agent-icon"><svg width="22" height="22"><use href="#bot"/></svg></div>
+      <div>
+        <b>Record trades from broker emails</b>
+        <p>Connect Claude, ChatGPT, or Codex. Paste a confirmation, and the agent updates this journal.</p>
+      </div>
+      <div class="row">
+        <button class="btn btn-primary" data-copy>Copy setup prompt</button>
+        <button class="btn btn-ghost" id="b-toggle" aria-expanded="true">Hide steps</button>
+      </div>
+    </div>
+    <div class="drawer open" id="b-drawer">
+      <div class="panel">
+        <h3>Set up your agent</h3>
+        <div class="tabs" role="tablist" data-tabs="b">
+          <button class="tab" role="tab" aria-selected="true" data-tab="claude-code">Claude Code</button>
+          <button class="tab" role="tab" aria-selected="false" data-tab="codex">Codex</button>
+          <button class="tab" role="tab" aria-selected="false" data-tab="claude-app">Claude app</button>
+          <button class="tab" role="tab" aria-selected="false" data-tab="chatgpt">ChatGPT</button>
+          <button class="tab" role="tab" aria-selected="false" data-tab="other">Other</button>
+        </div>
+        <div data-panels="b"></div>
+      </div>
+      <div class="panel">
+        <h3>Then try this</h3>
+        <div class="example">
+          <div class="who">You</div>
+          Update my trade log. This is my Vanguard account.
+          <pre>Sell 53 STRC at $97.95</pre>
+        </div>
+        <p class="note">The agent shows which lots it will close before it saves. It sees only your journal. Revoke access in Manage account → Security.</p>
+      </div>
+    </div>
+
+    <div class="table">
+      <table>
+        <thead><tr><th>Date</th><th>Account</th><th>Symbol</th><th>Qty</th><th>Entry</th><th>Status</th><th>Net P&amp;L</th></tr></thead>
+        <tbody>
+          <tr><td>2026-10-20</td><td>Vanguard - Ralph</td><td>STRC</td><td>30</td><td>95.00</td><td><span class="chip">Closed</span></td><td class="pos">+88.50</td></tr>
+          <tr><td>2025-11-11</td><td>Vanguard - Ralph</td><td>STRC</td><td>17</td><td>96.00</td><td><span class="chip open">Open</span></td><td>…</td></tr>
+          <tr><td>2025-11-10</td><td>Vanguard - Laura</td><td>STRC</td><td>10</td><td>94.00</td><td><span class="chip open">Open</span></td><td>…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============ C ============ -->
+<div class="variant-label"><div class="letter">C</div><div><h2>Guided flow</h2><p>A page, linked as "Agents", that walks through three steps and shows the result of the STRC example.</p></div></div>
+<section class="frame">
+  <div class="appbar">
+    <div class="left">
+      <div class="brand"><svg width="28" height="28"><use href="#mark"/></svg><span>Quant Companion</span></div>
+      <nav class="nav"><span>Analytics</span><span>Journal</span><span>Calculator</span><span>Proof Ladder</span><span class="on">Agents</span></nav>
+    </div>
+    <div class="right">◆ 1,240 XP <div class="avatar"></div></div>
+  </div>
+  <div class="page">
+    <div class="kicker">Agents</div>
+    <div class="title">From broker email to <span class="gold">verified record</span></div>
+    <p class="lede">Three steps. Your agent signs in as you, reads the confirmation, and closes the right lots.</p>
+
+    <div class="flow">
+      <div class="panel step">
+        <div class="num">1</div>
+        <h3>Connect</h3>
+        <p class="sub">Choose your agent.</p>
+        <div class="tabs" role="tablist" data-tabs="c">
+          <button class="tab" role="tab" aria-selected="true" data-tab="claude-code">Claude Code</button>
+          <button class="tab" role="tab" aria-selected="false" data-tab="codex">Codex</button>
+          <button class="tab" role="tab" aria-selected="false" data-tab="claude-app">Claude app</button>
+          <button class="tab" role="tab" aria-selected="false" data-tab="other">Other</button>
+        </div>
+        <div data-panels="c"></div>
+        <div class="row" style="margin-top:14px"><button class="btn btn-ghost btn-sm" data-copy>Copy setup prompt instead</button></div>
+      </div>
+      <div class="panel step">
+        <div class="num">2</div>
+        <h3>Approve</h3>
+        <p class="sub">A browser window opens. Sign in with this account and select Allow.</p>
+        <div class="example" style="display:grid;gap:8px">
+          <div class="who">Consent screen</div>
+          <div>An agent wants to access your Quant Companion account.</div>
+          <div class="mono" style="color:var(--ink2)">✓ Read your trade journal<br/>✓ Record and edit trades</div>
+        </div>
+        <p class="note">No API key. Revoke access any time in Manage account → Security.</p>
+      </div>
+      <div class="panel step">
+        <div class="num">3</div>
+        <h3>Paste a confirmation</h3>
+        <p class="sub">Say whose account it is.</p>
+        <div class="example">
+          <div class="who">You</div>
+          This is my Vanguard account.
+          <pre>Transaction type: Sell
+Security: … (STRC)
+Quantity: 53 share(s)
+Price: $97.95</pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel result">
+      <div class="row" style="justify-content:space-between">
+        <h3>What the agent records</h3>
+        <span class="verified">◆ Preview shown before saving</span>
+      </div>
+      <p class="sub">Account <span class="mono">Vanguard - Ralph</span>. Oldest lots close first. Laura's lots are not touched.</p>
+      <div class="lots">
+        <div class="lot"><span class="lbl">Close 30 bought at $95.00 on 2025-11-10</span><span>closed</span><span class="pos">+$88.50</span></div>
+        <div class="lot"><span class="lbl">Close 23 of 40 bought at $96.00 on 2025-11-11</span><span>split</span><span class="pos">+$44.85</span></div>
+        <div class="lot"><span class="lbl">17 shares stay open</span><span>open</span><span>…</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="review" style="padding-bottom:60px">
+  <p>All variants: the page reads the server URL from the backend and hides setup when the server is not configured. Copy buttons confirm with "Copied". Revoke wording points to Clerk's account security page.</p>
+</footer>
+
+<script>
+  const steps = {
+    'claude-code': ['Run this in your terminal:', 'claude mcp add --transport http --scope user quant-companion https://…/mcp', 'In Claude Code, type /mcp, choose quant-companion, then Authenticate.', 'Approve access in the browser.'],
+    'codex': ['Run this in your terminal. Codex opens sign-in when it adds the server:', 'codex mcp add quant-companion --url https://…/mcp', 'Approve access in the browser.'],
+    'claude-app': ['Open Customize, then Connectors. Select Add, then Add custom connector.', 'Name it Quant Companion and paste the server URL.', 'Select Connect and approve access.'],
+    'chatgpt': ['Go to chatgpt.com/plugins and add a custom MCP server.', 'Paste the server URL and choose OAuth.', 'Sign in and approve access.'],
+    'vscode': ['Install in one click, or add the URL to .vscode/mcp.json.', 'Start the server from the MCP list and approve access.'],
+    'other': ['Add the URL as a remote HTTP (Streamable HTTP) MCP server.', 'Select Authenticate or Sign in, and approve access.', 'Agents that only accept an API key cannot connect.'],
+  }
+  function render(group, id) {
+    const target = document.querySelector(`[data-panels="${group}"]`)
+    const list = steps[id]
+    const ol = document.createElement('ol')
+    ol.className = 'steps'
+    for (let i = 0; i < list.length; i++) {
+      const item = list[i]
+      const li = document.createElement('li')
+      if (item.startsWith('claude mcp') || item.startsWith('codex mcp')) continue
+      li.textContent = item
+      const next = list[i + 1]
+      if (next && (next.startsWith('claude mcp') || next.startsWith('codex mcp'))) {
+        const cmd = document.createElement('div')
+        cmd.className = 'url cmd'
+        cmd.innerHTML = `<span>${next}</span><button class="btn btn-ghost btn-sm" data-copy>Copy</button>`
+        li.appendChild(cmd)
+      }
+      ol.appendChild(li)
+    }
+    target.replaceChildren(ol)
+  }
+  document.querySelectorAll('[data-tabs]').forEach((tabs) => {
+    const group = tabs.dataset.tabs
+    tabs.addEventListener('click', (e) => {
+      const tab = e.target.closest('[data-tab]')
+      if (!tab) return
+      tabs.querySelectorAll('[data-tab]').forEach((t) => t.setAttribute('aria-selected', String(t === tab)))
+      render(group, tab.dataset.tab)
+    })
+    render(group, tabs.querySelector('[aria-selected="true"]').dataset.tab)
+  })
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-copy]')
+    if (!btn) return
+    const label = btn.textContent
+    btn.textContent = 'Copied'
+    btn.classList.add('copied')
+    setTimeout(() => { btn.textContent = label; btn.classList.remove('copied') }, 1400)
+  })
+  const toggle = document.getElementById('b-toggle')
+  toggle.addEventListener('click', () => {
+    const drawer = document.getElementById('b-drawer')
+    const open = drawer.classList.toggle('open')
+    toggle.textContent = open ? 'Hide steps' : 'Show steps'
+    toggle.setAttribute('aria-expanded', String(open))
+  })
+</script>
+</body>
+</html>

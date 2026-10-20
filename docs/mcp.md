@@ -10,7 +10,14 @@ at `/mcp`.
 | Production  | `https://opulent-spaniel-556.convex.site/mcp` |
 | Development | `https://formal-badger-214.convex.site/mcp`   |
 
-`/mcp-setup` on the same origin returns a setup prompt as plain text. Give it
+Signed-in users find the setup on the **Agents** page (`/agents`). It shows
+the setup prompt and server URL for the current deployment, steps for Claude
+Code, Codex, the Claude app, ChatGPT, VS Code, and other agents, and what the
+agent can do. Keep its client steps and capability list in
+`src/components/agents/AgentSetup.tsx` in sync with this document and
+`convex/mcp/server.ts`.
+
+`/mcp-setup` on the same origin returns the same setup prompt as plain text. Give it
 to the agent, and the agent adds the server and starts sign-in. You can also
 add the server yourself:
 
@@ -96,8 +103,8 @@ covers closed trades only.
 ## Security
 
 - Every request checks the token with Clerk. A revoked grant fails on the next
-  call. Removing the server from an agent does not revoke its grant. Revoke it
-  in your Clerk account's connected applications.
+  call. Removing the server from an agent does not revoke its grant. Users ask
+  Quant Alchemy to revoke it, and an administrator revokes the grant in Clerk.
 - The server accepts only opaque Clerk OAuth tokens issued for this server's
   URL. It refuses JWT access tokens, because Clerk cannot revoke them.
 - The agent works as the signed-in user. It uses the same journal owner key as

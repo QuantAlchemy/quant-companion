@@ -90,7 +90,8 @@ goes through Clerk's waitlist at `/waitlist`.
 
 Agents can read and update the trade journal through a hosted MCP server with
 browser sign-in. Paste a broker confirmation and the agent records the fill in
-the right account. See [docs/mcp.md](docs/mcp.md) for setup and tools.
+the right account. Signed-in users find setup steps on the Agents page
+(`/agents`). See [docs/mcp.md](docs/mcp.md) for setup and tools.
 
 ## Architecture notes
 
