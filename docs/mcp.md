@@ -146,6 +146,15 @@ Set these values on the Convex deployment. Use the `.convex.site` origin, not
 | `MCP_RESOURCE_URL` | The MCP URL from the table at the top                                  |
 | `CLERK_SECRET_KEY` | The secret key of the same Clerk instance as `CLERK_JWT_ISSUER_DOMAIN` |
 
+The Convex CLI reads `CONVEX_DEPLOY_KEY` from `.env.local` and then ignores
+`--prod`. To change production, export the production deploy key in the shell
+first, and pass secrets on stdin:
+
+```bash
+export CONVEX_DEPLOY_KEY="$(grep '^CONVEX_DEPLOY_KEY=' .env.production | cut -d= -f2-)"
+grep '^CLERK_SECRET_KEY=' .env.production | cut -d= -f2- | tr -d '\n' | pnpm exec convex env set CLERK_SECRET_KEY
+```
+
 Without both values, `/mcp` returns 503 and the app works as before. Changing
 `MCP_RESOURCE_URL` later makes every agent sign in again.
 
