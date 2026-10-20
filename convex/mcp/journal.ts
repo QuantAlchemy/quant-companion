@@ -19,7 +19,7 @@ import {
   splitTrade,
   tradeInput,
 } from '../model/trades'
-import { netJournalPnl } from '../../src/lib/journal'
+import { netJournalPnl, stableHash } from '../../src/lib/journal'
 import {
   journalTradesToPerformanceTrades,
   summarizePerformance,
@@ -610,15 +610,17 @@ export const recordExecution = agentMutation({
     const currentPlanId =
       plan.length === 0
         ? 'open'
-        : JSON.stringify(
-            plan.map(({ lot, quantity }) => [
-              lot._id,
-              quantity,
-              lot.quantity,
-              lot.price,
-              lot.tradeType,
-              lot.commission ?? null,
-            ]),
+        : stableHash(
+            JSON.stringify(
+              plan.map(({ lot, quantity }) => [
+                lot._id,
+                quantity,
+                lot.quantity,
+                lot.price,
+                lot.tradeType,
+                lot.commission ?? null,
+              ]),
+            ),
           )
     if (!dryRun && planId != null && planId !== currentPlanId) {
       throw new Error(

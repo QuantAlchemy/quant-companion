@@ -149,7 +149,8 @@ export const tradeSignature = (trade: JournalTradeData) =>
     ...(trade.initialRisk == null ? [] : [trade.initialRisk]),
   ])
 
-const stableHash = (input: string) => {
+/** Short, stable, non-cryptographic hash for content identity. */
+export const stableHash = (input: string) => {
   let first = 0x811c9dc5
   let second = 0x9e3779b9
   for (let index = 0; index < input.length; index += 1) {

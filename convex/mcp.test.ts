@@ -297,6 +297,34 @@ describe('MCP server', () => {
     },
   )
 
+  it('applies a plan that closes many lots', async () => {
+    const { client, call, ralph } = await fixture()
+    try {
+      for (let day = 1; day <= 120; day += 1) {
+        await ralph.mutation(api.trades.add, {
+          ...lot,
+          assetName: 'VOO',
+          quantity: 1,
+          price: 500 + day,
+          tradeDate: `2026-0${1 + Math.floor((day - 1) / 28)}-${String(((day - 1) % 28) + 1).padStart(2, '0')}`,
+          exchange: 'Vanguard - Ralph',
+        })
+      }
+      const sale = { ...strcSale, symbol: 'VOO', quantity: 120, price: 600 }
+      const plan = await call('record_execution', sale)
+      expect((plan.planId as string).length).toBeLessThanOrEqual(100)
+      expect(
+        await call('record_execution', {
+          ...sale,
+          dryRun: false,
+          planId: plan.planId,
+        }),
+      ).toMatchObject({ applied: true, remainingOpenQuantity: 0 })
+    } finally {
+      await client.close()
+    }
+  })
+
   it('reports the whole remaining position, including later lots', async () => {
     const { client, call, ralph } = await fixture()
     try {
