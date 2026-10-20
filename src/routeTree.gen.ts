@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AchievementsRouteImport } from './routes/achievements'
+import { Route as AgentsRouteImport } from './routes/agents'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as CalculatorRouteImport } from './routes/calculator'
 import { Route as JournalRouteImport } from './routes/journal'
@@ -28,6 +29,11 @@ const IndexRoute = IndexRouteImport.update({
 const AchievementsRoute = AchievementsRouteImport.update({
   id: '/achievements',
   path: '/achievements',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentsRoute = AgentsRouteImport.update({
+  id: '/agents',
+  path: '/agents',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AnalyticsRoute = AnalyticsRouteImport.update({
@@ -74,6 +80,7 @@ const SignUpSplatRoute = SignUpSplatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/achievements': typeof AchievementsRoute
+  '/agents': typeof AgentsRoute
   '/analytics': typeof AnalyticsRoute
   '/calculator': typeof CalculatorRoute
   '/journal': typeof JournalRoute
@@ -86,6 +93,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/achievements': typeof AchievementsRoute
+  '/agents': typeof AgentsRoute
   '/analytics': typeof AnalyticsRoute
   '/calculator': typeof CalculatorRoute
   '/journal': typeof JournalRoute
@@ -99,6 +107,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/achievements': typeof AchievementsRoute
+  '/agents': typeof AgentsRoute
   '/analytics': typeof AnalyticsRoute
   '/calculator': typeof CalculatorRoute
   '/journal': typeof JournalRoute
@@ -113,6 +122,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/achievements'
+    | '/agents'
     | '/analytics'
     | '/calculator'
     | '/journal'
@@ -125,6 +135,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/achievements'
+    | '/agents'
     | '/analytics'
     | '/calculator'
     | '/journal'
@@ -137,6 +148,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/achievements'
+    | '/agents'
     | '/analytics'
     | '/calculator'
     | '/journal'
@@ -150,6 +162,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AchievementsRoute: typeof AchievementsRoute
+  AgentsRoute: typeof AgentsRoute
   AnalyticsRoute: typeof AnalyticsRoute
   CalculatorRoute: typeof CalculatorRoute
   JournalRoute: typeof JournalRoute
@@ -174,6 +187,13 @@ declare module '@tanstack/react-router' {
       path: '/achievements'
       fullPath: '/achievements'
       preLoaderRoute: typeof AchievementsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agents': {
+      id: '/agents'
+      path: '/agents'
+      fullPath: '/agents'
+      preLoaderRoute: typeof AgentsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/analytics': {
@@ -238,6 +258,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AchievementsRoute: AchievementsRoute,
+  AgentsRoute: AgentsRoute,
   AnalyticsRoute: AnalyticsRoute,
   CalculatorRoute: CalculatorRoute,
   JournalRoute: JournalRoute,

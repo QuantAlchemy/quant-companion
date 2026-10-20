@@ -39,6 +39,9 @@ describe('public search-discovery files', () => {
     expect(sitemap).not.toContain(
       'https://www.quant-companion.quantalchemy.io/journal',
     )
+    expect(sitemap).not.toContain(
+      'https://www.quant-companion.quantalchemy.io/agents',
+    )
     expect(sitemap).not.toContain('/sign-in')
     expect(sitemap).not.toContain('/sign-up')
   })
@@ -96,6 +99,7 @@ describe('public search-discovery files', () => {
       'Sitemap: https://www.quant-companion.quantalchemy.io/sitemap.xml',
     )
     expect(robots).toContain('Disallow: /journal')
+    expect(robots).toContain('Disallow: /agents')
     expect(robots).toContain('Disallow: /sign-in')
     expect(robots).toContain('Disallow: /sign-up')
     expect(robots).toContain('User-agent: GPTBot')
