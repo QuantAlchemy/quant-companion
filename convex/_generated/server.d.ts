@@ -26,6 +26,8 @@ import type { DataModel } from "./dataModel.js";
  */
 type Env = {
   readonly CLERK_JWT_ISSUER_DOMAIN: string;
+  readonly CLERK_SECRET_KEY: string | undefined;
+  readonly MCP_RESOURCE_URL: string | undefined;
 };
 
 /**

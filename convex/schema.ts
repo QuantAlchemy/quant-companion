@@ -31,4 +31,12 @@ export default defineSchema({
     .index('by_userId_and_assetName', ['userId', 'assetName'])
     .index('by_userId_and_status', ['userId', 'status'])
     .index('by_userId_and_sourceId', ['userId', 'sourceId']),
+  // Results of agent writes, keyed by the agent's request ID, so a retried
+  // MCP call returns the first result instead of writing twice.
+  agentRequests: defineTable({
+    userId: v.string(),
+    requestId: v.string(),
+    input: v.string(), // JSON of the original arguments
+    result: v.string(), // JSON of the original result
+  }).index('by_userId_and_requestId', ['userId', 'requestId']),
 })

@@ -86,6 +86,12 @@ Live prices and benchmark bars use authenticated server functions in
 `src/lib/prices.ts`, so provider keys never reach the client. New account access
 goes through Clerk's waitlist at `/waitlist`.
 
+## Agents (MCP)
+
+Agents can read and update the trade journal through a hosted MCP server with
+browser sign-in. Paste a broker confirmation and the agent records the fill in
+the right account. See [docs/mcp.md](docs/mcp.md) for setup and tools.
+
 ## Architecture notes
 
 - `src/lib/stats.ts`, `monteCarlo.ts`, `invalidation.ts`, `headerMappings.ts`:
@@ -96,6 +102,8 @@ goes through Clerk's waitlist at `/waitlist`.
 - `src/lib/positionSize.ts`: position sizing and liquidation math
 - `src/components/Plot.tsx`: client-only, code-split Plotly wrapper
 - `src/routes/journal.tsx`: Clerk-protected Convex journal UI
+- `convex/model/trades.ts`: trade rules shared by the app and the MCP server
+- `convex/mcp/`: MCP server, Clerk token checks, and agent journal functions
 
 The legacy Chrome-extension build (TradingView page scraping) was retired with
 the SolidJS app; the git history (`main` prior to this replacement) retains it.

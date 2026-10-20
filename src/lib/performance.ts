@@ -1,8 +1,8 @@
-import { netJournalPnl } from '@/lib/journal'
-import { calculateZScores } from '@/lib/stats'
+import { netJournalPnl } from './journal'
+import { calculateZScores } from './stats'
 
-import type { JournalTrade } from '@/lib/journal'
-import type { TradeMetrics, TradeRecord } from '@/lib/stats'
+import type { JournalTrade } from './journal'
+import type { TradeMetrics, TradeRecord } from './stats'
 
 export type PerformanceSource = 'journal' | 'tradingview'
 export type PerformanceSide = 'long' | 'short'

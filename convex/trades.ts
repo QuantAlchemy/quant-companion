@@ -1,13 +1,26 @@
 import { v } from 'convex/values'
 
 import { mutation, query } from './_generated/server'
+import {
+  addTrade,
+  closeTrade,
+  editInput,
+  editTrade,
+  importTrades,
+  importedTrade,
+  listTrades,
+  removeTrades,
+  splitTrade,
+  tradeInput,
+} from './model/trades'
 
 import type { MutationCtx, QueryCtx } from './_generated/server'
 
 /**
  * Trades API — semantics mirror src/lib/journal.ts (which mirrors the
  * original trading-journal Convex backend). Auth comes from Clerk via the
- * "convex" JWT template.
+ * "convex" JWT template. The rules live in model/trades.ts, which the MCP
+ * server shares.
  */
 
 const requireUserIdentity = async (ctx: QueryCtx | MutationCtx) => {
@@ -21,93 +34,6 @@ const requireUserIdentity = async (ctx: QueryCtx | MutationCtx) => {
 const requireUserId = async (ctx: QueryCtx | MutationCtx): Promise<string> =>
   (await requireUserIdentity(ctx)).tokenIdentifier
 
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
-const MAX_IMPORT_BATCH = 50
-const MAX_DELETE_BATCH = 100
-
-const assertPositiveNumber = (value: number, label: string) => {
-  if (!Number.isFinite(value) || value <= 0) {
-    throw new Error(`${label} must be a finite number greater than 0`)
-  }
-}
-
-const assertIsoDate = (value: string, label: string) => {
-  const parsed = new Date(`${value}T00:00:00.000Z`)
-  if (
-    !ISO_DATE.test(value) ||
-    Number.isNaN(parsed.valueOf()) ||
-    !parsed.toISOString().startsWith(value)
-  ) {
-    throw new Error(`${label} must use a valid YYYY-MM-DD date`)
-  }
-}
-
-const assertOptionalText = (
-  value: string | undefined,
-  label: string,
-  maximumLength: number,
-) => {
-  if (value != null && value.length > maximumLength) {
-    throw new Error(`${label} must be ${maximumLength} characters or fewer`)
-  }
-}
-
-const validateTradeInput = (trade: {
-  assetName: string
-  quantity: number
-  price: number
-  tradeDate: string
-  commission?: number
-  initialRisk?: number | null
-  exchange?: string
-  comments?: string
-}) => {
-  if (!trade.assetName.trim() || trade.assetName.trim().length > 32) {
-    throw new Error('Asset name must be between 1 and 32 characters')
-  }
-  assertPositiveNumber(trade.quantity, 'Quantity')
-  assertPositiveNumber(trade.price, 'Price')
-  assertIsoDate(trade.tradeDate, 'Trade date')
-  if (trade.initialRisk != null) {
-    assertPositiveNumber(trade.initialRisk, 'Initial risk')
-  }
-  if (
-    trade.commission != null &&
-    (!Number.isFinite(trade.commission) || trade.commission < 0)
-  ) {
-    throw new Error('Commission must be a finite non-negative number')
-  }
-  assertOptionalText(trade.exchange, 'Exchange', 100)
-  assertOptionalText(trade.comments, 'Comments', 10_000)
-}
-
-const tradeInput = {
-  assetName: v.string(),
-  assetType: v.union(v.literal('crypto'), v.literal('traditional')),
-  quantity: v.number(),
-  price: v.number(),
-  tradeType: v.union(v.literal('buy'), v.literal('sell')),
-  tradeDate: v.string(),
-  commission: v.optional(v.number()),
-  initialRisk: v.optional(v.number()),
-  exchange: v.optional(v.string()),
-  comments: v.optional(v.string()),
-}
-
-const realizedPnlFor = (
-  tradeType: 'buy' | 'sell',
-  entryPrice: number,
-  closingPrice: number,
-  quantity: number,
-) => {
-  const entryValue = entryPrice * quantity
-  const closingValue = closingPrice * quantity
-  // sell = short position being bought back
-  return tradeType === 'buy'
-    ? closingValue - entryValue
-    : entryValue - closingValue
-}
-
 export const list = query({
   args: {},
   handler: async (ctx) => {
@@ -115,81 +41,19 @@ export const list = query({
     if (!identity) return []
     // Intentional: journal analytics require the complete account history.
     // Imports and deletes are bounded below to keep writes within limits.
-    return await ctx.db
-      .query('trades')
-      .withIndex('by_userId', (q) => q.eq('userId', identity.tokenIdentifier))
-      .order('desc')
-      .collect()
+    return await listTrades(ctx, identity.tokenIdentifier)
   },
 })
 
 export const add = mutation({
   args: tradeInput,
-  handler: async (ctx, args) => {
-    const userId = await requireUserId(ctx)
-    validateTradeInput(args)
-    return await ctx.db.insert('trades', {
-      ...args,
-      userId,
-      assetName: args.assetName.trim().toUpperCase(),
-      status: 'open',
-    })
-  },
+  handler: async (ctx, args) => addTrade(ctx, await requireUserId(ctx), args),
 })
 
 export const edit = mutation({
-  args: {
-    tradeId: v.id('trades'),
-    ...tradeInput,
-    initialRisk: v.optional(v.union(v.number(), v.null())),
-  },
-  handler: async (ctx, { tradeId, ...args }) => {
-    const userId = await requireUserId(ctx)
-    validateTradeInput(args)
-    const trade = await ctx.db.get(tradeId)
-    if (!trade) throw new Error('Trade not found')
-    if (trade.userId !== userId) throw new Error('Not authorized')
-
-    if (trade.closingDate != null && args.tradeDate > trade.closingDate) {
-      throw new Error('Trade date cannot be after the closing date')
-    }
-    const calculationChanged =
-      args.price !== trade.price ||
-      args.quantity !== trade.quantity ||
-      args.tradeType !== trade.tradeType
-    let realizedPnl = trade.realizedPnl
-    if (trade.status === 'closed' && calculationChanged) {
-      if (trade.closingPrice == null) {
-        throw new Error(
-          'Cannot recalculate a closed trade without a closing price',
-        )
-      }
-      assertPositiveNumber(trade.closingPrice, 'Closing price')
-      realizedPnl = realizedPnlFor(
-        args.tradeType,
-        args.price,
-        trade.closingPrice,
-        args.quantity,
-      )
-      if (!Number.isFinite(realizedPnl)) {
-        throw new Error('Realized P&L must be finite')
-      }
-    }
-
-    await ctx.db.patch(tradeId, {
-      ...args,
-      // A cleared form field is omitted from the request; remove its saved fee.
-      commission: args.commission,
-      // Preserve supplied historical gross P&L when calculation inputs match.
-      realizedPnl,
-      assetName: args.assetName.trim().toUpperCase(),
-      // Omission preserves risk for older clients; null explicitly clears it.
-      initialRisk:
-        args.initialRisk === null
-          ? undefined
-          : (args.initialRisk ?? trade.initialRisk),
-    })
-  },
+  args: { tradeId: v.id('trades'), ...editInput },
+  handler: async (ctx, { tradeId, ...args }) =>
+    editTrade(ctx, await requireUserId(ctx), tradeId, args),
 })
 
 export const close = mutation({
@@ -198,32 +62,7 @@ export const close = mutation({
     closingPrice: v.number(),
     closingDate: v.string(),
   },
-  handler: async (ctx, args) => {
-    const userId = await requireUserId(ctx)
-    const trade = await ctx.db.get(args.tradeId)
-    if (!trade) throw new Error('Trade not found')
-    if (trade.userId !== userId) throw new Error('Not authorized')
-    if (trade.status === 'closed') throw new Error('Trade is already closed')
-    assertPositiveNumber(args.closingPrice, 'Closing price')
-    assertIsoDate(args.closingDate, 'Closing date')
-    if (args.closingDate < trade.tradeDate) {
-      throw new Error('Closing date cannot be before the trade date')
-    }
-
-    const realizedPnl = realizedPnlFor(
-      trade.tradeType,
-      trade.price,
-      args.closingPrice,
-      trade.quantity,
-    )
-    await ctx.db.patch(args.tradeId, {
-      status: 'closed',
-      closingPrice: args.closingPrice,
-      closingDate: args.closingDate,
-      realizedPnl,
-    })
-    return { realizedPnl, commission: trade.commission }
-  },
+  handler: async (ctx, args) => closeTrade(ctx, await requireUserId(ctx), args),
 })
 
 export const split = mutation({
@@ -233,107 +72,19 @@ export const split = mutation({
     closingDate: v.string(),
     closingQuantity: v.number(),
   },
-  handler: async (ctx, args) => {
-    const userId = await requireUserId(ctx)
-    const trade = await ctx.db.get(args.tradeId)
-    if (!trade) throw new Error('Trade not found')
-    if (trade.userId !== userId) throw new Error('Not authorized')
-    if (trade.status === 'closed') throw new Error('Trade is already closed')
-    assertPositiveNumber(args.closingPrice, 'Closing price')
-    assertIsoDate(args.closingDate, 'Closing date')
-    if (args.closingDate < trade.tradeDate) {
-      throw new Error('Closing date cannot be before the trade date')
-    }
-    assertPositiveNumber(args.closingQuantity, 'Closing quantity')
-    if (args.closingQuantity <= 0 || args.closingQuantity >= trade.quantity) {
-      throw new Error(
-        'Closing quantity must be greater than 0 and less than the total quantity',
-      )
-    }
-
-    const realizedPnl = realizedPnlFor(
-      trade.tradeType,
-      trade.price,
-      args.closingPrice,
-      args.closingQuantity,
-    )
-    const remainingQuantity = trade.quantity - args.closingQuantity
-    const closedRisk =
-      trade.initialRisk == null
-        ? undefined
-        : trade.initialRisk * (args.closingQuantity / trade.quantity)
-    const commission =
-      trade.commission != null
-        ? (trade.commission * args.closingQuantity) / trade.quantity
-        : undefined
-
-    const closedTradeId = await ctx.db.insert('trades', {
-      userId,
-      assetName: trade.assetName,
-      assetType: trade.assetType,
-      quantity: args.closingQuantity,
-      price: trade.price,
-      tradeType: trade.tradeType,
-      tradeDate: trade.tradeDate,
-      status: 'closed',
-      closingPrice: args.closingPrice,
-      closingDate: args.closingDate,
-      realizedPnl,
-      initialRisk: closedRisk,
-      commission,
-      exchange: trade.exchange,
-      comments: trade.comments
-        ? `${trade.comments} (Split from original trade)`
-        : 'Split from original trade',
-    })
-
-    await ctx.db.patch(args.tradeId, {
-      quantity: remainingQuantity,
-      initialRisk:
-        trade.initialRisk != null && closedRisk != null
-          ? trade.initialRisk - closedRisk
-          : undefined,
-      commission:
-        trade.commission != null
-          ? (trade.commission * remainingQuantity) / trade.quantity
-          : undefined,
-    })
-
-    return { closedTradeId, realizedPnl, commission }
-  },
+  handler: async (ctx, args) => splitTrade(ctx, await requireUserId(ctx), args),
 })
 
 export const remove = mutation({
   args: { tradeIds: v.array(v.id('trades')) },
-  handler: async (ctx, args) => {
-    const userId = await requireUserId(ctx)
-    if (args.tradeIds.length > MAX_DELETE_BATCH) {
-      throw new Error(
-        `Delete requests are limited to ${MAX_DELETE_BATCH} trades`,
-      )
-    }
-    for (const tradeId of args.tradeIds) {
-      const trade = await ctx.db.get(tradeId)
-      if (!trade) continue
-      if (trade.userId !== userId) throw new Error('Not authorized')
-      await ctx.db.delete(tradeId)
-    }
-  },
+  handler: async (ctx, args) =>
+    removeTrades(ctx, await requireUserId(ctx), args.tradeIds),
 })
 
 export const importMany = mutation({
   args: {
     expectedSubject: v.string(),
-    trades: v.array(
-      v.object({
-        ...tradeInput,
-        sourceId: v.string(),
-        status: v.union(v.literal('open'), v.literal('closed')),
-        closingPrice: v.optional(v.number()),
-        closingDate: v.optional(v.string()),
-        realizedPnl: v.optional(v.number()),
-      }),
-    ),
+    trades: v.array(importedTrade),
   },
   handler: async (ctx, args) => {
     const identity = await requireUserIdentity(ctx)
@@ -342,56 +93,6 @@ export const importMany = mutation({
     if (identity.subject !== args.expectedSubject) {
       throw new Error('Signed-in account changed during import')
     }
-    const userId = identity.tokenIdentifier
-    if (args.trades.length > MAX_IMPORT_BATCH) {
-      throw new Error(
-        `Import batches are limited to ${MAX_IMPORT_BATCH} trades`,
-      )
-    }
-    let inserted = 0
-    let skipped = 0
-    let conflicts = 0
-    // Each Convex mutation is transactional. A validation error rolls back
-    // this batch; the client reports progress from earlier committed batches.
-    for (const trade of args.trades) {
-      validateTradeInput(trade)
-      if (trade.closingPrice != null) {
-        assertPositiveNumber(trade.closingPrice, 'Closing price')
-      }
-      if (trade.closingDate != null) {
-        assertIsoDate(trade.closingDate, 'Closing date')
-        if (trade.closingDate < trade.tradeDate) {
-          throw new Error('Closing date cannot be before the trade date')
-        }
-      }
-      if (trade.realizedPnl != null && !Number.isFinite(trade.realizedPnl)) {
-        throw new Error('Realized P&L must be finite')
-      }
-      if (!trade.sourceId || trade.sourceId.length > 128) {
-        throw new Error('Import source ID must be between 1 and 128 characters')
-      }
-      const existing = await ctx.db
-        .query('trades')
-        .withIndex('by_userId_and_sourceId', (q) =>
-          q.eq('userId', userId).eq('sourceId', trade.sourceId),
-        )
-        .unique()
-      if (existing) {
-        // Keep current risk and report conflicts without blocking other records.
-        if (existing.initialRisk !== trade.initialRisk) {
-          conflicts += 1
-          continue
-        }
-        skipped += 1
-        continue
-      }
-      await ctx.db.insert('trades', {
-        ...trade,
-        userId,
-        assetName: trade.assetName.trim().toUpperCase(),
-      })
-      inserted += 1
-    }
-    return { inserted, skipped, conflicts }
+    return importTrades(ctx, identity.tokenIdentifier, args.trades)
   },
 })

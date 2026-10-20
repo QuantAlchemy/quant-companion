@@ -16,3 +16,7 @@ VITE_CONVEX_URL={{ op://code-env/quant-companion-production/VITE_CONVEX_URL }}
 COINMARKETCAP_API_KEY={{ op://code-env/quant-companion-production/COINMARKETCAP_API_KEY }}
 ALPACA_API_KEY_ID={{ op://code-env/quant-companion-production/ALPACA_API_KEY_ID }}
 ALPACA_SECRET_KEY={{ op://code-env/quant-companion-production/ALPACA_SECRET_KEY }}
+
+# MCP server for agents (docs/mcp.md). Copy this and CLERK_SECRET_KEY to the
+# Convex deployment's environment; generating this file does not set them.
+MCP_RESOURCE_URL=https://opulent-spaniel-556.convex.site/mcp
