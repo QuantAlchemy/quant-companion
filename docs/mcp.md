@@ -72,14 +72,14 @@ The `quantcompanion:read` permission allows these tools:
 
 The `quantcompanion:write` permission adds these tools:
 
-| Tool               | Use                                                                     |
-| ------------------ | ----------------------------------------------------------------------- |
-| `record_execution` | Record a broker fill. It closes or opens lots as described above.       |
-| `add_trade`        | Open a trade directly                                                   |
-| `update_trade`     | Change only the supplied fields of one trade                            |
-| `close_trade`      | Close all or part of one trade, with an optional exit fee               |
-| `delete_trades`    | Delete up to 100 trades. This cannot be undone.                         |
-| `import_trades`    | Import up to 50 trades in the app's export format. Repeats add nothing. |
+| Tool               | Use                                                                                    |
+| ------------------ | -------------------------------------------------------------------------------------- |
+| `record_execution` | Record a broker fill. It closes or opens lots as described above.                      |
+| `add_trade`        | Open a trade directly                                                                  |
+| `update_trade`     | Change only the supplied fields of one trade                                           |
+| `close_trade`      | Close all or part of one trade, with an optional exit fee                              |
+| `delete_trades`    | Delete up to 100 trades. This cannot be undone.                                        |
+| `import_trades`    | Import up to 1,000 trades in the app's export format in one call. Repeats add nothing. |
 
 `add_trade` and `close_trade` also need a `requestId`, so a retried call does
 not add or split a trade twice. `update_trade` and `delete_trades` are safe to

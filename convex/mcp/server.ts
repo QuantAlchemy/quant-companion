@@ -5,6 +5,7 @@ import { z } from 'zod'
 
 import { internal } from '../_generated/api'
 import { MAX_DELETE_BATCH, MAX_IMPORT_BATCH } from '../model/trades'
+import { parseTradeFile, prepareTradeImport } from '../../src/lib/journal'
 import { calculatePosition } from '../../src/lib/positionSize'
 import {
   MCP_SCOPES,
@@ -96,6 +97,9 @@ const writeTools = [
   'delete_trades',
   'import_trades',
 ] as const
+
+// One call carries a whole file; it is written in batches of MAX_IMPORT_BATCH.
+const MAX_IMPORT_TRADES = 1000
 
 type McpCtx = Pick<ActionCtx, 'runQuery' | 'runMutation'>
 
@@ -370,24 +374,55 @@ export function createMcpServer(ctx: McpCtx, userId: string, scopes: string[]) {
   server.registerTool(
     'import_trades',
     {
-      description: `Import up to ${MAX_IMPORT_BATCH} trades in the app's journal export format, with the app's validation. Repeating an import adds nothing. Fields: assetName, assetType, quantity, price, tradeType, tradeDate, status, and optional closingPrice, closingDate, realizedPnl (gross), commission, initialRisk, exchange (the account), comments, sourceId.`,
+      description: `Import up to ${MAX_IMPORT_TRADES} trades in the app's journal export format, with the app's validation. Send the whole file in one call, so trades without a sourceId get stable IDs. Repeating an import adds nothing. Fields: assetName, assetType, quantity, price, tradeType, tradeDate, status, and optional closingPrice, closingDate, realizedPnl (gross), commission, initialRisk, exchange (the account), comments, sourceId.`,
       inputSchema: {
         trades: z
           .array(z.record(z.string(), z.unknown()))
           .min(1)
-          .max(MAX_IMPORT_BATCH),
+          .max(MAX_IMPORT_TRADES),
         newAccount: newAccountField,
       },
       annotations: { ...edit, idempotentHint: true },
     },
     ({ trades, newAccount }) =>
-      write(() =>
-        ctx.runMutation(journal.importMany, {
-          userId,
-          newAccount,
-          trades: JSON.stringify(trades),
-        }),
-      ),
+      write(async () => {
+        // Assign source IDs across the whole file before batching, as the app
+        // does, so identical trades in different batches keep distinct IDs.
+        const prepared = prepareTradeImport(
+          parseTradeFile(JSON.stringify(trades)),
+        )
+        const accounts = [
+          ...new Set(prepared.flatMap((trade) => trade.exchange ?? [])),
+        ]
+        const totals = { inserted: 0, skipped: 0, conflicts: 0 }
+        for (
+          let start = 0;
+          start < prepared.length;
+          start += MAX_IMPORT_BATCH
+        ) {
+          try {
+            const batch = await ctx.runMutation(journal.importMany, {
+              userId,
+              newAccount,
+              accounts,
+              trades: prepared.slice(start, start + MAX_IMPORT_BATCH),
+            })
+            totals.inserted += batch.inserted
+            totals.skipped += batch.skipped
+            totals.conflicts += batch.conflicts
+          } catch (error) {
+            // Earlier batches are saved. Repeating the same import is safe.
+            const reason =
+              error instanceof ConvexError && typeof error.data === 'string'
+                ? error.data
+                : String(error)
+            throw new ConvexError(
+              `Imported ${start} of ${prepared.length} trades, then stopped: ${reason} Repeating the same import skips the saved trades.`,
+            )
+          }
+        }
+        return totals
+      }),
   )
 
   return server

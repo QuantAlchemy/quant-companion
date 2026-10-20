@@ -256,25 +256,103 @@ describe('MCP server', () => {
     }
   })
 
-  it('refuses to apply a plan after its lots changed', async () => {
-    const { client, call, ralph, lots } = await fixture()
+  it.each([
+    ['closed', { closingPrice: 99, closingDate: '2026-10-19' }],
+    ['repriced', { price: 90 }],
+  ])(
+    'refuses to apply a plan after a lot was %s in the app',
+    async (_change, patch) => {
+      const { client, call, ralph, lots } = await fixture()
+      try {
+        const sale = { ...strcSale, quantity: 20 }
+        const plan = await call('record_execution', sale)
+        if ('closingPrice' in patch) {
+          await ralph.mutation(api.trades.close, {
+            tradeId: lots.first,
+            ...patch,
+          })
+        } else {
+          await ralph.mutation(api.trades.edit, {
+            tradeId: lots.first,
+            ...lot,
+            quantity: 30,
+            tradeDate: '2025-11-10',
+            commission: 3,
+            exchange: 'Vanguard - Ralph',
+            ...patch,
+          })
+        }
+        expect(
+          (
+            await call('record_execution', {
+              ...sale,
+              dryRun: false,
+              planId: plan.planId,
+            })
+          ).error,
+        ).toContain('changed since the dry run')
+      } finally {
+        await client.close()
+      }
+    },
+  )
+
+  it('reports the whole remaining position, including later lots', async () => {
+    const { client, call, ralph } = await fixture()
     try {
-      const sale = { ...strcSale, quantity: 20 }
-      const plan = await call('record_execution', sale)
-      await ralph.mutation(api.trades.close, {
-        tradeId: lots.first,
-        closingPrice: 99,
-        closingDate: '2026-10-19',
+      await ralph.mutation(api.trades.add, {
+        ...lot,
+        quantity: 5,
+        price: 98,
+        tradeDate: '2026-10-25',
+        exchange: 'Vanguard - Ralph',
+      })
+      expect(await call('record_execution', strcSale)).toMatchObject({
+        remainingOpenQuantity: 22,
+      })
+    } finally {
+      await client.close()
+    }
+  })
+
+  it('imports a file larger than one batch without dropping repeated trades', async () => {
+    const { client, call, ralph } = await fixture()
+    try {
+      const row = {
+        assetName: 'BTC',
+        assetType: 'crypto',
+        quantity: 0.1,
+        price: 60_000,
+        tradeType: 'buy',
+        tradeDate: '2026-01-02',
+        status: 'open',
+        exchange: 'Vanguard - Ralph',
+      }
+      const trades = Array.from({ length: 51 }, () => row)
+      expect(await call('import_trades', { trades })).toEqual({
+        inserted: 51,
+        skipped: 0,
+        conflicts: 0,
+      })
+      expect(await call('import_trades', { trades })).toEqual({
+        inserted: 0,
+        skipped: 51,
+        conflicts: 0,
       })
       expect(
         (
-          await call('record_execution', {
-            ...sale,
-            dryRun: false,
-            planId: plan.planId,
+          await call('import_trades', {
+            trades: [{ ...row, exchange: 'Kraken - Ralph' }],
           })
         ).error,
-      ).toContain('changed since the dry run')
+      ).toContain('Account "Kraken - Ralph" does not exist')
+      const ids = (await ralph.query(api.trades.list))
+        .filter((t) => t.assetName === 'BTC')
+        .map((t) => t._id)
+      // Repeated IDs delete and report each trade once.
+      expect(
+        await call('delete_trades', { tradeIds: [ids[0], ids[0]] }),
+      ).toMatchObject({ deleted: [{ id: ids[0] }], alreadyDeleted: 0 })
     } finally {
       await client.close()
     }

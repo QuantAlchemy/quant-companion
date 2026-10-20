@@ -11,6 +11,7 @@ import {
   editTrade,
   getOwnedTrade,
   importTrades,
+  importedTrade,
   listTrades,
   normalizeAssetName,
   realizedPnlFor,
@@ -18,11 +19,7 @@ import {
   splitTrade,
   tradeInput,
 } from '../model/trades'
-import {
-  netJournalPnl,
-  parseTradeFile,
-  prepareTradeImport,
-} from '../../src/lib/journal'
+import { netJournalPnl } from '../../src/lib/journal'
 import {
   journalTradesToPerformanceTrades,
   summarizePerformance,
@@ -476,7 +473,7 @@ export const close = agentMutation({
 export const remove = agentMutation({
   args: { ...owner, tradeIds: v.array(v.string()) },
   handler: async (ctx, { userId, tradeIds }) => {
-    const ids = tradeIds.map((id) => resolveTradeId(ctx, id))
+    const ids = [...new Set(tradeIds)].map((id) => resolveTradeId(ctx, id))
     const found = await Promise.all(ids.map((id) => ctx.db.get(id)))
     // Check every ID first, so one foreign ID deletes nothing.
     if (found.some((trade) => trade && trade.userId !== userId)) {
@@ -496,16 +493,24 @@ export const remove = agentMutation({
   },
 })
 
-/** Same validation and stable source IDs as the app's file import. */
+/**
+ * One batch of an import the MCP server already validated with the app's
+ * file parser and gave source IDs across the whole file. `accounts` lists
+ * every account in the file, so an unknown name stops the first batch.
+ */
 export const importMany = agentMutation({
-  args: { ...owner, trades: v.string(), newAccount: v.boolean() },
-  handler: async (ctx, { userId, trades, newAccount }) => {
-    const parsed = parseTradeFile(trades)
+  args: {
+    ...owner,
+    trades: v.array(importedTrade),
+    accounts: v.array(v.string()),
+    newAccount: v.boolean(),
+  },
+  handler: async (ctx, { userId, trades, accounts, newAccount }) => {
     const existing = await listTrades(ctx, userId)
-    for (const name of new Set(parsed.map((trade) => trade.exchange))) {
+    for (const name of accounts) {
       assertKnownAccount(existing, name, newAccount)
     }
-    return importTrades(ctx, userId, prepareTradeImport(parsed))
+    return importTrades(ctx, userId, trades)
   },
 })
 
@@ -567,6 +572,9 @@ export const recordExecution = agentMutation({
       .filter((t) => t.tradeDate <= input.date)
       .sort(byOldestFirst)
     const openQuantity = lots.reduce((sum, lot) => sum + lot.quantity, 0)
+    // The whole position after this fill, including lots dated after it.
+    const remainingOpenQuantity =
+      opposite.reduce((sum, lot) => sum + lot.quantity, 0) - input.quantity
     const later = opposite.length - lots.length
     const laterNote =
       later > 0
@@ -600,9 +608,18 @@ export const recordExecution = agentMutation({
     })
     // Identifies the lots a dry run showed, so the apply can refuse a changed plan.
     const currentPlanId =
-      plan
-        .map(({ lot, quantity }) => `${lot._id}:${quantity}/${lot.quantity}`)
-        .join(',') || 'open'
+      plan.length === 0
+        ? 'open'
+        : JSON.stringify(
+            plan.map(({ lot, quantity }) => [
+              lot._id,
+              quantity,
+              lot.quantity,
+              lot.price,
+              lot.tradeType,
+              lot.commission ?? null,
+            ]),
+          )
     if (!dryRun && planId != null && planId !== currentPlanId) {
       throw new Error(
         'The open lots changed since the dry run. Run the dry run again and show the user the new plan.',
@@ -673,7 +690,7 @@ export const recordExecution = agentMutation({
         opened: null,
         closed,
         netPnl: closed.reduce((sum, row) => sum + row.netPnl, 0),
-        remainingOpenQuantity: openQuantity - input.quantity,
+        remainingOpenQuantity,
       }
     }
 
@@ -695,7 +712,7 @@ export const recordExecution = agentMutation({
       closed: results.map((r) => r.closed),
       remaining: results.flatMap((r) => r.remaining ?? []),
       netPnl: results.reduce((sum, r) => sum + (r.closed.netPnl ?? 0), 0),
-      remainingOpenQuantity: openQuantity - input.quantity,
+      remainingOpenQuantity,
     })
   },
 })
