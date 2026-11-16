@@ -31,11 +31,15 @@ export const armedLevels = (trade: Doc<'trades'>) => {
   return levels
 }
 
+/** One crossed level, with the instrument and side its price was for. */
 export type LevelHit = {
   tradeId: Doc<'trades'>['_id']
   kind: LevelKind
   level: number
   price: number
+  assetName: string
+  assetType: Doc<'trades'>['assetType']
+  tradeType: Doc<'trades'>['tradeType']
 }
 
 /** Latest prices by asset type, so a stock and a coin with one ticker never mix. */
@@ -60,5 +64,13 @@ export const findHits = (
       .filter(({ kind, level }) =>
         levelHit(trade.tradeType, kind, level, price),
       )
-      .map(({ kind, level }) => ({ tradeId: trade._id, kind, level, price }))
+      .map(({ kind, level }) => ({
+        tradeId: trade._id,
+        kind,
+        level,
+        price,
+        assetName: trade.assetName,
+        assetType: trade.assetType,
+        tradeType: trade.tradeType,
+      }))
   })

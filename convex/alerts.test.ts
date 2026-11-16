@@ -22,6 +22,11 @@ const long = {
   tradeType: 'buy',
   tradeDate: '2026-11-02',
 } as const
+const nvda = {
+  assetName: 'NVDA',
+  assetType: 'traditional',
+  tradeType: 'buy',
+} as const
 
 afterEach(() => {
   vi.unstubAllEnvs()
@@ -82,7 +87,13 @@ describe('stop and target alerts', () => {
       stopPrice: 182,
       targetPrice: 205,
     })
-    const hit = { tradeId, kind: 'stop', level: 182, price: 181.62 } as const
+    const hit = {
+      ...nvda,
+      tradeId,
+      kind: 'stop',
+      level: 182,
+      price: 181.62,
+    } as const
     await t.mutation(internal.alerts.recordHits, { hits: [hit] })
     await t.mutation(internal.alerts.recordHits, { hits: [hit] })
     expect(await t.query(api.alerts.list)).toMatchObject({
@@ -106,6 +117,34 @@ describe('stop and target alerts', () => {
 
     await t.mutation(api.alerts.markRead, {})
     expect((await t.query(api.alerts.list)).unread).toBe(0)
+  })
+
+  it('ties a hit to the instrument its price was for', async () => {
+    const t = convexTest(schema, modules).withIdentity(identity)
+    const tradeId = await t.mutation(api.trades.add, {
+      ...long,
+      stopPrice: 182,
+    })
+    const hit = {
+      ...nvda,
+      tradeId,
+      kind: 'stop',
+      level: 182,
+      price: 181,
+    } as const
+
+    // A price for the stock does not count once the trade says crypto.
+    await t.mutation(api.trades.edit, { tradeId, ...long, assetType: 'crypto' })
+    await t.mutation(internal.alerts.recordHits, { hits: [hit] })
+    expect((await t.query(api.alerts.list)).alerts).toHaveLength(0)
+
+    // A hit is cleared when the instrument changes, so the level alerts again.
+    await t.mutation(internal.alerts.recordHits, {
+      hits: [{ ...hit, assetType: 'crypto' }],
+    })
+    await t.mutation(api.trades.edit, { tradeId, ...long })
+    const [trade] = await t.query(api.trades.list)
+    expect(trade.stopHitAt).toBeUndefined()
   })
 
   it('fetches each symbol once and checks only armed levels', async () => {
@@ -197,7 +236,7 @@ describe('stop and target alerts', () => {
     })
 
     await t.mutation(internal.alerts.recordHits, {
-      hits: [{ tradeId, kind: 'stop', level: 182, price: 181.62 }],
+      hits: [{ ...nvda, tradeId, kind: 'stop', level: 182, price: 181.62 }],
     })
     await t.finishAllScheduledFunctions(vi.runAllTimers)
 

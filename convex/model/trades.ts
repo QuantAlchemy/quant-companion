@@ -227,13 +227,22 @@ export const editTrade = async (
     }
   }
 
+  const assetName = normalizeAssetName(args.assetName)
+  // A hit belongs to one level on one instrument and side. Changing any of
+  // them arms the level again.
+  const keepsHit = (level: number | undefined, saved: number | undefined) =>
+    level === saved &&
+    assetName === trade.assetName &&
+    args.assetType === trade.assetType &&
+    args.tradeType === trade.tradeType
+
   await ctx.db.patch(tradeId, {
     ...args,
     // A cleared form field is omitted from the request; remove its saved fee.
     commission: args.commission,
     // Preserve supplied historical gross P&L when calculation inputs match.
     realizedPnl,
-    assetName: normalizeAssetName(args.assetName),
+    assetName,
     // Omission preserves risk for older clients; null explicitly clears it.
     initialRisk:
       args.initialRisk === null
@@ -242,10 +251,12 @@ export const editTrade = async (
     stopPrice,
     targetPrice,
     priceAlerts: args.priceAlerts ?? trade.priceAlerts,
-    // A moved level can alert again.
-    stopHitAt: stopPrice === trade.stopPrice ? trade.stopHitAt : undefined,
-    targetHitAt:
-      targetPrice === trade.targetPrice ? trade.targetHitAt : undefined,
+    stopHitAt: keepsHit(stopPrice, trade.stopPrice)
+      ? trade.stopHitAt
+      : undefined,
+    targetHitAt: keepsHit(targetPrice, trade.targetPrice)
+      ? trade.targetHitAt
+      : undefined,
   })
 }
 

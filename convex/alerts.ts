@@ -289,6 +289,9 @@ export const recordHits = internalMutation({
         kind: v.union(v.literal('stop'), v.literal('target')),
         level: v.number(),
         price: v.number(),
+        assetName: v.string(),
+        assetType: v.union(v.literal('crypto'), v.literal('traditional')),
+        tradeType: v.union(v.literal('buy'), v.literal('sell')),
       }),
     ),
   },
@@ -298,9 +301,13 @@ export const recordHits = internalMutation({
     for (const hit of hits) {
       const trade = await ctx.db.get(hit.tradeId)
       if (!trade) continue
-      const stillArmed = armedLevels(trade).some(
-        ({ kind, level }) => kind === hit.kind && level === hit.level,
-      )
+      const stillArmed =
+        trade.assetName === hit.assetName &&
+        trade.assetType === hit.assetType &&
+        trade.tradeType === hit.tradeType &&
+        armedLevels(trade).some(
+          ({ kind, level }) => kind === hit.kind && level === hit.level,
+        )
       if (!stillArmed) continue
       await ctx.db.patch(
         trade._id,
