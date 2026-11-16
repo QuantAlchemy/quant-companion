@@ -137,6 +137,51 @@ describe('stop and target alerts', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
+  it('keeps stock and crypto prices apart and skips names that are not tickers', async () => {
+    vi.stubEnv('ALPACA_API_KEY_ID', 'test-key')
+    vi.stubEnv('ALPACA_SECRET_KEY', 'test-secret')
+    vi.stubEnv('COINMARKETCAP_API_KEY', 'test-cmc')
+    const fetchMock = vi.fn(async (url: string) =>
+      url.includes('coinmarketcap')
+        ? Response.json({
+            data: { AMP: { symbol: 'AMP', quote: { USD: { price: 0.004 } } } },
+            status: { error_code: 0, error_message: null },
+          })
+        : Response.json({ trade: { p: 510 } }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const t = convexTest(schema, modules).withIdentity(identity)
+    const coin = { ...long, assetType: 'crypto', assetName: 'AMP' } as const
+
+    // Ameriprise at 510 is far above its 450 stop; the Amp coin is below its stop.
+    await t.mutation(api.trades.add, {
+      ...long,
+      assetName: 'AMP',
+      stopPrice: 450,
+      price: 500,
+    })
+    await t.mutation(api.trades.add, {
+      ...coin,
+      price: 0.006,
+      stopPrice: 0.005,
+    })
+    await t.mutation(api.trades.add, {
+      ...coin,
+      assetName: 'BTC&convert=EUR',
+      price: 1,
+      stopPrice: 0.5,
+    })
+
+    expect(await t.action(internal.alerts.checkLevels, {})).toEqual({
+      checked: 3,
+      hits: 1,
+    })
+    const [alert] = (await t.query(api.alerts.list)).alerts
+    expect(alert).toMatchObject({ assetName: 'AMP', price: 0.004 })
+    const urls = fetchMock.mock.calls.map(([url]) => url)
+    expect(urls.some((url) => url.includes('convert'))).toBe(false)
+  })
+
   it('emails a hit when email alerts are on', async () => {
     vi.useFakeTimers()
     vi.stubEnv('RESEND_API_KEY', 'test-resend-key')

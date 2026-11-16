@@ -16,6 +16,11 @@ export type MarketDataKeys = {
 
 const REQUEST_TIMEOUT_MS = 10_000
 export const MAX_CRYPTO_SYMBOLS = 100
+/** A ticker such as NVDA, BRK.B, or BTC/USD. Anything else never reaches a URL. */
+export const SYMBOL_PATTERN =
+  /^[A-Za-z0-9][A-Za-z0-9._-]*(?:\/[A-Za-z0-9][A-Za-z0-9._-]*)?$/
+const isMarketSymbol = (symbol: string) =>
+  symbol.length <= 32 && SYMBOL_PATTERN.test(symbol)
 const TRADITIONAL_REQUEST_CONCURRENCY = 5
 
 const coinMarketCapResponse = z.object({
@@ -55,11 +60,11 @@ const fetchCryptoPrices = async (
     return {}
   }
 
-  const validSymbols = symbols.filter((s) => s && s.trim().length > 0)
+  const validSymbols = symbols.filter(isMarketSymbol)
   if (validSymbols.length === 0) return {}
 
   const symbolsToFetch = [...new Set(validSymbols)].slice(0, MAX_CRYPTO_SYMBOLS)
-  const url = `https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol=${symbolsToFetch.join(',')}&aux=cmc_rank`
+  const url = `https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol=${symbolsToFetch.map(encodeURIComponent).join(',')}&aux=cmc_rank`
 
   try {
     const response = await fetchWithTimeout(url, {
@@ -145,7 +150,7 @@ const fetchTraditionalPrices = async (
   symbols: string[],
   keys: MarketDataKeys,
 ) => {
-  const uniqueSymbols = [...new Set(symbols)]
+  const uniqueSymbols = [...new Set(symbols.filter(isMarketSymbol))]
   const results: Array<{ symbol: string; price: number | null }> = []
   for (
     let index = 0;
@@ -172,7 +177,10 @@ const fetchTraditionalPrices = async (
   return results
 }
 
-/** A symbol -> price map for both asset types. Symbols without a price are omitted. */
+/**
+ * A symbol -> price map for both asset types. Symbols without a price, and
+ * names that are not tickers, are omitted.
+ */
 export const fetchMarketPrices = async (
   { crypto, traditional }: { crypto: string[]; traditional: string[] },
   keys: MarketDataKeys,

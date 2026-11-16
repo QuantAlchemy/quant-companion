@@ -17,6 +17,7 @@ import {
   sendResendEmail,
 } from './model/alertMessage'
 import { armedLevels, findHits } from './model/levels'
+import type { PricesByType } from './model/levels'
 
 import type { Doc, Id } from './_generated/dataModel'
 import type { MutationCtx, QueryCtx } from './_generated/server'
@@ -188,6 +189,20 @@ export const subscribePush = mutation({
   },
 })
 
+/** Whether pushes to this browser's endpoint reach the signed-in user. */
+export const pushStatus = query({
+  args: { endpoint: v.string() },
+  handler: async (ctx, { endpoint }) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) return false
+    const existing = await ctx.db
+      .query('pushSubscriptions')
+      .withIndex('by_endpoint', (q) => q.eq('endpoint', endpoint))
+      .unique()
+    return existing?.userId === identity.tokenIdentifier
+  },
+})
+
 export const unsubscribePush = mutation({
   args: { endpoint: v.string() },
   handler: async (ctx, { endpoint }) => {
@@ -242,13 +257,16 @@ export const checkLevels = internalAction({
       alpacaKeyId: env.ALPACA_API_KEY_ID,
       alpacaSecret: env.ALPACA_SECRET_KEY,
     }
-    const prices: Record<string, number> = await fetchMarketPrices(
-      { crypto: [], traditional: symbols('traditional') },
-      keys,
-    )
+    const prices: PricesByType = {
+      traditional: await fetchMarketPrices(
+        { crypto: [], traditional: symbols('traditional') },
+        keys,
+      ),
+      crypto: {},
+    }
     for (const crypto of chunk(symbols('crypto'), MAX_CRYPTO_SYMBOLS)) {
       Object.assign(
-        prices,
+        prices.crypto,
         await fetchMarketPrices({ crypto, traditional: [] }, keys),
       )
     }

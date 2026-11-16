@@ -38,6 +38,12 @@ export type LevelHit = {
   price: number
 }
 
+/** Latest prices by asset type, so a stock and a coin with one ticker never mix. */
+export type PricesByType = Record<
+  Doc<'trades'>['assetType'],
+  Partial<Record<string, number>>
+>
+
 /**
  * Every armed level the latest prices reached. A trade without a price is
  * skipped. When a gap passes both levels at once, only one can be true, so a
@@ -45,10 +51,10 @@ export type LevelHit = {
  */
 export const findHits = (
   trades: Doc<'trades'>[],
-  prices: Partial<Record<string, number>>,
+  prices: PricesByType,
 ): LevelHit[] =>
   trades.flatMap((trade) => {
-    const price = prices[trade.assetName.toUpperCase()]
+    const price = prices[trade.assetType][trade.assetName.toUpperCase()]
     if (price == null) return []
     return armedLevels(trade)
       .filter(({ kind, level }) =>

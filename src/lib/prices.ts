@@ -4,6 +4,7 @@ import { z } from 'zod'
 
 import {
   MAX_CRYPTO_SYMBOLS,
+  SYMBOL_PATTERN,
   fetchMarketPrices,
   fetchWithTimeout,
 } from './marketData'
@@ -20,8 +21,6 @@ import {
 const MAX_TRADITIONAL_SYMBOLS = 25
 const MAX_BAR_RANGE_DAYS = 3_660
 const MAX_BAR_PAGES = 5
-const SYMBOL_PATTERN =
-  /^[A-Za-z0-9][A-Za-z0-9._-]*(?:\/[A-Za-z0-9][A-Za-z0-9._-]*)?$/
 
 const alpacaBar = z.object({ t: z.string(), c: z.number().finite() })
 const alpacaBarsResponse = z.object({
