@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Stop alerts plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@1,700;1,900&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap">
+<style>
+/* Quant Companion brand: brand/brand.json. */
+:root{color-scheme:dark;--bg:#0A0D16;--surface:#111525;--raised:#171c30;--line:#252b45;--violet:#7C5CFF;--violet-hi:#B48CFF;--gold:#E8B45A;--ink:#E9ECF8;--ink2:#A7AECB;--rose:#FF3366}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16.5px/1.65 "Instrument Sans",ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+main{max-width:76ch;margin:auto;padding:34px 20px 80px}
+.mast{font:13px "IBM Plex Mono",monospace;color:var(--ink2);border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:28px}
+h1,h2{font-family:Fraunces,serif;font-style:italic;font-weight:900;line-height:1.12;letter-spacing:-.01em}
+h1{font-size:clamp(30px,5vw,42px);margin:0 0 12px}
+h2{font-size:25px;margin:42px 0 12px}
+p,li{color:var(--ink2)}
+strong{color:var(--ink);font-weight:600}
+a{color:var(--violet-hi);text-underline-offset:4px}
+code{font:.88em "IBM Plex Mono",monospace;color:var(--violet-hi)}
+.lead{font-size:19px;color:var(--ink)}
+.callout{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:10px;padding:14px 18px;margin:22px 0}
+.callout p{margin:0}
+.callout p+p{margin-top:8px}
+ol.flow{counter-reset:s;list-style:none;padding:0;display:grid;gap:10px}
+ol.flow li{counter-increment:s;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 16px 12px 52px;position:relative}
+ol.flow li:before{content:counter(s);position:absolute;left:16px;top:10px;font:900 italic 22px Fraunces,serif;color:var(--violet)}
+table{width:100%;border-collapse:collapse;font-size:14.5px;margin:8px 0}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:500 12px "IBM Plex Mono",monospace;text-transform:uppercase;letter-spacing:.04em;color:var(--ink2)}
+td{color:var(--ink2)}
+td:first-child{color:var(--ink);white-space:nowrap}
+ul{padding-left:20px}
+li+li{margin-top:6px}
+.decide li{margin-top:12px}
+footer{margin-top:44px;border-top:1px solid var(--line);padding-top:14px;font-size:14px;color:var(--ink2)}
+</style>
+</head>
+<body>
+<main>
+<div class="mast">quant-companion · docs/plans/stop-alerts · November 16, 2026 · Proposal</div>
+<h1>Stop alerts for the journal</h1>
+<p class="lead">Each open trade can have an optional stop price. When the price reaches the stop, Quant Companion tells you in the app, and also by browser notification or email if you turn those on.</p>
+
+<div class="callout">
+<p><strong>An alert, not an order.</strong> Quant Companion never sells or closes anything. A stop hit gives you one click, "Close at stop", which records the exit in the journal. Keep your real stop order with your broker.</p>
+<p><strong>Pick a screen first.</strong> The <a href="https://2ijmzh90em5v.postplan.dev">mocks</a> show three directions: in the table, an alert inbox, and a risk board. No code changes until you pick one.</p>
+</div>
+
+<h2>How it works</h2>
+<ol class="flow">
+<li><strong>You set a stop.</strong> The trade form gets an optional stop price and an "Alert me" checkbox. The form shows the risk at the stop and uses it for R. A long trade hits its stop when the price is at or below it. A short trade hits its stop when the price is at or above it.</li>
+<li><strong>Convex checks prices every 5 minutes.</strong> A scheduled job reads the open trades with an armed stop. It groups the symbols and asks for prices in one call for each provider: CoinMarketCap for crypto, and Alpaca for stocks, in market hours only. This works while the app is closed.</li>
+<li><strong>A stop fires once.</strong> For each hit, one mutation writes an alert and marks the trade as hit. A later check does not alert again. Change the stop and it is armed again.</li>
+<li><strong>You get told.</strong> The in-app alert updates live through a Convex query. A browser notification goes through a service worker and Web Push. An email goes through the Convex Resend component.</li>
+<li><strong>You decide.</strong> "Close at stop" opens the normal close form with the stop price filled in. Change the price to your real fill before you save. "Edit stop" moves the stop and arms it again.</li>
+</ol>
+
+<h2>Data changes</h2>
+<table>
+<tr><th>Table</th><th>Change</th></tr>
+<tr><td><code>trades</code></td><td>Add optional <code>stopPrice</code>, <code>stopAlert</code>, and <code>stopHitAt</code>, plus an index on status and <code>stopAlert</code> for the scheduled job. Old trades need no migration.</td></tr>
+<tr><td><code>alerts</code> (new)</td><td>One row for each hit: user, trade, stop, price seen, and when. It also records when you read it and when the email or notification went out.</td></tr>
+<tr><td><code>alertSettings</code> (new)</td><td>One row for each user: browser on or off, email on or off. In-app alerts are always on.</td></tr>
+<tr><td><code>pushSubscriptions</code> (new)</td><td>One row for each browser that allowed notifications.</td></tr>
+</table>
+<p>The MCP tools <code>add_trade</code>, <code>update_trade</code>, and <code>record_execution</code> accept <code>stopPrice</code>, so the agent can set a stop when it records a fill. <code>get_trade</code> and <code>list_trades</code> return it.</p>
+
+<h2>Limits to know</h2>
+<ul>
+<li><strong>Checks every 5 minutes.</strong> A quick drop through the stop that recovers inside 5 minutes can be missed. A later version can read 1-minute bars and use the low or high instead of the last price.</li>
+<li><strong>Price data cost.</strong> One CoinMarketCap call every 5 minutes is about 8,640 calls a month. Check this against your CoinMarketCap plan before turning it on. Alpaca's free data covers stocks through IEX.</li>
+<li><strong>Market hours.</strong> Stock stops are checked only in market hours. A gap past the stop overnight fires on the first check after the open, at the open price.</li>
+<li><strong>Keys move.</strong> The price keys live on Vercel today. The scheduled job runs in Convex, so the same keys must be set on the Convex deployment.</li>
+<li><strong>Email needs a sender.</strong> Resend needs a verified sending domain and an API key.</li>
+<li><strong>Browser notifications</strong> need permission once on each device. On an iPhone they work only after you add the app to the home screen.</li>
+</ul>
+
+<h2>Build order</h2>
+<p>Each step is its own pull request and is useful alone.</p>
+<ol class="flow">
+<li><strong>Stop price and R.</strong> The form field, the table column, R from the stop, and the MCP fields. No alerts yet.</li>
+<li><strong>Alert engine and in-app alerts.</strong> The scheduled job, the price check, the <code>alerts</code> table, and the screen from the mock you pick.</li>
+<li><strong>Browser notifications.</strong> The service worker, the permission prompt, and the settings switch.</li>
+<li><strong>Email.</strong> The Resend component, the email in the mock, and the settings switch.</li>
+</ol>
+<p>Tests stay focused: the hit rule for long and short trades, including a price equal to the stop; fire once, then arm again after an edit; and one price call for many trades with the same symbol. All work and tests run on the development deployment. Production keys and settings change only when you say so.</p>
+
+<h2>Decisions for Ralph</h2>
+<ol class="decide">
+<li><strong>Which screen: A, B, or C?</strong> I recommend <strong>B, the alert inbox</strong>. An alert must be visible on every page, not only on the journal, and the inbox keeps a history. A is the smallest build. C is the best for the video, because it shows every position and its stop at a glance.</li>
+<li><strong>Is a check every 5 minutes enough?</strong> Faster checks cost more price calls.</li>
+<li><strong>Which email sender?</strong> For example <code>alerts@</code> on a domain you own, and whether you already have a Resend account.</li>
+<li><strong>Also a target price?</strong> The same engine can alert when a profit target is reached. I left it out to keep the first version small.</li>
+<li><strong>Recording on your real journal.</strong> Alerts will show real tickers and sizes. Decide which screens you show on camera, or blur sizes and P&amp;L in the edit.</li>
+</ol>
+
+<footer>Facts come from Quant Companion <code>main</code> at <code>8738b7b</code>: no scheduled jobs, email, or push code exist yet, and live prices come from <code>src/lib/prices.ts</code> server functions. Mocks: <a href="https://2ijmzh90em5v.postplan.dev">mocks.html</a>.</footer>
+</main>
+</body>
+</html>
