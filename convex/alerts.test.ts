@@ -45,6 +45,21 @@ describe('levelHit', () => {
 })
 
 describe('stop and target alerts', () => {
+  it('accepts only known browser push services', async () => {
+    const t = convexTest(schema, modules).withIdentity(identity)
+    const keys = { p256dh: 'key', auth: 'secret' }
+    await t.mutation(api.alerts.subscribePush, {
+      endpoint: 'https://fcm.googleapis.com/fcm/send/abc',
+      ...keys,
+    })
+    await expect(
+      t.mutation(api.alerts.subscribePush, {
+        endpoint: 'https://fcm.googleapis.com.example.com/send',
+        ...keys,
+      }),
+    ).rejects.toThrow('unknown push service')
+  })
+
   it('rejects a target on the losing side of the stop', async () => {
     const t = convexTest(schema, modules).withIdentity(identity)
     await expect(

@@ -33,6 +33,31 @@ import type { MutationCtx, QueryCtx } from './_generated/server'
 const INBOX_SIZE = 30
 const UNREAD_LIMIT = 99
 
+/**
+ * Push services of Chrome and most Chromium browsers, Firefox, Edge, and
+ * Safari. The server posts to the endpoint, so it must be one of these.
+ */
+const PUSH_HOSTS = [
+  'fcm.googleapis.com',
+  'push.services.mozilla.com',
+  'notify.windows.com',
+  'push.apple.com',
+]
+
+const isPushEndpoint = (endpoint: string) => {
+  try {
+    const url = new URL(endpoint)
+    return (
+      url.protocol === 'https:' &&
+      PUSH_HOSTS.some(
+        (host) => url.hostname === host || url.hostname.endsWith(`.${host}`),
+      )
+    )
+  } catch {
+    return false
+  }
+}
+
 const identityOf = async (ctx: QueryCtx | MutationCtx) => {
   const identity = await ctx.auth.getUserIdentity()
   if (!identity) throw new Error('User not authenticated')
@@ -150,8 +175,8 @@ export const subscribePush = mutation({
   args: { endpoint: v.string(), p256dh: v.string(), auth: v.string() },
   handler: async (ctx, subscription) => {
     const userId = (await identityOf(ctx)).tokenIdentifier
-    if (!/^https:\/\//.test(subscription.endpoint)) {
-      throw new Error('Push endpoint must use HTTPS')
+    if (!isPushEndpoint(subscription.endpoint)) {
+      throw new Error('This browser uses an unknown push service')
     }
     const existing = await ctx.db
       .query('pushSubscriptions')
