@@ -88,6 +88,12 @@ The `quantcompanion:write` permission adds these tools:
 | `delete_trades`    | Delete up to 100 trades. This cannot be undone.                                        |
 | `import_trades`    | Import up to 1,000 trades in the app's export format in one call. Repeats add nothing. |
 
+`add_trade` and `update_trade` accept `stopPrice` and `targetPrice`, so the
+agent can set a stop loss and take profit. The app alerts once when the price
+reaches a level (see "Stop and take profit alerts" in the README). Moving a
+level arms it again. `get_trade` and `list_trades` return both levels and when
+each was hit.
+
 `add_trade` and `close_trade` also need a `requestId`, so a retried call does
 not add or split a trade twice. `update_trade` and `delete_trades` are safe to
 repeat.

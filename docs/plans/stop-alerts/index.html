@@ -42,20 +42,21 @@ footer{margin-top:44px;border-top:1px solid var(--line);padding-top:14px;font-si
 </head>
 <body>
 <main>
-<div class="mast">quant-companion · docs/plans/stop-alerts · November 16, 2026 · Proposal</div>
-<h1>Stop alerts for the journal</h1>
-<p class="lead">Each open trade can have an optional stop price. When the price reaches the stop, Quant Companion tells you in the app, and also by browser notification or email if you turn those on.</p>
+<div class="mast">quant-companion · docs/plans/stop-alerts · November 16, 2026 · Built on branch feat/price-alerts</div>
+<h1>Stop loss and take profit alerts</h1>
+<p class="lead">Each open trade can have an optional stop loss and take profit. When the price reaches a level, Quant Companion tells you in the app, and also by browser notification or email if you turn those on.</p>
 
 <div class="callout">
-<p><strong>An alert, not an order.</strong> Quant Companion never sells or closes anything. A stop hit gives you one click, "Close at stop", which records the exit in the journal. Keep your real stop order with your broker.</p>
-<p><strong>Pick a screen first.</strong> The <a href="https://2ijmzh90em5v.postplan.dev">mocks</a> show three directions: in the table, an alert inbox, and a risk board. No code changes until you pick one.</p>
+<p><strong>An alert, not an order.</strong> Quant Companion never sells or closes anything. A hit gives you one click, "Close at", which records the exit in the journal at the level. Keep your real orders with your broker.</p>
+<p><strong>Decided on November 16.</strong> Screen B, the alert inbox. Take profit alerts as well as stops. Checks once an hour, because these are swing trades. Email is in: it uses the Resend account and sending domains Netly already verified, with a plain <code>fetch</code> and no new package.</p>
+<p><strong>The screens.</strong> The <a href="https://2ijmzh90em5v.postplan.dev">mocks</a> show three directions: in the table, an alert inbox, and a risk board. No code changes until you pick one.</p>
 </div>
 
 <h2>How it works</h2>
 <ol class="flow">
-<li><strong>You set a stop.</strong> The trade form gets an optional stop price and an "Alert me" checkbox. The form shows the risk at the stop and uses it for R. A long trade hits its stop when the price is at or below it. A short trade hits its stop when the price is at or above it.</li>
-<li><strong>Convex checks prices every 5 minutes.</strong> A scheduled job reads the open trades with an armed stop. It groups the symbols and asks for prices in one call for each provider: CoinMarketCap for crypto, and Alpaca for stocks, in market hours only. This works while the app is closed.</li>
-<li><strong>A stop fires once.</strong> For each hit, one mutation writes an alert and marks the trade as hit. A later check does not alert again. Change the stop and it is armed again.</li>
+<li><strong>You set the levels.</strong> The trade form gets an optional stop loss, an optional take profit, and an "Alert me" checkbox. The form shows the risk at the stop and the reward at the take profit, and the stop fills in the risk for R. A long hits its stop at or below it and its take profit at or above it. A short is the mirror image.</li>
+<li><strong>Convex checks prices every hour.</strong> A scheduled job reads the open trades with an armed level. It asks for one price for each symbol: CoinMarketCap for crypto and Alpaca for stocks. With no armed levels, it makes no price calls. This works while the app is closed.</li>
+<li><strong>A level fires once.</strong> For each hit, one mutation writes an alert and marks the level as hit. A later check does not alert again. Move the level and it is armed again.</li>
 <li><strong>You get told.</strong> The in-app alert updates live through a Convex query. A browser notification goes through a service worker and Web Push. An email goes through the Convex Resend component.</li>
 <li><strong>You decide.</strong> "Close at stop" opens the normal close form with the stop price filled in. Change the price to your real fill before you save. "Edit stop" moves the stop and arms it again.</li>
 </ol>
@@ -63,43 +64,34 @@ footer{margin-top:44px;border-top:1px solid var(--line);padding-top:14px;font-si
 <h2>Data changes</h2>
 <table>
 <tr><th>Table</th><th>Change</th></tr>
-<tr><td><code>trades</code></td><td>Add optional <code>stopPrice</code>, <code>stopAlert</code>, and <code>stopHitAt</code>, plus an index on status and <code>stopAlert</code> for the scheduled job. Old trades need no migration.</td></tr>
+<tr><td><code>trades</code></td><td>Add optional <code>stopPrice</code>, <code>targetPrice</code>, <code>priceAlerts</code>, <code>stopHitAt</code>, and <code>targetHitAt</code>, plus an index on status for the scheduled job. Old trades need no migration.</td></tr>
 <tr><td><code>alerts</code> (new)</td><td>One row for each hit: user, trade, stop, price seen, and when. It also records when you read it and when the email or notification went out.</td></tr>
 <tr><td><code>alertSettings</code> (new)</td><td>One row for each user: browser on or off, email on or off. In-app alerts are always on.</td></tr>
 <tr><td><code>pushSubscriptions</code> (new)</td><td>One row for each browser that allowed notifications.</td></tr>
 </table>
-<p>The MCP tools <code>add_trade</code>, <code>update_trade</code>, and <code>record_execution</code> accept <code>stopPrice</code>, so the agent can set a stop when it records a fill. <code>get_trade</code> and <code>list_trades</code> return it.</p>
+<p>The MCP tools <code>add_trade</code> and <code>update_trade</code> accept <code>stopPrice</code> and <code>targetPrice</code>. <code>get_trade</code> and <code>list_trades</code> return both levels and when each was hit.</p>
 
 <h2>Limits to know</h2>
 <ul>
-<li><strong>Checks every 5 minutes.</strong> A quick drop through the stop that recovers inside 5 minutes can be missed. A later version can read 1-minute bars and use the low or high instead of the last price.</li>
-<li><strong>Price data cost.</strong> One CoinMarketCap call every 5 minutes is about 8,640 calls a month. Check this against your CoinMarketCap plan before turning it on. Alpaca's free data covers stocks through IEX.</li>
-<li><strong>Market hours.</strong> Stock stops are checked only in market hours. A gap past the stop overnight fires on the first check after the open, at the open price.</li>
+<li><strong>Checks every hour.</strong> A move through a level that comes back within the hour can be missed. A later version can read hourly bars and use the low or high instead of the last price.</li>
+<li><strong>Price data cost.</strong> One CoinMarketCap call an hour is about 720 calls a month. Alpaca's free data covers stocks through IEX.</li>
+<li><strong>Extended hours.</strong> For stocks, Alpaca's latest trade can be a pre-market or after-hours trade, so a level can fire outside market hours.</li>
 <li><strong>Keys move.</strong> The price keys live on Vercel today. The scheduled job runs in Convex, so the same keys must be set on the Convex deployment.</li>
-<li><strong>Email needs a sender.</strong> Resend needs a verified sending domain and an API key.</li>
+<li><strong>Email needs the email claim.</strong> The address comes from the <code>email</code> claim in Clerk's <code>convex</code> JWT template. The development instance had no <code>convex</code> template at all, so the template was created with that claim on November 16. Check that production's template has it.</li>
 <li><strong>Browser notifications</strong> need permission once on each device. On an iPhone they work only after you add the app to the home screen.</li>
 </ul>
 
-<h2>Build order</h2>
-<p>Each step is its own pull request and is useful alone.</p>
-<ol class="flow">
-<li><strong>Stop price and R.</strong> The form field, the table column, R from the stop, and the MCP fields. No alerts yet.</li>
-<li><strong>Alert engine and in-app alerts.</strong> The scheduled job, the price check, the <code>alerts</code> table, and the screen from the mock you pick.</li>
-<li><strong>Browser notifications.</strong> The service worker, the permission prompt, and the settings switch.</li>
-<li><strong>Email.</strong> The Resend component, the email in the mock, and the settings switch.</li>
-</ol>
-<p>Tests stay focused: the hit rule for long and short trades, including a price equal to the stop; fire once, then arm again after an edit; and one price call for many trades with the same symbol. All work and tests run on the development deployment. Production keys and settings change only when you say so.</p>
-
-<h2>Decisions for Ralph</h2>
+<h2>What was built and checked</h2>
+<p>Branch <code>feat/price-alerts</code>, on top of this plan. All 173 tests pass, including 12 new alert tests: the hit rule for both sides and both levels, fire once and arm again, one price call for each symbol, level validation, and the email.</p>
+<p>On the development deployment, with real prices: three test levels fired once each, the emails reached Resend's test inbox, and a push to a dead subscription removed it. In a browser, a test user logged a trade with both levels, saw the bell badge and the alert, and "Close at" opened the close dialog at the stop price. The test trades and the test user were deleted.</p>
+<h2>Still open</h2>
 <ol class="decide">
-<li><strong>Which screen: A, B, or C?</strong> I recommend <strong>B, the alert inbox</strong>. An alert must be visible on every page, not only on the journal, and the inbox keeps a history. A is the smallest build. C is the best for the video, because it shows every position and its stop at a glance.</li>
-<li><strong>Is a check every 5 minutes enough?</strong> Faster checks cost more price calls.</li>
-<li><strong>Which email sender?</strong> For example <code>alerts@</code> on a domain you own, and whether you already have a Resend account.</li>
-<li><strong>Also a target price?</strong> The same engine can alert when a profit target is reached. I left it out to keep the first version small.</li>
-<li><strong>Recording on your real journal.</strong> Alerts will show real tickers and sizes. Decide which screens you show on camera, or blur sizes and P&amp;L in the edit.</li>
+<li><strong>Production keys.</strong> Production needs the price keys, VAPID keys, a Resend key, <code>ALERT_FROM_EMAIL</code> on <code>mail.labs.quantalchemy.io</code>, and <code>APP_URL</code>. Nothing on production changes until you say so.</li>
+<li><strong>A Resend key of its own.</strong> Development uses Netly's key. Production should have a key for Quant Companion.</li>
+<li><strong>Recording on your real journal.</strong> Alerts show real tickers and sizes. Decide which screens you show on camera, or blur sizes and P&amp;L in the edit.</li>
 </ol>
 
-<footer>Facts come from Quant Companion <code>main</code> at <code>8738b7b</code>: no scheduled jobs, email, or push code exist yet, and live prices come from <code>src/lib/prices.ts</code> server functions. Mocks: <a href="https://2ijmzh90em5v.postplan.dev">mocks.html</a>.</footer>
+<footer>Before this branch, Quant Companion <code>main</code> at <code>8738b7b</code> had no scheduled jobs, email, or push code. The setup steps are in the README section "Stop and take profit alerts". Mocks: <a href="https://2ijmzh90em5v.postplan.dev">mocks.html</a>.</footer>
 </main>
 </body>
 </html>
