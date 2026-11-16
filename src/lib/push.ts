@@ -5,11 +5,20 @@
  *
  * A subscription belongs to the browser, not the account, so this file also
  * remembers which Clerk user made it. BrowserAlertOwner (AlertInbox.tsx) drops
- * it when that user signs out or someone else signs in.
+ * it when that user signs out or someone else signs in. Subscribe, unsubscribe,
+ * and release run one at a time, so a release cannot undo a new subscription.
  */
 
 const WORKER_URL = '/sw.js'
 const OWNER_KEY = 'quant-companion:push-owner'
+
+let queue: Promise<unknown> = Promise.resolve()
+/** Runs browser subscription changes in order. */
+const inOrder = <T>(work: () => Promise<T>) => {
+  const run = queue.then(work, work)
+  queue = run.catch(() => undefined)
+  return run
+}
 
 export const pushSupported = () =>
   typeof window !== 'undefined' &&
@@ -70,10 +79,10 @@ export const activeSubscription = async (vapidPublicKey: string) => {
 }
 
 /** Asks for permission and subscribes. Returns what the server stores. */
-export const subscribeToPush = async (
-  vapidPublicKey: string,
-  ownerId: string,
-) => {
+export const subscribeToPush = (vapidPublicKey: string, ownerId: string) =>
+  inOrder(() => subscribe(vapidPublicKey, ownerId))
+
+const subscribe = async (vapidPublicKey: string, ownerId: string) => {
   const permission = await Notification.requestPermission()
   if (permission !== 'granted') {
     throw new Error('Notifications are blocked for this site in the browser')
@@ -100,8 +109,7 @@ export const subscribeToPush = async (
   return { endpoint, p256dh: keys.p256dh, auth: keys.auth }
 }
 
-/** Unsubscribes this browser. Returns the endpoint to remove on the server. */
-export const unsubscribeFromPush = async () => {
+const unsubscribe = async () => {
   const subscription = await currentSubscription()
   if (!subscription) return null
   await subscription.unsubscribe()
@@ -109,14 +117,16 @@ export const unsubscribeFromPush = async () => {
   return subscription.endpoint
 }
 
+/** Unsubscribes this browser. Returns the endpoint to remove on the server. */
+export const unsubscribeFromPush = () => inOrder(unsubscribe)
+
 /**
- * Unsubscribes this browser unless `userId` made the subscription. Runs on
- * sign-out and sign-in, so one person's alerts never show for the next. The
- * server row is removed when the next push to it fails as gone.
+ * Unsubscribes this browser unless `userId` made the subscription. Pass null
+ * on sign-out. The server row is removed when the next push to it fails as
+ * gone.
  */
-export const releaseUnlessOwner = async (userId: string | null) => {
-  const subscription = await currentSubscription()
-  if (!subscription) return
-  if (userId !== null && readOwner() === userId) return
-  await unsubscribeFromPush()
-}
+export const releaseUnlessOwner = (userId: string | null) =>
+  inOrder(async () => {
+    if (userId !== null && readOwner() === userId) return
+    await unsubscribe()
+  })
