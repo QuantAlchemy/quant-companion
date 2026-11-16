@@ -57,7 +57,7 @@ footer{margin-top:44px;border-top:1px solid var(--line);padding-top:14px;font-si
 <li><strong>You set the levels.</strong> The trade form gets an optional stop loss, an optional take profit, and an "Alert me" checkbox. The form shows the risk at the stop and the reward at the take profit, and the stop fills in the risk for R. A long hits its stop at or below it and its take profit at or above it. A short is the mirror image.</li>
 <li><strong>Convex checks prices every hour.</strong> A scheduled job reads the open trades with an armed level. It asks for one price for each symbol: CoinMarketCap for crypto and Alpaca for stocks. With no armed levels, it makes no price calls. This works while the app is closed.</li>
 <li><strong>A level fires once.</strong> For each hit, one mutation writes an alert and marks the level as hit. A later check does not alert again. Move the level and it is armed again.</li>
-<li><strong>You get told.</strong> The in-app alert updates live through a Convex query. A browser notification goes through a service worker and Web Push. An email goes through the Convex Resend component.</li>
+<li><strong>You get told.</strong> The in-app alert updates live through a Convex query. A browser notification goes through a service worker and Web Push. An email goes through Resend with a plain <code>fetch</code>.</li>
 <li><strong>You decide.</strong> "Close at stop" opens the normal close form with the stop price filled in. Change the price to your real fill before you save. "Edit stop" moves the stop and arms it again.</li>
 </ol>
 
@@ -86,8 +86,8 @@ footer{margin-top:44px;border-top:1px solid var(--line);padding-top:14px;font-si
 <p>On the development deployment, with real prices: three test levels fired once each, the emails reached Resend's test inbox, and a push to a dead subscription removed it. In a browser, a test user logged a trade with both levels, saw the bell badge and the alert, and "Close at" opened the close dialog at the stop price. The test trades and the test user were deleted.</p>
 <h2>Still open</h2>
 <ol class="decide">
-<li><strong>Production keys.</strong> Production needs the price keys, VAPID keys, a Resend key, <code>ALERT_FROM_EMAIL</code> on <code>mail.labs.quantalchemy.io</code>, and <code>APP_URL</code>. Nothing on production changes until you say so.</li>
-<li><strong>A Resend key of its own.</strong> Development uses Netly's key. Production should have a key for Quant Companion.</li>
+<li><strong>Production keys.</strong> Production needs the price keys, VAPID keys, a Resend key, <code>ALERT_FROM_EMAIL</code> on <code>quant-companion.quantalchemy.io</code>, and <code>APP_URL</code>. Nothing on production changes until you say so.</li>
+<li><strong>Sender domain.</strong> <code>quant-companion.quantalchemy.io</code> is added in Resend and waits for its DNS records at Fastmail. Dev and production share the labs Resend key. Dev keeps sending from <code>mail-dev.labs.quantalchemy.io</code>.</li>
 <li><strong>Recording on your real journal.</strong> Alerts show real tickers and sizes. Decide which screens you show on camera, or blur sizes and P&amp;L in the edit.</li>
 </ol>
 
