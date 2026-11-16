@@ -1,3 +1,4 @@
+import { useAuth } from '@clerk/tanstack-react-start'
 import { Link } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
 import { Bell } from 'lucide-react'
@@ -14,10 +15,11 @@ import {
 } from '@/components/ui/dialog'
 import { Switch } from '@/components/ui/switch'
 import { api } from '@/../convex/_generated/api'
-import { currencyFormatter } from '@/lib/format'
+import { formatUsdPrice } from '@/lib/format'
 import {
-  currentSubscription,
+  activeSubscription,
   pushSupported,
+  releaseUnlessOwner,
   subscribeToPush,
   unsubscribeFromPush,
 } from '@/lib/push'
@@ -80,20 +82,47 @@ export default function AlertInbox() {
   )
 }
 
-/** In app is always on. Browser is per device; email is per account. */
+/**
+ * Drops this browser's push subscription when its owner signs out or another
+ * user signs in. Rendered in the header whether or not anyone is signed in.
+ */
+export function BrowserAlertOwner() {
+  const { isLoaded, userId } = useAuth()
+  useEffect(() => {
+    if (!isLoaded) return
+    releaseUnlessOwner(userId ?? null).catch((error: unknown) =>
+      console.error('Could not release browser alerts', error),
+    )
+  }, [isLoaded, userId])
+  return null
+}
+
+/**
+ * In app is always on. Browser is per device; email is per account. The
+ * browser switch is on only when the server delivers to this browser for the
+ * signed-in user with the current key.
+ */
 function AlertChannels() {
+  const { userId } = useAuth()
   const settings = useQuery(api.alerts.settings)
   const setEmail = useMutation(api.alerts.setEmail)
   const subscribe = useMutation(api.alerts.subscribePush)
   const unsubscribe = useMutation(api.alerts.unsubscribePush)
-  const [browserOn, setBrowserOn] = useState(false)
+  const [endpoint, setEndpoint] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const vapidPublicKey = settings?.vapidPublicKey ?? null
+  const delivering = useQuery(
+    api.alerts.pushStatus,
+    endpoint ? { endpoint } : 'skip',
+  )
+  const browserOn = endpoint !== null && delivering === true
 
   useEffect(() => {
-    void currentSubscription().then((subscription) =>
-      setBrowserOn(subscription !== null),
+    if (!vapidPublicKey) return
+    void activeSubscription(vapidPublicKey).then((subscription) =>
+      setEndpoint(subscription?.endpoint ?? null),
     )
-  }, [])
+  }, [vapidPublicKey])
 
   const browserReason = !pushSupported()
     ? 'This browser cannot show notifications'
@@ -118,13 +147,14 @@ function AlertChannels() {
   const toggleBrowser = (enabled: boolean) =>
     run(async () => {
       if (enabled) {
-        if (!settings?.vapidPublicKey) return
-        await subscribe(await subscribeToPush(settings.vapidPublicKey))
-        setBrowserOn(true)
+        if (!vapidPublicKey || !userId) return
+        const subscription = await subscribeToPush(vapidPublicKey, userId)
+        setEndpoint(subscription.endpoint)
+        await subscribe(subscription)
       } else {
-        const endpoint = await unsubscribeFromPush()
-        if (endpoint) await unsubscribe({ endpoint })
-        setBrowserOn(false)
+        const removed = await unsubscribeFromPush()
+        setEndpoint(null)
+        if (removed) await unsubscribe({ endpoint: removed })
       }
     })
 
@@ -135,7 +165,7 @@ function AlertChannels() {
         label="Browser notification"
         detail={browserReason}
         checked={browserOn}
-        disabled={busy || !pushSupported() || !settings?.vapidPublicKey}
+        disabled={busy || !pushSupported() || !vapidPublicKey}
         onChange={toggleBrowser}
       />
       <Channel
@@ -259,14 +289,16 @@ function AlertCard({
         <dt className="text-muted-foreground">
           {isStop ? 'Stop' : 'Take profit'}
         </dt>
-        <dd className="text-right">{currencyFormatter.format(alert.level)}</dd>
+        <dd className="text-right">{formatUsdPrice(alert.level)}</dd>
         <dt className="text-muted-foreground">Price seen</dt>
         <dd className={cn('text-right', isStop ? 'text-loss' : 'text-profit')}>
-          {currencyFormatter.format(alert.price)}
+          {formatUsdPrice(alert.price)}
         </dd>
       </dl>
       {open ? (
         <div className="mt-2.5 flex flex-wrap gap-1.5">
+          {/* Intentional: prefills the level, not the price seen. The card shows
+              both, and the close dialog is editable for the real fill. */}
           <Button
             size="sm"
             render={
@@ -277,7 +309,7 @@ function AlertCard({
               />
             }
           >
-            Close at {currencyFormatter.format(alert.level)}
+            Close at {formatUsdPrice(alert.level)}
           </Button>
           <Button
             size="sm"
@@ -301,7 +333,7 @@ function AlertCard({
       ) : (
         <p className="mt-2 text-xs text-muted-foreground">
           {alert.tradeStatus === 'closed'
-            ? `Closed${alert.closingPrice != null ? ` at ${currencyFormatter.format(alert.closingPrice)}` : ''} in the journal`
+            ? `Closed${alert.closingPrice != null ? ` at ${formatUsdPrice(alert.closingPrice)}` : ''} in the journal`
             : 'This trade was deleted'}
         </p>
       )}

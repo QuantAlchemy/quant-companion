@@ -2,7 +2,7 @@ import { Show, SignInButton, UserButton } from '@clerk/tanstack-react-start'
 import { Link } from '@tanstack/react-router'
 
 import Logo from '@/components/Logo'
-import AlertInbox from '@/components/alerts/AlertInbox'
+import AlertInbox, { BrowserAlertOwner } from '@/components/alerts/AlertInbox'
 import XPBadge from '@/components/gamification/XPBadge'
 import { Button } from '@/components/ui/button'
 import { isClerkClientConfigured } from '@/lib/clerk'
@@ -66,6 +66,7 @@ function AuthControls({ alerts }: { alerts: boolean }) {
 
   return (
     <>
+      {alerts && <BrowserAlertOwner />}
       <Show when="signed-out">
         <SignInButton mode="modal">
           <Button variant="ghost" size="sm">
