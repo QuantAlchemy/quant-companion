@@ -26,11 +26,52 @@ export default defineSchema({
     initialRisk: v.optional(v.number()), // dollars allocated to this portion
     exchange: v.optional(v.string()),
     comments: v.optional(v.string()),
+    // Price levels. A level alerts once when the price reaches it. Changing
+    // the level clears its hit time, so it can alert again.
+    stopPrice: v.optional(v.number()),
+    targetPrice: v.optional(v.number()),
+    priceAlerts: v.optional(v.boolean()), // absent means on
+    stopHitAt: v.optional(v.number()),
+    targetHitAt: v.optional(v.number()),
   })
     .index('by_userId', ['userId'])
     .index('by_userId_and_assetName', ['userId', 'assetName'])
     .index('by_userId_and_status', ['userId', 'status'])
-    .index('by_userId_and_sourceId', ['userId', 'sourceId']),
+    .index('by_userId_and_sourceId', ['userId', 'sourceId'])
+    // The price check reads open trades across all users.
+    .index('by_status', ['status']),
+  // One row each time a trade reaches its stop or target.
+  alerts: defineTable({
+    userId: v.string(),
+    tradeId: v.id('trades'),
+    kind: v.union(v.literal('stop'), v.literal('target')),
+    assetName: v.string(),
+    tradeType: v.union(v.literal('buy'), v.literal('sell')),
+    level: v.number(),
+    price: v.number(), // the price that crossed the level
+    readAt: v.optional(v.number()),
+    pushedAt: v.optional(v.number()),
+    emailedAt: v.optional(v.number()),
+  })
+    .index('by_userId', ['userId'])
+    .index('by_userId_and_readAt', ['userId', 'readAt']),
+  // Optional alert channels. In-app alerts are always on.
+  alertSettings: defineTable({
+    userId: v.string(),
+    email: v.boolean(),
+    // Captured from the sign-in token when email is turned on, because the
+    // scheduled job runs without a signed-in user.
+    emailAddress: v.optional(v.string()),
+  }).index('by_userId', ['userId']),
+  // One row for each browser that allowed notifications.
+  pushSubscriptions: defineTable({
+    userId: v.string(),
+    endpoint: v.string(),
+    p256dh: v.string(),
+    auth: v.string(),
+  })
+    .index('by_userId', ['userId'])
+    .index('by_endpoint', ['endpoint']),
   // Results of agent writes, keyed by the agent's request ID, so a retried
   // MCP call returns the first result instead of writing twice.
   agentRequests: defineTable({

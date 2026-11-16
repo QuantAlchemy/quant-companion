@@ -29,7 +29,9 @@ To update the journal from a broker or exchange confirmation (Vanguard, Coinbase
 4. If the plan matches the confirmation, call record_execution again with dryRun false, the same requestId, the same input, and the planId from the dry run. If the lots changed in between, the call fails; run the dry run again. If anything is unclear, show the plan and ask first. On a lost response, retry with the same requestId; never create a new one for the same fill.
 5. Report what changed from the result: the closed lots, net P&L after fees, and any remaining position. Do not claim a trade is recorded until a result has applied true.
 
-If a sell has no open long to close, ask whether a buy is missing. Set allowShort only when the user confirms a short. Never invent an account name; set newAccount only after the user confirms a new account. For other edits, read the trade first with get_trade or list_trades, then send only the changed fields to update_trade. Every add_trade and close_trade call needs a new UUID requestId; reuse it only to retry the same call. delete_trades cannot be undone, so confirm before deleting.`
+If a sell has no open long to close, ask whether a buy is missing. Set allowShort only when the user confirms a short. Never invent an account name; set newAccount only after the user confirms a new account. For other edits, read the trade first with get_trade or list_trades, then send only the changed fields to update_trade. Every add_trade and close_trade call needs a new UUID requestId; reuse it only to retry the same call. delete_trades cannot be undone, so confirm before deleting.
+
+Each open trade can have a stop loss (stopPrice) and a take profit (targetPrice). Set or move them with add_trade or update_trade. The app checks prices every hour and alerts the user once when a level is reached; moving a level arms it again. These are journal alerts, not broker orders: never say a stop will close the position.`
 
 const isoDate = z.iso.date().describe('YYYY-MM-DD')
 const accountField = z
@@ -74,6 +76,16 @@ const filter = {
     .optional()
     .describe('Latest date, YYYY-MM-DD. Closed trades use the closing date.'),
 }
+
+const stopField = positive.describe(
+  'Stop loss price. The app alerts once when the price reaches it.',
+)
+const targetField = positive.describe(
+  'Take profit price. The app alerts once when the price reaches it.',
+)
+const priceAlertsField = z
+  .boolean()
+  .describe('False keeps the levels for the record without alerts')
 
 const readOnly = {
   readOnlyHint: true,
@@ -289,6 +301,9 @@ export function createMcpServer(ctx: McpCtx, userId: string, scopes: string[]) {
           .optional()
           .describe('Dollars at risk, used for R-multiples'),
         comments: z.string().max(10_000).optional(),
+        stopPrice: stopField.optional(),
+        targetPrice: targetField.optional(),
+        priceAlerts: priceAlertsField.optional(),
         requestId: requestIdField,
         newAccount: newAccountField,
       },
@@ -322,6 +337,9 @@ export function createMcpServer(ctx: McpCtx, userId: string, scopes: string[]) {
         commission: fee.nullable().optional(),
         initialRisk: positive.nullable().optional(),
         comments: z.string().max(10_000).nullable().optional(),
+        stopPrice: stopField.nullable().optional(),
+        targetPrice: targetField.nullable().optional(),
+        priceAlerts: priceAlertsField.optional(),
         newAccount: newAccountField,
       },
       annotations: { ...edit, idempotentHint: true },

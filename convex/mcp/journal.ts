@@ -93,6 +93,15 @@ const tradeView = (trade: Doc<'trades'>) => ({
   netPnl: netJournalPnl(trade.realizedPnl, trade.commission),
   initialRisk: trade.initialRisk ?? null,
   comments: trade.comments ?? null,
+  stopPrice: trade.stopPrice ?? null,
+  targetPrice: trade.targetPrice ?? null,
+  priceAlerts: trade.priceAlerts !== false,
+  stopHitAt:
+    trade.stopHitAt == null ? null : new Date(trade.stopHitAt).toISOString(),
+  targetHitAt:
+    trade.targetHitAt == null
+      ? null
+      : new Date(trade.targetHitAt).toISOString(),
 })
 
 const resolveTradeId = (ctx: QueryCtx, id: string) => {
@@ -349,6 +358,9 @@ export const update = agentMutation({
       initialRisk: v.optional(v.union(v.number(), v.null())),
       exchange: v.optional(v.union(v.string(), v.null())),
       comments: v.optional(v.union(v.string(), v.null())),
+      stopPrice: v.optional(v.union(v.number(), v.null())),
+      targetPrice: v.optional(v.union(v.number(), v.null())),
+      priceAlerts: v.optional(v.boolean()),
     }),
   },
   handler: async (ctx, { userId, tradeId, newAccount, changes }) => {
@@ -374,6 +386,10 @@ export const update = agentMutation({
       initialRisk: changes.initialRisk,
       exchange: keep(changes.exchange, current.exchange),
       comments: keep(changes.comments, current.comments),
+      // editTrade keeps an omitted level and clears a null one.
+      stopPrice: changes.stopPrice,
+      targetPrice: changes.targetPrice,
+      priceAlerts: changes.priceAlerts,
     })
     return tradeView(await getOwnedTrade(ctx, userId, id))
   },
