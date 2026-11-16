@@ -22,8 +22,9 @@ export const SYMBOL_PATTERN =
 const isMarketSymbol = (symbol: string) =>
   symbol.length <= 32 && SYMBOL_PATTERN.test(symbol)
 /**
- * CoinMarketCap skips an unknown symbol but rejects the whole batch when one
- * symbol is not letters and digits, such as BTC/USD.
+ * With skip_invalid, CoinMarketCap skips an unknown symbol, but it still
+ * rejects the whole batch when one symbol is not letters and digits, such as
+ * BTC/USD.
  */
 const isCoinMarketCapSymbol = (symbol: string) =>
   isMarketSymbol(symbol) && /^[A-Za-z0-9]+$/.test(symbol)
@@ -70,7 +71,7 @@ const fetchCryptoPrices = async (
   if (validSymbols.length === 0) return {}
 
   const symbolsToFetch = [...new Set(validSymbols)].slice(0, MAX_CRYPTO_SYMBOLS)
-  const url = `https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol=${symbolsToFetch.join(',')}&aux=cmc_rank`
+  const url = `https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol=${symbolsToFetch.join(',')}&aux=cmc_rank&skip_invalid=true`
 
   try {
     const response = await fetchWithTimeout(url, {

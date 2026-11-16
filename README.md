@@ -97,7 +97,10 @@ order: the app never closes a trade by itself. For stocks, Alpaca's latest
 trade can be a pre-market or after-hours trade.
 
 Alerts show in the bell in the app bar. Browser notifications (per device) and
-email (per account) are optional switches in that panel. Set these on each
+email (per account) are optional switches in that panel. Browser alerts stay
+on after sign-out, so an expired session does not silence them, and stop when
+a different user signs in on that browser. On a shared computer, turn them off
+before you sign out. Set these on each
 Convex deployment with `npx convex env set` (`--prod` for production). A
 channel without its keys is skipped:
 

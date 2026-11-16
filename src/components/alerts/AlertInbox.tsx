@@ -2,7 +2,7 @@ import { useAuth } from '@clerk/tanstack-react-start'
 import { Link } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
 import { Bell } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -83,20 +83,19 @@ export default function AlertInbox() {
 }
 
 /**
- * Drops this browser's push subscription when another user signs in, or when
- * the owner signs out during this visit. A page that loads signed out, such
- * as after a session expired, keeps it. Rendered in the header whether or not
- * anyone is signed in.
+ * Drops this browser's push subscription when a different user signs in, so
+ * one person's alerts never reach the next.
+ *
+ * Intentional: signing out keeps the subscription. Clerk reports an expired
+ * session the same way as a sign-out, and a stop alert that silently stops is
+ * worse for a trader on their own device. On a shared computer, turn browser
+ * alerts off in the panel before signing out (README).
  */
 export function BrowserAlertOwner() {
   const { isLoaded, userId } = useAuth()
-  const previous = useRef<string | null>(null)
   useEffect(() => {
-    if (!isLoaded) return
-    const signedOut = !userId && previous.current !== null
-    previous.current = userId ?? null
-    if (!userId && !signedOut) return
-    releaseUnlessOwner(userId ?? null).catch((error: unknown) =>
+    if (!isLoaded || !userId) return
+    releaseUnlessOwner(userId).catch((error: unknown) =>
       console.error('Could not release browser alerts', error),
     )
   }, [isLoaded, userId])

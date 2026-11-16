@@ -5,7 +5,7 @@
  *
  * A subscription belongs to the browser, not the account, so this file also
  * remembers which Clerk user made it. BrowserAlertOwner (AlertInbox.tsx) drops
- * it when that user signs out or someone else signs in. Subscribe, unsubscribe,
+ * it when someone else signs in. Subscribe, unsubscribe,
  * and release run one at a time, so a release cannot undo a new subscription.
  */
 
@@ -121,12 +121,11 @@ const unsubscribe = async () => {
 export const unsubscribeFromPush = () => inOrder(unsubscribe)
 
 /**
- * Unsubscribes this browser unless `userId` made the subscription. Pass null
- * on sign-out. The server row is removed when the next push to it fails as
- * gone.
+ * Unsubscribes this browser unless `userId` made the subscription. The server
+ * row is removed when the next push to it fails as gone.
  */
-export const releaseUnlessOwner = (userId: string | null) =>
+export const releaseUnlessOwner = (userId: string) =>
   inOrder(async () => {
-    if (userId !== null && readOwner() === userId) return
+    if (readOwner() === userId) return
     await unsubscribe()
   })
