@@ -41,11 +41,21 @@ const optionalNumber = (input: HTMLInputElement) =>
     ? undefined
     : input.valueAsNumber
 
-/** Dollars between the entry and a level for the whole quantity. */
-const dollarsTo = (form: NewTrade, level: number | undefined) =>
-  level != null && form.price > 0 && form.quantity > 0
-    ? Math.abs(form.price - level) * form.quantity
-    : undefined
+/**
+ * Dollars lost at a stop or gained at a target for the whole quantity.
+ * Undefined when the level is on the other side of the entry, such as a stop
+ * trailed past breakeven.
+ */
+const dollarsTo = (
+  form: NewTrade,
+  level: number | undefined,
+  side: 'loss' | 'gain',
+) => {
+  if (level == null || form.price <= 0 || form.quantity <= 0) return undefined
+  const move = (level - form.price) * (form.tradeType === 'buy' ? 1 : -1)
+  const dollars = (side === 'gain' ? move : -move) * form.quantity
+  return dollars > 0 ? dollars : undefined
+}
 
 /** The server rule, so the form can say it before saving. */
 const levelError = (form: NewTrade) => {
@@ -93,8 +103,10 @@ export function TradeFormDialog({
 }: TradeFormDialogProps) {
   const [form, setForm] = useState<NewTrade>(emptyForm())
   const [isSaving, setIsSaving] = useState(false)
-  // Until the user types a risk, a stop fills it in.
   const [riskTouched, setRiskTouched] = useState(false)
+  // On a new trade, the stop sets the risk until the user types one. An edit
+  // never changes a saved risk: a moved stop is not the initial risk.
+  const autoRisk = !trade && !riskTouched
 
   useEffect(() => {
     if (!open) return
@@ -121,7 +133,12 @@ export function TradeFormDialog({
   }, [open, trade])
 
   const set = <TKey extends keyof NewTrade>(key: TKey, value: NewTrade[TKey]) =>
-    setForm((f) => ({ ...f, [key]: value }))
+    setForm((f) => {
+      const next = { ...f, [key]: value }
+      return autoRisk && key !== 'initialRisk'
+        ? { ...next, initialRisk: dollarsTo(next, next.stopPrice, 'loss') }
+        : next
+    })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -280,16 +297,7 @@ export function TradeFormDialog({
               step="any"
               min={0}
               value={form.stopPrice ?? ''}
-              onChange={(e) => {
-                const stopPrice = optionalNumber(e.target)
-                setForm((f) => ({
-                  ...f,
-                  stopPrice,
-                  initialRisk: riskTouched
-                    ? f.initialRisk
-                    : dollarsTo(f, stopPrice),
-                }))
-              }}
+              onChange={(e) => set('stopPrice', optionalNumber(e.target))}
             />
           </div>
           <div className="space-y-1.5">
@@ -337,8 +345,8 @@ export function TradeFormDialog({
               aria-describedby="initialRiskHelp"
             />
             <p id="initialRiskHelp" className="text-xs text-muted-foreground">
-              Planned loss for this quantity at entry. A stop loss fills this
-              in. Leave blank if unknown.
+              Planned loss for this quantity at entry. On a new trade, the stop
+              fills this in. Leave blank if unknown.
             </p>
           </div>
           <div className="col-span-2 space-y-1.5">
@@ -370,8 +378,8 @@ export function TradeFormDialog({
 
 /** Risk at the stop and reward at the take profit, in dollars and R. */
 function LevelSummary({ form }: { form: NewTrade }) {
-  const risk = form.initialRisk ?? dollarsTo(form, form.stopPrice)
-  const reward = dollarsTo(form, form.targetPrice)
+  const risk = form.initialRisk ?? dollarsTo(form, form.stopPrice, 'loss')
+  const reward = dollarsTo(form, form.targetPrice, 'gain')
   return (
     <div className="col-span-2 -mt-2 space-y-2">
       <p className="text-xs text-muted-foreground">
