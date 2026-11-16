@@ -36,7 +36,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { currencyFormatter } from '@/lib/format'
+import { currencyFormatter, formatUsdPrice } from '@/lib/format'
 import { netJournalPnl } from '@/lib/journal'
 import { unrealizedPnl } from '@/lib/performance'
 import { cn } from '@/lib/utils'
@@ -280,7 +280,7 @@ function TradeLevels({ trade }: { trade: JournalTrade }) {
     value == null ? null : (
       <span className={cn('tabular', hitAt != null && hitClass)}>
         <span className="text-muted-foreground">{label} </span>
-        {currencyFormatter.format(value)}
+        {formatUsdPrice(value)}
         {hitAt != null && trade.status === 'open' && (
           <span className="ml-1 text-[10px] font-semibold uppercase">hit</span>
         )}
