@@ -228,7 +228,8 @@ export const checkLevels = internalAction({
       )
     }
     const hits = findHits(trades, prices)
-    if (hits.length > 0) await ctx.runMutation(internal.alerts.recordHits, { hits })
+    if (hits.length > 0)
+      await ctx.runMutation(internal.alerts.recordHits, { hits })
     return { checked: trades.length, hits: hits.length }
   },
 })
@@ -347,7 +348,9 @@ export const sendEmail = internalAction({
     if (!info?.settings?.email || !info.settings.emailAddress) return
     if (info.alert.emailedAt != null) return
     if (!env.RESEND_API_KEY || !env.ALERT_FROM_EMAIL) {
-      console.warn('Email alert skipped: RESEND_API_KEY or ALERT_FROM_EMAIL is not set')
+      console.warn(
+        'Email alert skipped: RESEND_API_KEY or ALERT_FROM_EMAIL is not set',
+      )
       return
     }
     try {

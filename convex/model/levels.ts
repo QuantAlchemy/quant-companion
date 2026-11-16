@@ -45,12 +45,14 @@ export type LevelHit = {
  */
 export const findHits = (
   trades: Doc<'trades'>[],
-  prices: Record<string, number>,
+  prices: Partial<Record<string, number>>,
 ): LevelHit[] =>
   trades.flatMap((trade) => {
     const price = prices[trade.assetName.toUpperCase()]
     if (price == null) return []
     return armedLevels(trade)
-      .filter(({ kind, level }) => levelHit(trade.tradeType, kind, level, price))
+      .filter(({ kind, level }) =>
+        levelHit(trade.tradeType, kind, level, price),
+      )
       .map(({ kind, level }) => ({ tradeId: trade._id, kind, level, price }))
   })

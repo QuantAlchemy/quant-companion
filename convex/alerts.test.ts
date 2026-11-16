@@ -131,7 +131,10 @@ describe('stop and target alerts', () => {
     vi.stubGlobal('fetch', fetchMock)
     const t = convexTest(schema, modules).withIdentity(identity)
     await t.mutation(api.alerts.setEmail, { enabled: true })
-    const tradeId = await t.mutation(api.trades.add, { ...long, stopPrice: 182 })
+    const tradeId = await t.mutation(api.trades.add, {
+      ...long,
+      stopPrice: 182,
+    })
 
     await t.mutation(internal.alerts.recordHits, {
       hits: [{ tradeId, kind: 'stop', level: 182, price: 181.62 }],

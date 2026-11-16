@@ -40,7 +40,9 @@ export const sendAlert = internalAction({
     let delivered = 0
     for (const subscription of info.subscriptions) {
       try {
-        await webpush.sendNotification(subscription, payload, { TTL: SIX_HOURS })
+        await webpush.sendNotification(subscription, payload, {
+          TTL: SIX_HOURS,
+        })
         delivered += 1
       } catch (error) {
         const status =

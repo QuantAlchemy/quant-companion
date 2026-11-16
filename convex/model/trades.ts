@@ -88,7 +88,9 @@ export const assertLevels = (
   if (stopPrice != null) assertPositiveNumber(stopPrice, 'Stop price')
   if (targetPrice != null) assertPositiveNumber(targetPrice, 'Target price')
   if (stopPrice == null || targetPrice == null) return
-  if (tradeType === 'buy' ? targetPrice <= stopPrice : targetPrice >= stopPrice) {
+  if (
+    tradeType === 'buy' ? targetPrice <= stopPrice : targetPrice >= stopPrice
+  ) {
     throw new Error(
       tradeType === 'buy'
         ? 'For a long, the target must be above the stop'
