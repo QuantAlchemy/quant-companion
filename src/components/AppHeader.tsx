@@ -2,6 +2,7 @@ import { Show, SignInButton, UserButton } from '@clerk/tanstack-react-start'
 import { Link } from '@tanstack/react-router'
 
 import Logo from '@/components/Logo'
+import AlertInbox from '@/components/alerts/AlertInbox'
 import XPBadge from '@/components/gamification/XPBadge'
 import { Button } from '@/components/ui/button'
 import { isClerkClientConfigured } from '@/lib/clerk'
@@ -14,7 +15,8 @@ const NAV = [
   { to: '/agents', label: 'Agents' },
 ] as const
 
-export default function AppHeader() {
+/** `alerts` is false when this build has no Convex backend. */
+export default function AppHeader({ alerts }: { alerts: boolean }) {
   return (
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/70 backdrop-blur-xl">
       <div className="mx-auto flex h-16 w-full max-w-[1400px] items-center justify-between gap-4 px-4 md:px-8">
@@ -38,7 +40,7 @@ export default function AppHeader() {
 
         <div className="flex items-center gap-3">
           <XPBadge />
-          <AuthControls />
+          <AuthControls alerts={alerts} />
         </div>
       </div>
 
@@ -59,7 +61,7 @@ export default function AppHeader() {
   )
 }
 
-function AuthControls() {
+function AuthControls({ alerts }: { alerts: boolean }) {
   if (!isClerkClientConfigured()) return null
 
   return (
@@ -75,6 +77,7 @@ function AuthControls() {
         </Button>
       </Show>
       <Show when="signed-in">
+        {alerts && <AlertInbox />}
         <UserButton />
       </Show>
     </>

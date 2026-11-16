@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -34,6 +35,35 @@ const today = () => new Date().toISOString().slice(0, 10)
 
 const isIsoDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value)
 
+/** A blank number field is undefined, not 0. */
+const optionalNumber = (input: HTMLInputElement) =>
+  input.value === '' || Number.isNaN(input.valueAsNumber)
+    ? undefined
+    : input.valueAsNumber
+
+/** Dollars between the entry and a level for the whole quantity. */
+const dollarsTo = (form: NewTrade, level: number | undefined) =>
+  level != null && form.price > 0 && form.quantity > 0
+    ? Math.abs(form.price - level) * form.quantity
+    : undefined
+
+/** The server rule, so the form can say it before saving. */
+const levelError = (form: NewTrade) => {
+  const { stopPrice, targetPrice, tradeType } = form
+  if (stopPrice != null && stopPrice <= 0) return 'Stop must be greater than 0'
+  if (targetPrice != null && targetPrice <= 0) {
+    return 'Take profit must be greater than 0'
+  }
+  if (stopPrice == null || targetPrice == null) return null
+  if (tradeType === 'buy' && targetPrice <= stopPrice) {
+    return 'For a long, take profit must be above the stop'
+  }
+  if (tradeType === 'sell' && targetPrice >= stopPrice) {
+    return 'For a short, take profit must be below the stop'
+  }
+  return null
+}
+
 const emptyForm = (): NewTrade => ({
   assetName: '',
   assetType: 'crypto',
@@ -44,6 +74,7 @@ const emptyForm = (): NewTrade => ({
   commission: undefined,
   exchange: '',
   comments: '',
+  priceAlerts: true,
 })
 
 interface TradeFormDialogProps {
@@ -62,6 +93,8 @@ export function TradeFormDialog({
 }: TradeFormDialogProps) {
   const [form, setForm] = useState<NewTrade>(emptyForm())
   const [isSaving, setIsSaving] = useState(false)
+  // Until the user types a risk, a stop fills it in.
+  const [riskTouched, setRiskTouched] = useState(false)
 
   useEffect(() => {
     if (!open) return
@@ -78,9 +111,13 @@ export function TradeFormDialog({
             initialRisk: trade.initialRisk,
             exchange: trade.exchange ?? '',
             comments: trade.comments ?? '',
+            stopPrice: trade.stopPrice,
+            targetPrice: trade.targetPrice,
+            priceAlerts: trade.priceAlerts !== false,
           }
         : emptyForm(),
     )
+    setRiskTouched(trade?.initialRisk != null)
   }, [open, trade])
 
   const set = <TKey extends keyof NewTrade>(key: TKey, value: NewTrade[TKey]) =>
@@ -102,6 +139,8 @@ export function TradeFormDialog({
     ) {
       return toast.error('Initial risk must be a finite number greater than 0')
     }
+    const invalidLevel = levelError(form)
+    if (invalidLevel) return toast.error(invalidLevel)
 
     setIsSaving(true)
     try {
@@ -233,6 +272,51 @@ export function TradeFormDialog({
               onChange={(e) => set('exchange', e.target.value)}
             />
           </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="stopPrice">Stop loss (optional)</Label>
+            <Input
+              id="stopPrice"
+              type="number"
+              step="any"
+              min={0}
+              value={form.stopPrice ?? ''}
+              onChange={(e) => {
+                const stopPrice = optionalNumber(e.target)
+                setForm((f) => ({
+                  ...f,
+                  stopPrice,
+                  initialRisk: riskTouched
+                    ? f.initialRisk
+                    : dollarsTo(f, stopPrice),
+                }))
+              }}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="targetPrice">Take profit (optional)</Label>
+            <Input
+              id="targetPrice"
+              type="number"
+              step="any"
+              min={0}
+              value={form.targetPrice ?? ''}
+              onChange={(e) => set('targetPrice', optionalNumber(e.target))}
+            />
+          </div>
+          {(form.stopPrice != null || form.targetPrice != null) && (
+            <>
+              <LevelSummary form={form} />
+              <Label className="col-span-2 -mt-2 flex items-center gap-2 font-normal">
+                <Checkbox
+                  checked={form.priceAlerts !== false}
+                  onCheckedChange={(checked) =>
+                    set('priceAlerts', checked === true)
+                  }
+                />
+                Alert me when the price reaches a level
+              </Label>
+            </>
+          )}
           <div className="col-span-2 space-y-1.5">
             <Label htmlFor="initialRisk">
               Initial risk in dollars (optional)
@@ -243,16 +327,18 @@ export function TradeFormDialog({
               step="any"
               min={0}
               value={form.initialRisk ?? ''}
-              onChange={(e) =>
+              onChange={(e) => {
+                setRiskTouched(true)
                 set(
                   'initialRisk',
                   e.target.value === '' ? undefined : e.target.valueAsNumber,
                 )
-              }
+              }}
               aria-describedby="initialRiskHelp"
             />
             <p id="initialRiskHelp" className="text-xs text-muted-foreground">
-              Planned loss for this quantity at entry. Leave blank if unknown.
+              Planned loss for this quantity at entry. A stop loss fills this
+              in. Leave blank if unknown.
             </p>
           </div>
           <div className="col-span-2 space-y-1.5">
@@ -282,10 +368,31 @@ export function TradeFormDialog({
   )
 }
 
+/** Risk at the stop and reward at the take profit, in dollars and R. */
+function LevelSummary({ form }: { form: NewTrade }) {
+  const risk = form.initialRisk ?? dollarsTo(form, form.stopPrice)
+  const reward = dollarsTo(form, form.targetPrice)
+  return (
+    <div className="col-span-2 -mt-2 space-y-2">
+      <p className="text-xs text-muted-foreground">
+        {risk != null && <>Risk at stop: {currencyFormatter.format(risk)}. </>}
+        {reward != null && (
+          <>
+            Reward at take profit: {currencyFormatter.format(reward)}
+            {risk ? ` (${(reward / risk).toFixed(1)}R)` : ''}.
+          </>
+        )}
+      </p>
+    </div>
+  )
+}
+
 interface CloseTradeDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   trade: JournalTrade | null
+  /** Fills in the closing price, for example the stop from an alert. */
+  initialPrice?: number
   onCloseTrade: (closingPrice: number, closingDate: string) => Promise<number>
 }
 
@@ -294,6 +401,7 @@ export function CloseTradeDialog({
   onCloseTrade,
   onOpenChange,
   trade,
+  initialPrice,
 }: CloseTradeDialogProps) {
   const [closingPrice, setClosingPrice] = useState(0)
   const [closingDate, setClosingDate] = useState(today())
@@ -301,10 +409,10 @@ export function CloseTradeDialog({
 
   useEffect(() => {
     if (open) {
-      setClosingPrice(0)
+      setClosingPrice(initialPrice ?? 0)
       setClosingDate(today())
     }
-  }, [open])
+  }, [open, initialPrice])
 
   if (!trade) return null
 

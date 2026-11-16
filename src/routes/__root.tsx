@@ -60,7 +60,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <TooltipProvider>
         <GamificationBridge />
         <div className="flex min-h-screen flex-col">
-          <AppHeader />
+          <AppHeader alerts={convexClient !== null} />
           <main className="flex-1">{children}</main>
           <footer className="mt-16 border-t border-border/40 py-6">
             <div className="mx-auto flex w-full max-w-[1400px] flex-wrap items-center justify-between gap-3 px-4 text-xs text-muted-foreground md:px-8">

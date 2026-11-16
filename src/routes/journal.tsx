@@ -68,7 +68,21 @@ const authStateFn = createServerFn().handler(async () => {
   }
 })
 
+/**
+ * Alert links open a dialog: ?close=<tradeId>&price=<level> opens the close
+ * dialog at that price, and ?edit=<tradeId> opens the trade form.
+ */
+type JournalSearch = { close?: string; price?: number; edit?: string }
+
 export const Route = createFileRoute('/journal')({
+  validateSearch: (search: Record<string, unknown>): JournalSearch => ({
+    close: typeof search.close === 'string' ? search.close : undefined,
+    price:
+      typeof search.price === 'number' && Number.isFinite(search.price)
+        ? search.price
+        : undefined,
+    edit: typeof search.edit === 'string' ? search.edit : undefined,
+  }),
   beforeLoad: async () => await authStateFn(),
   head: () =>
     seo({
@@ -122,6 +136,7 @@ function JournalPage() {
   const [formOpen, setFormOpen] = useState(false)
   const [editingTrade, setEditingTrade] = useState<JournalTrade | null>(null)
   const [closingTrade, setClosingTrade] = useState<JournalTrade | null>(null)
+  const [closeAtPrice, setCloseAtPrice] = useState<number>()
   const [splittingTrade, setSplittingTrade] = useState<JournalTrade | null>(
     null,
   )
@@ -134,6 +149,23 @@ function JournalPage() {
     () => (tradeDocuments ?? []).map(toJournalTrade),
     [tradeDocuments],
   )
+
+  const search = Route.useSearch()
+  const navigate = Route.useNavigate()
+  useEffect(() => {
+    const tradeId = search.close ?? search.edit
+    if (!tradeId || !tradeDocuments) return
+    const trade = trades.find((candidate) => candidate.id === tradeId)
+    if (!trade) toast.error('That trade is no longer in the journal')
+    else if (search.close && trade.status === 'open') {
+      setCloseAtPrice(search.price)
+      setClosingTrade(trade)
+    } else if (search.edit) {
+      setEditingTrade(trade)
+      setFormOpen(true)
+    }
+    void navigate({ search: {}, replace: true })
+  }, [search, trades, tradeDocuments, navigate])
   const tradeIdsByString = useMemo(
     () =>
       new Map<string, Id<'trades'>>(
@@ -410,6 +442,9 @@ function JournalPage() {
         tradeId: requireTradeId(editingTrade.id),
         ...input,
         initialRisk: input.initialRisk ?? null,
+        // A blank level field removes the level.
+        stopPrice: input.stopPrice ?? null,
+        targetPrice: input.targetPrice ?? null,
       })
       return
     }
@@ -539,7 +574,10 @@ function JournalPage() {
           onRowSelectionChange={setRowSelection}
           columnVisibility={columnVisibility}
           onColumnVisibilityChange={setColumnVisibility}
-          onClose={setClosingTrade}
+          onClose={(trade) => {
+            setCloseAtPrice(undefined)
+            setClosingTrade(trade)
+          }}
           onSplit={setSplittingTrade}
           onEdit={(trade) => {
             setEditingTrade(trade)
@@ -562,6 +600,7 @@ function JournalPage() {
         open={closingTrade !== null}
         onOpenChange={(open) => !open && setClosingTrade(null)}
         trade={closingTrade}
+        initialPrice={closeAtPrice}
         onCloseTrade={async (closingPrice, closingDate) => {
           if (!closingTrade) throw new Error('Trade not found')
           const { realizedPnl, commission } = await closeTrade({
