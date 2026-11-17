@@ -6,6 +6,7 @@ import { convexTest } from 'convex-test'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { JournalStats } from './JournalStats'
+import { NO_PRICES } from '@/lib/marketData'
 import TradeTable from './TradeTable'
 import { api } from '../../../convex/_generated/api'
 import schema from '../../../convex/schema'
@@ -96,7 +97,7 @@ describe('recorded R-multiples', () => {
           trade,
           { ...trade, id: 'legacy', initialRisk: undefined, realizedPnl: 900 },
         ]}
-        prices={{}}
+        prices={NO_PRICES}
       />,
     )
     expect(screen.getByText('2.00R')).toBeTruthy()
@@ -107,7 +108,12 @@ describe('recorded R-multiples', () => {
   it.each([undefined, 0, -1, Infinity])(
     'shows unavailable instead of zero for missing or invalid risk %s',
     (initialRisk) => {
-      render(<JournalStats trades={[{ ...trade, initialRisk }]} prices={{}} />)
+      render(
+        <JournalStats
+          trades={[{ ...trade, initialRisk }]}
+          prices={NO_PRICES}
+        />,
+      )
       expect(screen.getByText('Unavailable')).toBeTruthy()
       expect(rTrace()?.y).toEqual([null])
     },
@@ -121,7 +127,7 @@ describe('recorded R-multiples', () => {
           { ...trade, id: 'loss', realizedPnl: -50 },
           { ...trade, id: 'flat', realizedPnl: 0 },
         ]}
-        prices={{}}
+        prices={NO_PRICES}
       />,
     )
     expect(screen.getByText('0.50R')).toBeTruthy()
@@ -150,7 +156,7 @@ function Journal({ trade: journalTrade }: { trade: JournalTrade }) {
     <>
       <TradeTable
         trades={[journalTrade]}
-        prices={{}}
+        prices={NO_PRICES}
         rowSelection={{}}
         onRowSelectionChange={vi.fn()}
         columnVisibility={{}}
@@ -159,7 +165,7 @@ function Journal({ trade: journalTrade }: { trade: JournalTrade }) {
         onSplit={vi.fn()}
         onEdit={vi.fn()}
       />
-      <JournalStats trades={[journalTrade]} prices={{}} />
+      <JournalStats trades={[journalTrade]} prices={NO_PRICES} />
     </>
   )
 }

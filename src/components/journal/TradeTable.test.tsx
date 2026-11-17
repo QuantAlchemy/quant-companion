@@ -59,7 +59,7 @@ function TradeTableHarness() {
       </button>
       <TradeTable
         trades={[trade]}
-        prices={{ STRC: 96.16 }}
+        prices={{ crypto: {}, traditional: { STRC: 96.16 } }}
         rowSelection={{}}
         onRowSelectionChange={vi.fn()}
         columnVisibility={columnVisibility}
