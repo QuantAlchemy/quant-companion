@@ -1,11 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
-import {
-  Calculator,
-  ShieldAlert,
-  ShieldCheck,
-  ShieldQuestion,
-} from 'lucide-react'
+import { Calculator, ShieldAlert, ShieldCheck, ShieldQuestion } from 'lucide-react'
 
 import NumberField from '@/components/NumberField'
 import { Button } from '@/components/ui/button'
@@ -67,10 +62,8 @@ function CalculatorPage() {
   const [result, setResult] = useState<PositionSizeResult | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const set = <TKey extends keyof PositionSizeInput>(
-    key: TKey,
-    value: PositionSizeInput[TKey],
-  ) => setForm((f) => ({ ...f, [key]: value }))
+  const set = <TKey extends keyof PositionSizeInput>(key: TKey, value: PositionSizeInput[TKey]) =>
+    setForm((f) => ({ ...f, [key]: value }))
 
   const handleCalculate = () => {
     try {
@@ -196,9 +189,7 @@ function CalculatorPage() {
               <Calculator className="mr-2 h-4 w-4" />
               Calculate position
             </Button>
-            {error && (
-              <p className="text-sm text-destructive-foreground">{error}</p>
-            )}
+            {error && <p className="text-sm text-destructive-foreground">{error}</p>}
           </CardContent>
         </Card>
 
@@ -209,9 +200,7 @@ function CalculatorPage() {
                 <CardHeader>
                   <CardTitle>
                     Position —{' '}
-                    <span
-                      className={result.isLong ? 'text-profit' : 'text-loss'}
-                    >
+                    <span className={result.isLong ? 'text-profit' : 'text-loss'}>
                       {result.isLong ? 'Long' : 'Short'}
                     </span>
                   </CardTitle>
@@ -239,9 +228,7 @@ function CalculatorPage() {
                   />
                   <ResultRow
                     label="Maintenance margin"
-                    value={currencyFormatter.format(
-                      result.maintenanceMarginAmount,
-                    )}
+                    value={currencyFormatter.format(result.maintenanceMarginAmount)}
                   />
                   <ResultRow
                     label="Liquidation price"
@@ -255,10 +242,7 @@ function CalculatorPage() {
               </Card>
 
               <Card
-                className={cn(
-                  'panel rise-in border',
-                  bufferStyles[result.bufferLevel],
-                )}
+                className={cn('panel rise-in border', bufferStyles[result.bufferLevel])}
               >
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
@@ -277,9 +261,7 @@ function CalculatorPage() {
                   />
                   <ResultRow
                     label="Max loss before liquidation"
-                    value={currencyFormatter.format(
-                      result.maxLossBeforeLiquidation,
-                    )}
+                    value={currencyFormatter.format(result.maxLossBeforeLiquidation)}
                   />
                   <ul className="mt-3 space-y-1 text-sm">
                     {result.riskTips.map((tip) => (
