@@ -22,6 +22,13 @@ export interface JournalTrade {
   initialRisk?: number
   exchange?: string
   comments?: string
+  /** Optional levels. The app alerts once when the price reaches one. */
+  stopPrice?: number
+  targetPrice?: number
+  /** Absent means alerts are on. */
+  priceAlerts?: boolean
+  stopHitAt?: number
+  targetHitAt?: number
   createdAt: number
 }
 
@@ -40,6 +47,9 @@ export interface NewTrade {
   initialRisk?: number
   exchange?: string
   comments?: string
+  stopPrice?: number
+  targetPrice?: number
+  priceAlerts?: boolean
 }
 
 export type JournalTradeData = Omit<JournalTrade, 'id' | 'createdAt'>
@@ -337,6 +347,17 @@ export function parseTradeFile(input: string): JournalTradeData[] {
     if (initialRisk === 0) {
       throw new Error(`Trade ${index + 1} must have a positive initial risk`)
     }
+    const level = (key: 'stopPrice' | 'targetPrice', label: string) => {
+      const parsed = optionalFiniteNumber(value[key], label, index, 0)
+      if (parsed === 0) {
+        throw new Error(`Trade ${index + 1} must have a positive ${label}`)
+      }
+      return parsed
+    }
+    const priceAlerts = value.priceAlerts
+    if (priceAlerts != null && typeof priceAlerts !== 'boolean') {
+      throw new Error(`Trade ${index + 1} has an invalid price alerts setting`)
+    }
     const closingPrice = optionalFiniteNumber(
       value.closingPrice,
       'closing price',
@@ -388,6 +409,10 @@ export function parseTradeFile(input: string): JournalTradeData[] {
       ),
       exchange: optionalString(value.exchange, 'exchange', index, 100),
       comments: optionalString(value.comments, 'comments', index, 10_000),
+      // Hit times are not imported, so imported levels start armed.
+      stopPrice: level('stopPrice', 'stop price'),
+      targetPrice: level('targetPrice', 'target price'),
+      priceAlerts: priceAlerts ?? undefined,
     }
   })
 }

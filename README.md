@@ -86,6 +86,34 @@ Live prices and benchmark bars use authenticated server functions in
 `src/lib/prices.ts`, so provider keys never reach the client. New account access
 goes through Clerk's waitlist at `/waitlist`.
 
+## Stop and take profit alerts
+
+Each open trade can have an optional stop loss and take profit. Every hour,
+`convex/crons.ts` runs `alerts:checkLevels`. It reads the open trades with an
+armed level, fetches one latest price for each symbol, and records an alert the
+first time the price reaches a level. A long hits its stop at or below the
+stop; a short at or above it. Moving a level arms it again. An alert is not an
+order: the app never closes a trade by itself. For stocks, Alpaca's latest
+trade can be a pre-market or after-hours trade.
+
+Alerts show in the bell in the app bar. Browser notifications (per device) and
+email (per account) are optional switches in that panel. Browser alerts stay
+on after sign-out, so an expired session does not silence them, and stop when
+a different user signs in on that browser. On a shared computer, turn them off
+before you sign out. Set these on each
+Convex deployment with `npx convex env set` (`--prod` for production). A
+channel without its keys is skipped:
+
+| Variable                                                          | Used for                                                                                                                |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `COINMARKETCAP_API_KEY`, `ALPACA_API_KEY_ID`, `ALPACA_SECRET_KEY` | Prices for the hourly check. The same keys as the web server.                                                           |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`          | Browser notifications. Make keys with `pnpm exec web-push generate-vapid-keys`. Changing them drops every subscription. |
+| `RESEND_API_KEY`, `ALERT_FROM_EMAIL`                              | Email, from a domain verified in Resend                                                                                 |
+| `APP_URL`                                                         | The journal link in emails and notifications                                                                            |
+
+Email goes to the address in the Clerk `convex` JWT template's `email` claim,
+saved when the user turns email on.
+
 ## Agents (MCP)
 
 Agents can read and update the trade journal through a hosted MCP server with

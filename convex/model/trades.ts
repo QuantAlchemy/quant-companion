@@ -51,6 +51,9 @@ export const validateTradeInput = (trade: {
   initialRisk?: number | null
   exchange?: string
   comments?: string
+  tradeType: 'buy' | 'sell'
+  stopPrice?: number | null
+  targetPrice?: number | null
 }) => {
   if (!trade.assetName.trim() || trade.assetName.trim().length > 32) {
     throw new Error('Asset name must be between 1 and 32 characters')
@@ -69,6 +72,31 @@ export const validateTradeInput = (trade: {
   }
   assertOptionalText(trade.exchange, 'Exchange', 100)
   assertOptionalText(trade.comments, 'Comments', 10_000)
+  assertLevels(trade.tradeType, trade.stopPrice, trade.targetPrice)
+}
+
+/**
+ * A stop and a target must be positive. When both are set, the target must be
+ * on the profit side of the stop: above it for a long, below it for a short.
+ * Neither is checked against the entry, so a stop moved past entry still works.
+ */
+export const assertLevels = (
+  tradeType: 'buy' | 'sell',
+  stopPrice?: number | null,
+  targetPrice?: number | null,
+) => {
+  if (stopPrice != null) assertPositiveNumber(stopPrice, 'Stop price')
+  if (targetPrice != null) assertPositiveNumber(targetPrice, 'Target price')
+  if (stopPrice == null || targetPrice == null) return
+  if (
+    tradeType === 'buy' ? targetPrice <= stopPrice : targetPrice >= stopPrice
+  ) {
+    throw new Error(
+      tradeType === 'buy'
+        ? 'For a long, the target must be above the stop'
+        : 'For a short, the target must be below the stop',
+    )
+  }
 }
 
 export const tradeInput = {
@@ -82,11 +110,17 @@ export const tradeInput = {
   initialRisk: v.optional(v.number()),
   exchange: v.optional(v.string()),
   comments: v.optional(v.string()),
+  stopPrice: v.optional(v.number()),
+  targetPrice: v.optional(v.number()),
+  priceAlerts: v.optional(v.boolean()),
 }
 
+// In an edit, an omitted field keeps its value for older clients, and null clears it.
 export const editInput = {
   ...tradeInput,
   initialRisk: v.optional(v.union(v.number(), v.null())),
+  stopPrice: v.optional(v.union(v.number(), v.null())),
+  targetPrice: v.optional(v.union(v.number(), v.null())),
 }
 
 export const importedTrade = v.object({
@@ -160,8 +194,12 @@ export const editTrade = async (
   tradeId: Id<'trades'>,
   args: EditInput,
 ) => {
-  validateTradeInput(args)
   const trade = await getOwnedTrade(ctx, userId, tradeId)
+  const keepOrClear = (next: number | null | undefined, previous?: number) =>
+    next === null ? undefined : (next ?? previous)
+  const stopPrice = keepOrClear(args.stopPrice, trade.stopPrice)
+  const targetPrice = keepOrClear(args.targetPrice, trade.targetPrice)
+  validateTradeInput({ ...args, stopPrice, targetPrice })
 
   if (trade.closingDate != null && args.tradeDate > trade.closingDate) {
     throw new Error('Trade date cannot be after the closing date')
@@ -189,18 +227,36 @@ export const editTrade = async (
     }
   }
 
+  const assetName = normalizeAssetName(args.assetName)
+  // A hit belongs to one level on one instrument and side. Changing any of
+  // them arms the level again.
+  const keepsHit = (level: number | undefined, saved: number | undefined) =>
+    level === saved &&
+    assetName === trade.assetName &&
+    args.assetType === trade.assetType &&
+    args.tradeType === trade.tradeType
+
   await ctx.db.patch(tradeId, {
     ...args,
     // A cleared form field is omitted from the request; remove its saved fee.
     commission: args.commission,
     // Preserve supplied historical gross P&L when calculation inputs match.
     realizedPnl,
-    assetName: normalizeAssetName(args.assetName),
+    assetName,
     // Omission preserves risk for older clients; null explicitly clears it.
     initialRisk:
       args.initialRisk === null
         ? undefined
         : (args.initialRisk ?? trade.initialRisk),
+    stopPrice,
+    targetPrice,
+    priceAlerts: args.priceAlerts ?? trade.priceAlerts,
+    stopHitAt: keepsHit(stopPrice, trade.stopPrice)
+      ? trade.stopHitAt
+      : undefined,
+    targetHitAt: keepsHit(targetPrice, trade.targetPrice)
+      ? trade.targetHitAt
+      : undefined,
   })
 }
 
@@ -291,6 +347,8 @@ export const splitTrade = async (
     initialRisk: closedRisk,
     commission,
     exchange: trade.exchange,
+    stopPrice: trade.stopPrice,
+    targetPrice: trade.targetPrice,
     comments: trade.comments
       ? `${trade.comments} (Split from original trade)`
       : 'Split from original trade',

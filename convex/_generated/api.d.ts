@@ -8,12 +8,17 @@
  * @module
  */
 
+import type * as alerts from "../alerts.js";
+import type * as crons from "../crons.js";
 import type * as http from "../http.js";
 import type * as mcp_auth from "../mcp/auth.js";
 import type * as mcp_journal from "../mcp/journal.js";
 import type * as mcp_server from "../mcp/server.js";
 import type * as mcp_setup from "../mcp/setup.js";
+import type * as model_alertMessage from "../model/alertMessage.js";
+import type * as model_levels from "../model/levels.js";
 import type * as model_trades from "../model/trades.js";
+import type * as push from "../push.js";
 import type * as trades from "../trades.js";
 
 import type {
@@ -23,12 +28,17 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  alerts: typeof alerts;
+  crons: typeof crons;
   http: typeof http;
   "mcp/auth": typeof mcp_auth;
   "mcp/journal": typeof mcp_journal;
   "mcp/server": typeof mcp_server;
   "mcp/setup": typeof mcp_setup;
+  "model/alertMessage": typeof model_alertMessage;
+  "model/levels": typeof model_levels;
   "model/trades": typeof model_trades;
+  push: typeof push;
   trades: typeof trades;
 }>;
 

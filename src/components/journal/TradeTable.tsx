@@ -36,7 +36,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { currencyFormatter } from '@/lib/format'
+import { currencyFormatter, formatUsdPrice } from '@/lib/format'
 import { netJournalPnl } from '@/lib/journal'
 import { unrealizedPnl } from '@/lib/performance'
 import { cn } from '@/lib/utils'
@@ -78,6 +78,7 @@ const tradeColumnOptions = [
   { id: 'tradeType', label: 'Side', group: 'core' },
   { id: 'quantity', label: 'Quantity', group: 'core' },
   { id: 'price', label: 'Entry price', group: 'core' },
+  { id: 'levels', label: 'Stop / target', group: 'core' },
   { id: 'tradeDate', label: 'Date', group: 'core' },
   { id: 'status', label: 'Status', group: 'core' },
   { id: 'marketPrice', label: 'Market price', group: 'core' },
@@ -93,6 +94,7 @@ const defaultColumnVisibility: VisibilityState = {
   tradeType: true,
   quantity: true,
   price: true,
+  levels: true,
   tradeDate: true,
   status: true,
   marketPrice: true,
@@ -261,6 +263,40 @@ export function TradeTableColumnPicker({
         </Popover.Positioner>
       </Popover.Portal>
     </Popover.Root>
+  )
+}
+
+/** Stop over target. A level the price reached says "hit". */
+function TradeLevels({ trade }: { trade: JournalTrade }) {
+  if (trade.stopPrice == null && trade.targetPrice == null) {
+    return <span className="text-muted-foreground">—</span>
+  }
+  const level = (
+    label: string,
+    value: number | undefined,
+    hitAt: number | undefined,
+    hitClass: string,
+  ) =>
+    value == null ? null : (
+      <span className={cn('tabular', hitAt != null && hitClass)}>
+        <span className="text-muted-foreground">{label} </span>
+        {formatUsdPrice(value)}
+        {hitAt != null && trade.status === 'open' && (
+          <span className="ml-1 text-[10px] font-semibold uppercase">hit</span>
+        )}
+      </span>
+    )
+  return (
+    <div
+      className={cn(
+        'flex flex-col text-xs leading-tight',
+        trade.priceAlerts === false && 'opacity-70',
+      )}
+      title={trade.priceAlerts === false ? 'Alerts off' : undefined}
+    >
+      {level('S', trade.stopPrice, trade.stopHitAt, 'text-loss')}
+      {level('T', trade.targetPrice, trade.targetHitAt, 'text-profit')}
+    </div>
   )
 }
 
@@ -482,6 +518,12 @@ export function TradeTable({
             {currencyFormatter.format(getValue<number>())}
           </span>
         ),
+      },
+      {
+        id: 'levels',
+        header: 'Stop / target',
+        enableSorting: false,
+        cell: ({ row }) => <TradeLevels trade={row.original} />,
       },
       {
         accessorKey: 'commission',

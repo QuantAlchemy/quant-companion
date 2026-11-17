@@ -25,9 +25,18 @@ import type { DataModel } from "./dataModel.js";
  * Typesafe environment variables declared in `convex.config.ts`.
  */
 type Env = {
+  readonly ALERT_FROM_EMAIL: string | undefined;
+  readonly ALPACA_API_KEY_ID: string | undefined;
+  readonly ALPACA_SECRET_KEY: string | undefined;
+  readonly APP_URL: string | undefined;
   readonly CLERK_JWT_ISSUER_DOMAIN: string;
   readonly CLERK_SECRET_KEY: string | undefined;
+  readonly COINMARKETCAP_API_KEY: string | undefined;
   readonly MCP_RESOURCE_URL: string | undefined;
+  readonly RESEND_API_KEY: string | undefined;
+  readonly VAPID_PRIVATE_KEY: string | undefined;
+  readonly VAPID_PUBLIC_KEY: string | undefined;
+  readonly VAPID_SUBJECT: string | undefined;
 };
 
 /**

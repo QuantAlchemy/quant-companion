@@ -15,7 +15,7 @@ export const Route = createFileRoute('/privacy')({
 function PrivacyPage() {
   return (
     <article className="prose prose-invert mx-auto max-w-3xl px-4 py-16 md:px-8">
-      <p className="kicker">Last updated August 21, 2026</p>
+      <p className="kicker">Last updated November 16, 2026</p>
       <h1>Privacy</h1>
       <p>
         Quant Companion stores journal entries in a private account-scoped
@@ -27,6 +27,16 @@ function PrivacyPage() {
         We process account details provided through Clerk, journal entries you
         choose to save, basic product analytics, and market symbols sent to our
         server when you request live prices or benchmark data.
+      </p>
+      <h2>Stop and take profit alerts</h2>
+      <p>
+        When an open trade has a stop loss or take profit with alerts on, our
+        server sends its market symbol to our price providers, CoinMarketCap and
+        Alpaca, once an hour. If you turn on email alerts, we store your sign-in
+        email address and send alerts through Resend. If you turn on browser
+        alerts, we store the address your browser's push service gives us, at
+        Google, Mozilla, Microsoft, or Apple, and send alerts through it. You
+        can turn each one off in the alerts panel.
       </p>
       <h2>How we use information</h2>
       <p>

@@ -37,9 +37,12 @@ documents:
 
 Strategy upload files are processed locally in the browser. Journal entries are
 stored in a private cloud database under the authenticated identity. Market
-symbols are sent to server-side data providers only when an approved user asks
-for live prices or benchmark bars. Quant Companion provides educational tools,
-not investment advice. Market data can be delayed, incomplete, or inaccurate.
+symbols are sent to server-side data providers when an approved user asks for
+live prices or benchmark bars, and once an hour for open trades with a stop
+loss or take profit alert. Alerts appear in the app, and by browser
+notification or email when the user turns those on. Quant Companion provides
+educational tools, not investment advice. Market data can be delayed,
+incomplete, or inaccurate.
 
 ## Public routes
 
