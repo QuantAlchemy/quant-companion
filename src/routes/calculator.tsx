@@ -5,7 +5,7 @@ import { Calculator, ShieldAlert, ShieldCheck, ShieldQuestion } from 'lucide-rea
 import NumberField from '@/components/NumberField'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { currencyFormatter } from '@/lib/format'
+import { currencyFormatter, formatUsdPrice } from '@/lib/format'
 import { award } from '@/lib/gamification'
 import { calculatePosition } from '@/lib/positionSize'
 import { cn } from '@/lib/utils'
@@ -232,7 +232,7 @@ function CalculatorPage() {
                   />
                   <ResultRow
                     label="Liquidation price"
-                    value={currencyFormatter.format(result.liquidationPrice)}
+                    value={formatUsdPrice(result.liquidationPrice)}
                   />
                   <ResultRow
                     label="Distance to liquidation"
