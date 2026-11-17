@@ -516,9 +516,7 @@ export function TradeTable({
         accessorKey: 'price',
         header: ({ column }) => <SortHeader column={column}>Entry</SortHeader>,
         cell: ({ getValue }) => (
-          <span className="tabular">
-            {currencyFormatter.format(getValue<number>())}
-          </span>
+          <span className="tabular">{formatUsdPrice(getValue<number>())}</span>
         ),
       },
       {
@@ -625,7 +623,7 @@ export function TradeTable({
             return (
               <span className="tabular text-muted-foreground">
                 {trade.closingPrice != null
-                  ? currencyFormatter.format(trade.closingPrice)
+                  ? formatUsdPrice(trade.closingPrice)
                   : '—'}
               </span>
             )
@@ -633,7 +631,7 @@ export function TradeTable({
           const price = marketPrice(prices, trade)
           return (
             <span className="tabular">
-              {price != null ? currencyFormatter.format(price) : '—'}
+              {price != null ? formatUsdPrice(price) : '—'}
             </span>
           )
         },

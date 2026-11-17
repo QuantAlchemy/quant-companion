@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { netJournalPnl } from '@/lib/journal'
-import { currencyFormatter } from '@/lib/format'
+import { currencyFormatter, formatUsdPrice } from '@/lib/format'
 
 import type {
   AssetType,
@@ -465,7 +465,7 @@ export function CloseTradeDialog({
             Close {trade.assetName}
           </DialogTitle>
           <DialogDescription>
-            {trade.quantity} @ {currencyFormatter.format(trade.price)} ·{' '}
+            {trade.quantity} @ {formatUsdPrice(trade.price)} ·{' '}
             {trade.tradeType === 'buy' ? 'long' : 'short'}
           </DialogDescription>
         </DialogHeader>

@@ -175,4 +175,25 @@ describe('TradeTable column visibility', () => {
       await screen.findByRole('heading', { name: 'Note for STRC' }),
     ).toBeTruthy()
   })
+
+  it('shows sub-cent coin prices instead of $0.00', () => {
+    render(
+      <TradeTable
+        trades={[
+          { ...trade, assetName: 'AMP', assetType: 'crypto', price: 0.0004 },
+        ]}
+        prices={{ crypto: { AMP: 0.000525 }, traditional: {} }}
+        rowSelection={{}}
+        onRowSelectionChange={vi.fn()}
+        columnVisibility={{}}
+        onColumnVisibilityChange={vi.fn()}
+        onClose={vi.fn()}
+        onSplit={vi.fn()}
+        onEdit={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('$0.00040')).toBeTruthy()
+    expect(screen.getByText('$0.000525')).toBeTruthy()
+  })
 })
