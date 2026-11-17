@@ -1,7 +1,9 @@
 import { netJournalPnl } from './journal'
+import { NO_PRICES, marketPrice } from './marketData'
 import { calculateZScores } from './stats'
 
 import type { JournalTrade } from './journal'
+import type { MarketPrices } from './marketData'
 import type { TradeMetrics, TradeRecord } from './stats'
 
 export type PerformanceSource = 'journal' | 'tradingview'
@@ -69,14 +71,13 @@ const numberOrZero = (value: number | undefined | null) =>
 
 export const calculateJournalUnrealizedPnl = (
   trade: JournalTrade,
-  prices: Record<string, number>,
+  prices: MarketPrices,
 ): number | null => {
   if (trade.status !== 'open') return null
-  const marketPrice = prices[trade.assetName]
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- index access may be undefined
-  if (marketPrice == null) return null
+  const price = marketPrice(prices, trade)
+  if (price == null) return null
   const entryValue = trade.price * trade.quantity
-  const currentValue = marketPrice * trade.quantity
+  const currentValue = price * trade.quantity
   const grossPnl =
     trade.tradeType === 'buy'
       ? currentValue - entryValue
@@ -88,7 +89,7 @@ export const unrealizedPnl = calculateJournalUnrealizedPnl
 
 export const journalTradesToPerformanceTrades = (
   trades: JournalTrade[],
-  prices: Record<string, number> = {},
+  prices: MarketPrices = NO_PRICES,
 ): PerformanceTrade[] =>
   trades.map((trade) => {
     const livePnl = calculateJournalUnrealizedPnl(trade, prices) ?? undefined

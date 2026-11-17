@@ -17,7 +17,6 @@ import {
   sendResendEmail,
 } from './model/alertMessage'
 import { armedLevels, findHits } from './model/levels'
-import type { PricesByType } from './model/levels'
 
 import type { Doc, Id } from './_generated/dataModel'
 import type { MutationCtx, QueryCtx } from './_generated/server'
@@ -257,18 +256,16 @@ export const checkLevels = internalAction({
       alpacaKeyId: env.ALPACA_API_KEY_ID,
       alpacaSecret: env.ALPACA_SECRET_KEY,
     }
-    const prices: PricesByType = {
-      traditional: await fetchMarketPrices(
-        { crypto: [], traditional: symbols('traditional') },
-        keys,
-      ),
-      crypto: {},
-    }
+    const prices = await fetchMarketPrices(
+      { crypto: [], traditional: symbols('traditional') },
+      keys,
+    )
     for (const crypto of chunk(symbols('crypto'), MAX_CRYPTO_SYMBOLS)) {
-      Object.assign(
-        prices.crypto,
-        await fetchMarketPrices({ crypto, traditional: [] }, keys),
+      const { crypto: batch } = await fetchMarketPrices(
+        { crypto, traditional: [] },
+        keys,
       )
+      Object.assign(prices.crypto, batch)
     }
     const hits = findHits(trades, prices)
     if (hits.length > 0)

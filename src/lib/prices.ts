@@ -51,7 +51,7 @@ export const marketPricesInput = z.object({
 
 /**
  * Batch fetch market prices for open positions.
- * Returns a symbol -> price map; symbols without a price are omitted.
+ * Returns one price map per asset type; symbols without a price are omitted.
  */
 export const getMarketPrices = createServerFn({ method: 'POST' })
   .validator(marketPricesInput)

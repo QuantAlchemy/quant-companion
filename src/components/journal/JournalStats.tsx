@@ -19,10 +19,11 @@ import { cn } from '@/lib/utils'
 
 import type { PlotData } from 'plotly.js'
 import type { JournalTrade } from '@/lib/journal'
+import type { MarketPrices } from '@/lib/marketData'
 
 interface JournalStatsProps {
   trades: JournalTrade[]
-  prices: Record<string, number>
+  prices: MarketPrices
 }
 
 function StatCard({

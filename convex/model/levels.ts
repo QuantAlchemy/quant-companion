@@ -1,4 +1,7 @@
+import { marketPrice } from '../../src/lib/marketData'
+
 import type { Doc } from '../_generated/dataModel'
+import type { MarketPrices } from '../../src/lib/marketData'
 
 /**
  * Stop and target hit rules, shared by the hourly price check and its tests.
@@ -42,12 +45,6 @@ export type LevelHit = {
   tradeType: Doc<'trades'>['tradeType']
 }
 
-/** Latest prices by asset type, so a stock and a coin with one ticker never mix. */
-export type PricesByType = Record<
-  Doc<'trades'>['assetType'],
-  Partial<Record<string, number>>
->
-
 /**
  * Every armed level the latest prices reached. A trade without a price is
  * skipped. When a gap passes both levels at once, only one can be true, so a
@@ -55,10 +52,10 @@ export type PricesByType = Record<
  */
 export const findHits = (
   trades: Doc<'trades'>[],
-  prices: PricesByType,
+  prices: MarketPrices,
 ): LevelHit[] =>
   trades.flatMap((trade) => {
-    const price = prices[trade.assetType][trade.assetName.toUpperCase()]
+    const price = marketPrice(prices, trade)
     if (price == null) return []
     return armedLevels(trade)
       .filter(({ kind, level }) =>

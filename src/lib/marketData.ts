@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import type { AssetType } from './journal'
+
 /**
  * Latest market prices from CoinMarketCap (crypto) and Alpaca (stocks).
  * Shared by the journal's live prices (src/lib/prices.ts, on the web server)
@@ -13,6 +15,20 @@ export type MarketDataKeys = {
   alpacaKeyId?: string
   alpacaSecret?: string
 }
+
+/**
+ * Latest prices by asset type, keyed by upper-case ticker. A stock and a coin
+ * can share a ticker (AMP), so each type has its own map.
+ */
+export type MarketPrices = Record<AssetType, Partial<Record<string, number>>>
+
+export const NO_PRICES: MarketPrices = { crypto: {}, traditional: {} }
+
+/** The latest price for a trade's instrument, or undefined when there is none. */
+export const marketPrice = (
+  prices: MarketPrices,
+  trade: { assetType: AssetType; assetName: string },
+) => prices[trade.assetType][trade.assetName.toUpperCase()]
 
 const REQUEST_TIMEOUT_MS = 10_000
 export const MAX_CRYPTO_SYMBOLS = 100
@@ -185,22 +201,22 @@ const fetchTraditionalPrices = async (
 }
 
 /**
- * A symbol -> price map for both asset types. Symbols without a price, and
- * names that are not tickers, are omitted.
+ * Prices for both asset types, each in its own map. Symbols without a price,
+ * and names that are not tickers, are omitted.
  */
 export const fetchMarketPrices = async (
   { crypto, traditional }: { crypto: string[]; traditional: string[] },
   keys: MarketDataKeys,
-): Promise<Record<string, number>> => {
+): Promise<MarketPrices> => {
   const [cryptoPrices, traditionalResults] = await Promise.all([
     crypto.length > 0
       ? fetchCryptoPrices(crypto, keys.coinMarketCap)
       : Promise.resolve({}),
     fetchTraditionalPrices(traditional, keys),
   ])
-  const prices: Record<string, number> = { ...cryptoPrices }
+  const traditionalPrices: Record<string, number> = {}
   for (const { symbol, price } of traditionalResults) {
-    if (price !== null) prices[symbol] = price
+    if (price !== null) traditionalPrices[symbol] = price
   }
-  return prices
+  return { crypto: cryptoPrices, traditional: traditionalPrices }
 }

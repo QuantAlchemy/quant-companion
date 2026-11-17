@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/table'
 import { currencyFormatter, formatUsdPrice } from '@/lib/format'
 import { netJournalPnl } from '@/lib/journal'
+import { marketPrice } from '@/lib/marketData'
 import { unrealizedPnl } from '@/lib/performance'
 import { cn } from '@/lib/utils'
 
@@ -51,6 +52,7 @@ import type {
   VisibilityState,
 } from '@tanstack/react-table'
 import type { JournalTrade } from '@/lib/journal'
+import type { MarketPrices } from '@/lib/marketData'
 
 export interface TradeRowActions {
   onClose: (trade: JournalTrade) => void
@@ -60,8 +62,8 @@ export interface TradeRowActions {
 
 interface TradeTableProps extends TradeRowActions {
   trades: JournalTrade[]
-  /** live market prices keyed by upper-cased symbol */
-  prices: Record<string, number>
+  /** live market prices by asset type */
+  prices: MarketPrices
   rowSelection: RowSelectionState
   onRowSelectionChange: (
     updater:
@@ -611,7 +613,7 @@ export function TradeTable({
           const marketValue = (trade: JournalTrade) =>
             trade.status === 'closed'
               ? trade.closingPrice
-              : prices[trade.assetName]
+              : marketPrice(prices, trade)
           return compareNullableNumbers(
             marketValue(rowA.original),
             marketValue(rowB.original),
@@ -628,10 +630,9 @@ export function TradeTable({
               </span>
             )
           }
-          const price = prices[trade.assetName]
+          const price = marketPrice(prices, trade)
           return (
             <span className="tabular">
-              {/* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- index access may be undefined */}
               {price != null ? currencyFormatter.format(price) : '—'}
             </span>
           )

@@ -254,7 +254,10 @@ describe('net journal performance', () => {
     expect(netJournalPnl(partial.realizedPnl, partial.commission)).toBe(-4)
     expect(
       summarizePerformance(
-        journalTradesToPerformanceTrades(trades(), { TEST: 101 }),
+        journalTradesToPerformanceTrades(trades(), {
+          crypto: {},
+          traditional: { TEST: 101 },
+        }),
       ),
     ).toMatchObject({ realizedPnl: -4, unrealizedPnl: -6, totalPnl: -10 })
     const rest = await handler(close)(ctx, { tradeId, ...exit })

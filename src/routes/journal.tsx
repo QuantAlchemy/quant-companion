@@ -33,6 +33,7 @@ import {
   serializeTrades,
 } from '@/lib/journal'
 import { journalTradesToPerformanceTrades } from '@/lib/performance'
+import { NO_PRICES } from '@/lib/marketData'
 import { getMarketPrices } from '@/lib/prices'
 import { seo } from '@/lib/seo'
 import { startingEquityStore } from '@/lib/stats'
@@ -326,7 +327,7 @@ function JournalPage() {
     refetchInterval: 60_000,
     staleTime: 30_000,
   })
-  const prices = pricesQuery.data ?? {}
+  const prices = pricesQuery.data ?? NO_PRICES
   const performanceTrades = useMemo(
     () => journalTradesToPerformanceTrades(trades, prices),
     [prices, trades],
