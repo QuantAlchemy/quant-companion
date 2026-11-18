@@ -32,6 +32,7 @@ import type { MutationCtx, QueryCtx } from './_generated/server'
 
 const INBOX_SIZE = 30
 const UNREAD_LIMIT = 99
+const READ_BATCH = 200
 
 /**
  * Push services of Chrome and most Chromium browsers, Firefox, Edge, and
@@ -123,15 +124,45 @@ export const markRead = mutation({
       if (alert.readAt == null) await ctx.db.patch(alertId, { readAt: now })
       return
     }
-    const unread = await ctx.db
-      .query('alerts')
-      .withIndex('by_userId_and_readAt', (q) =>
-        q.eq('userId', userId).eq('readAt', undefined),
-      )
-      .take(200)
-    for (const alert of unread) await ctx.db.patch(alert._id, { readAt: now })
+    await markReadBatch(ctx, userId, now)
   },
 })
+
+/** Continues `markRead` for a user with more unread alerts than one batch. */
+export const markAllReadBatch = internalMutation({
+  args: { userId: v.string(), readAt: v.number() },
+  handler: (ctx, { userId, readAt }) => markReadBatch(ctx, userId, readAt),
+})
+
+/**
+ * Marks one batch of the user's unread alerts created by `readAt` as read,
+ * then schedules the next batch while a full batch was found. Alerts that
+ * arrive after the click stay unread.
+ */
+const markReadBatch = async (
+  ctx: MutationCtx,
+  userId: string,
+  readAt: number,
+) => {
+  const unread = await ctx.db
+    .query('alerts')
+    .withIndex('by_userId_and_readAt', (q) =>
+      q
+        .eq('userId', userId)
+        .eq('readAt', undefined)
+        .lte('_creationTime', readAt),
+    )
+    .take(READ_BATCH)
+  for (const alert of unread) {
+    await ctx.db.patch(alert._id, { readAt })
+  }
+  if (unread.length === READ_BATCH) {
+    await ctx.scheduler.runAfter(0, internal.alerts.markAllReadBatch, {
+      userId,
+      readAt,
+    })
+  }
+}
 
 /** Channel settings, and which channels this deployment can send at all. */
 export const settings = query({

@@ -376,9 +376,13 @@ export function TradeFormDialog({
   )
 }
 
-/** Risk at the stop and reward at the take profit, in dollars and R. */
+/**
+ * Risk at the current stop and reward at the take profit, in dollars. R is the
+ * saved initial risk, or the risk at the current stop when none is saved.
+ */
 function LevelSummary({ form }: { form: NewTrade }) {
-  const risk = form.initialRisk ?? dollarsTo(form, form.stopPrice, 'loss')
+  const risk = dollarsTo(form, form.stopPrice, 'loss')
+  const oneR = form.initialRisk || risk
   const reward = dollarsTo(form, form.targetPrice, 'gain')
   return (
     <div className="col-span-2 -mt-2 space-y-2">
@@ -387,7 +391,7 @@ function LevelSummary({ form }: { form: NewTrade }) {
         {reward != null && (
           <>
             Reward at take profit: {currencyFormatter.format(reward)}
-            {risk ? ` (${(reward / risk).toFixed(1)}R)` : ''}.
+            {oneR ? ` (${(reward / oneR).toFixed(1)}R)` : ''}.
           </>
         )}
       </p>

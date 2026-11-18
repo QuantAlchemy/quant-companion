@@ -101,3 +101,23 @@ it('leaves a saved trade without risk alone when its stop moves', () => {
     ).value,
   ).toBe('')
 })
+
+it('shows risk at the current stop after the stop moves', () => {
+  render(
+    <TradeFormDialog
+      open
+      trade={{ ...trade, stopPrice: 90, targetPrice: 120 }}
+      onSave={vi.fn()}
+      onOpenChange={vi.fn()}
+    />,
+  )
+  fireEvent.change(screen.getByLabelText('Stop loss (optional)'), {
+    target: { value: '95' },
+  })
+  // R stays the saved initial risk of $100.
+  expect(
+    screen.getByText(
+      /Risk at stop: \$50\.00\. Reward at take profit: \$200\.00 \(2\.0R\)/,
+    ),
+  ).toBeTruthy()
+})
