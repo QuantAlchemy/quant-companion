@@ -119,6 +119,33 @@ describe('stop and target alerts', () => {
     expect((await t.query(api.alerts.list)).unread).toBe(0)
   })
 
+  it('marks every unread alert read in batches', async () => {
+    vi.useFakeTimers()
+    const t = convexTest(schema, modules).withIdentity(identity)
+    const tradeId = await t.mutation(api.trades.add, long)
+    const userId = `${identity.issuer}|${identity.subject}`
+    await t.run(async (ctx) => {
+      for (let i = 0; i < 450; i++) {
+        await ctx.db.insert('alerts', {
+          userId,
+          assetName: 'NVDA',
+          tradeType: 'buy',
+          tradeId,
+          kind: 'stop',
+          level: 182,
+          price: 181,
+        })
+      }
+    })
+    vi.advanceTimersByTime(1000)
+    await t.mutation(api.alerts.markRead, {})
+    await t.finishAllScheduledFunctions(vi.runAllTimers)
+    const unread = await t.run(async (ctx) =>
+      (await ctx.db.query('alerts').collect()).filter((a) => a.readAt == null),
+    )
+    expect(unread).toHaveLength(0)
+  })
+
   it('ties a hit to the instrument its price was for', async () => {
     const t = convexTest(schema, modules).withIdentity(identity)
     const tradeId = await t.mutation(api.trades.add, {
